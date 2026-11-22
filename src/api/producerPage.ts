@@ -31,7 +31,7 @@ export const PRODUCER_PAGE = `<!doctype html>
 </head>
 <body>
 <main>
-  <h1>Neoprompter: message the Presenter</h1>
+  <h1>Neoprompter: send a Notification to the Operator</h1>
 
   <section id="tokenBox" hidden>
     <p>This Neoprompter needs an access token. Ask the Operator for it.</p>
@@ -42,7 +42,7 @@ export const PRODUCER_PAGE = `<!doctype html>
   </section>
 
   <section>
-    <textarea id="text" maxlength="500" placeholder="Short plain-text message" aria-label="Message"></textarea>
+    <textarea id="text" maxlength="500" placeholder="Short plain-text Notification" aria-label="Notification"></textarea>
     <button id="send" class="primary">Send</button>
   </section>
 
@@ -102,7 +102,7 @@ export const PRODUCER_PAGE = `<!doctype html>
 
   function send(text, button) {
     text = text.trim();
-    if (!text) { setStatus('Type a message first.', 'bad'); return Promise.resolve(false); }
+    if (!text) { setStatus('Type a Notification first.', 'bad'); return Promise.resolve(false); }
     if (button) button.disabled = true;
     setStatus('Sending...', '');
     return call('/api/notify', 'POST', { text: text })

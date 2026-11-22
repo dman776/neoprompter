@@ -40,7 +40,7 @@ export function createProducerRoutes(store: QuickMessageStore): Route[] {
         if (!list) return res.json(400, { error: '"messages" must be a list of strings' });
         if (list.length > MAX_QUICK_MESSAGES) return res.json(400, { error: `At most ${MAX_QUICK_MESSAGES} quick messages` });
         if (list.some((m) => m.length > MAX_QUICK_MESSAGE_LENGTH)) {
-          return res.json(400, { error: `Each message must be ${MAX_QUICK_MESSAGE_LENGTH} characters or fewer` });
+          return res.json(400, { error: `Each quick message must be ${MAX_QUICK_MESSAGE_LENGTH} characters or fewer` });
         }
         store.save(list);
         res.json(200, { messages: list });

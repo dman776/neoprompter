@@ -32,6 +32,10 @@ _Avoid_: Prompter screen, display, program
 A short live message from the Producer, shown as a banner only in the Operator view and never on the Output. It disappears on its own after a set time.
 _Avoid_: Alert, message, cue
 
+**Quick message**:
+A saved Notification text the Producer can send with one tap from the Producer page.
+_Avoid_: Canned message, macro
+
 **Producer page**:
 The web page the app serves on the local network, where the Producer sends Notifications from a phone or laptop with no install.
 _Avoid_: Producer app, remote, dashboard

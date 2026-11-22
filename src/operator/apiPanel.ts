@@ -7,7 +7,7 @@ root.insertAdjacentHTML(
   `<p>Lets Bitfocus Companion (or any device on this network) send Notifications and read status.
      Local network only; see docs/companion.md.</p>
    <label>Port <input id="api-port" type="number" min="1024" max="65535" /></label>
-   <label>Token (optional) <input id="api-token" type="text" autocomplete="off" /></label>
+   <label>Token (optional) <input id="api-token" type="password" autocomplete="off" /></label>
    <button id="api-save">Save</button>
    <p id="api-status" role="status"></p>`,
 );

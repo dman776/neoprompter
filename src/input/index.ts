@@ -2,7 +2,7 @@ import type { Core } from '../core';
 
 /**
  * Abstract device events. The Virtual shuttle, the keyboard, the mouse/trackpad and the real
- * ShuttleXPress adapter (ticket 05) all produce these; one mapper turns them into core commands.
+ * ShuttleXPress adapter all produce these; one mapper turns them into core commands.
  */
 export type DeviceEvent =
   /** Spring-loaded ring, -1 (full back) to 1 (full forward); 0 means released. */
@@ -64,7 +64,7 @@ export interface InputMapper {
   setButton(button: ButtonId, action: ActionId): boolean;
   /** Action ids that can be chosen for a button. */
   availableActions(): ActionId[];
-  /** Add or replace an action (later tickets, e.g. dismiss Notification). */
+  /** Add or replace an action (for example dismiss Notification, registered by the Operator view). */
   registerAction(id: ActionId, run: () => void): void;
 }
 

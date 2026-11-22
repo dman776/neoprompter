@@ -14,7 +14,6 @@ async function setup(opts: { token?: string; maxBodyBytes?: number; allow?: () =
   const server = createApiServer({
     core,
     port: 0,
-    host: '127.0.0.1',
     token: opts.token,
     maxBodyBytes: opts.maxBodyBytes,
     isAllowedRemote: opts.allow,
@@ -114,11 +113,11 @@ describe('token', () => {
     expect(texts(core)).toEqual([]);
   });
 
-  it('accepts a bearer header, an X-Neoprompter-Token header or a ?token= query', async () => {
+  it('accepts a bearer header or an X-Neoprompter-Token header, but not a ?token= query', async () => {
     const { core, call, post } = await setup({ token: 's3cret' });
     expect((await call('/api/status', { headers: { authorization: 'Bearer s3cret' } })).status).toBe(200);
     expect((await call('/api/status', { headers: { 'x-neoprompter-token': 's3cret' } })).status).toBe(200);
-    expect((await call('/api/status?token=s3cret')).status).toBe(200);
+    expect((await call('/api/status?token=s3cret')).status).toBe(401);
     expect((await post({ text: 'ok' }, { 'x-neoprompter-token': 's3cret' })).status).toBe(202);
     expect(texts(core)).toEqual(['ok']);
   });
@@ -131,8 +130,8 @@ describe('token', () => {
   it('a token change takes effect without restarting', async () => {
     const { server, call } = await setup({ token: 'a' });
     server.setToken('b');
-    expect((await call('/api/status?token=a')).status).toBe(401);
-    expect((await call('/api/status?token=b')).status).toBe(200);
+    expect((await call('/api/status', { headers: { 'x-neoprompter-token': 'a' } })).status).toBe(401);
+    expect((await call('/api/status', { headers: { 'x-neoprompter-token': 'b' } })).status).toBe(200);
   });
 });
 
@@ -207,14 +206,13 @@ describe('extension', () => {
     const server = createApiServer({
       core,
       port: 0,
-      host: '127.0.0.1',
       token: 't',
       extraRoutes: [{ method: 'GET', path: '/', handler: (_req, res) => res.json(200, { page: true }) }],
     });
     servers.push(server);
     const { port } = await server.start();
     expect((await fetch(`http://127.0.0.1:${port}/`)).status).toBe(401);
-    expect((await fetch(`http://127.0.0.1:${port}/?token=t`)).status).toBe(200);
+    expect((await fetch(`http://127.0.0.1:${port}/`, { headers: { 'x-neoprompter-token': 't' } })).status).toBe(200);
   });
 });
 

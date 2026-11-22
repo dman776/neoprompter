@@ -91,12 +91,10 @@ export interface ApiServerOptions {
   core: Core;
   port: number;
   token?: string;
-  /** Interface to bind. Default 0.0.0.0 (all); the private-address check is the gate. */
-  host?: string;
   maxBodyBytes?: number;
   /** Override the remote-address gate (tests). Default: `isPrivateAddress`. */
   isAllowedRemote?: (address: string | undefined) => boolean;
-  /** Extra routes (ticket 17's Producer page). They sit behind the same address gate and token. */
+  /** Extra routes (such as the Producer page). They sit behind the same address gate and token. */
   extraRoutes?: Route[];
 }
 export interface ApiServer {
@@ -113,7 +111,8 @@ function tokensMatch(given: string, expected: string): boolean {
 
 export function createApiServer(options: ApiServerOptions): ApiServer {
   const { core } = options;
-  const host = options.host ?? '0.0.0.0';
+  // All interfaces so LAN devices can reach it; the private-address check is the gate.
+  const host = '0.0.0.0';
   const maxBody = options.maxBodyBytes ?? MAX_BODY_BYTES;
   const allowed = options.isAllowedRemote ?? isPrivateAddress;
   let token = options.token ?? '';
@@ -161,11 +160,11 @@ export function createApiServer(options: ApiServerOptions): ApiServer {
   };
   const routes: Route[] = [notify, status, ...(options.extraRoutes ?? [])];
 
-  function authorized(req: http.IncomingMessage, query: URLSearchParams): boolean {
+  function authorized(req: http.IncomingMessage): boolean {
     if (!token) return true;
     const bearer = /^Bearer (.+)$/i.exec(req.headers.authorization ?? '')?.[1];
     const header = req.headers['x-neoprompter-token'];
-    const given = bearer ?? (typeof header === 'string' ? header : undefined) ?? query.get('token') ?? '';
+    const given = bearer ?? (typeof header === 'string' ? header : undefined) ?? '';
     return tokensMatch(given, token);
   }
 
@@ -181,7 +180,7 @@ export function createApiServer(options: ApiServerOptions): ApiServer {
     if (!allowed(req.socket.remoteAddress)) return json(403, { error: 'Local network only' });
     const url = new URL(req.url ?? '/', 'http://localhost');
     const isPublicPage = routes.some((r) => r.public && r.path === url.pathname && r.method === req.method);
-    if (!isPublicPage && !authorized(req, url.searchParams)) {
+    if (!isPublicPage && !authorized(req)) {
       return json(401, { error: 'Missing or wrong token' }, { 'www-authenticate': 'Bearer' });
     }
     const matching = routes.filter((r) => r.path === url.pathname);

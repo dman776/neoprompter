@@ -93,7 +93,7 @@ describe('input mapping', () => {
     expect(core.getState().appearance.mirror).toBe(false);
   });
 
-  it('a later ticket can register the dismiss action without changing the mapper', () => {
+  it('a new action can be registered the dismiss action without changing the mapper', () => {
     const { mapper } = setup();
     let dismissed = 0;
     mapper.registerAction('dismissNotification', () => dismissed++);

@@ -4,11 +4,12 @@ Neoprompter runs a small HTTP service so Companion (or anything on the same netw
 
 Set the port (default `4780`) and an optional token in the Operator view, under "Companion API". Use the Operator computer's LAN address below, for example `192.168.1.20`. If the port is taken, the panel says so; pick another one.
 
-If a token is set, every request must carry it, or it gets `401`. Any one of:
+If a token is set, every request must carry it, or it gets `401`. Either of:
 
 - header `Authorization: Bearer <token>`
 - header `X-Neoprompter-Token: <token>`
-- query string `?token=<token>` (handy for polling URLs)
+
+A `?token=` query string is not accepted (URLs end up in logs and browser history).
 
 Requests from outside the local network get `403` whatever the token.
 
@@ -30,7 +31,7 @@ curl -X POST http://192.168.1.20:4780/api/notify -H 'X-Neoprompter-Token: <token
 
 ## Poll status (button feedback)
 
-Create a **Generic HTTP** module (or the HTTP polling feature of your Companion version) that does `GET http://192.168.1.20:4780/api/status?token=<token>` every second or two. The reply:
+Create a **Generic HTTP** module (or the HTTP polling feature of your Companion version) that does `GET http://192.168.1.20:4780/api/status` every second or two, with the header `X-Neoprompter-Token: <token>` if a token is set. The reply:
 
 ```
 {"script":"Sunday sermon","state":"playing","playing":true,"position":42.5,"progress":0.31}

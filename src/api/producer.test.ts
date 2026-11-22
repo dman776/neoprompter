@@ -19,7 +19,6 @@ async function setup(opts: { token?: string; store?: QuickMessageStore } = {}) {
   const server = createApiServer({
     core,
     port: 0,
-    host: '127.0.0.1',
     token: opts.token,
     extraRoutes: createProducerRoutes(store),
   });
