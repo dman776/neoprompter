@@ -51,6 +51,8 @@ export interface ApiResponse {
 export interface Route {
   method: 'GET' | 'POST';
   path: string;
+  /** Skips the token check (still behind the address gate). Only for static pages that hold no data. */
+  public?: boolean;
   handler(req: ApiRequest, res: ApiResponse): void;
 }
 
@@ -178,7 +180,8 @@ export function createApiServer(options: ApiServerOptions): ApiServer {
     // 1. Address gate, 2. token, 3. routing. Everything, including 404s, passes the first two.
     if (!allowed(req.socket.remoteAddress)) return json(403, { error: 'Local network only' });
     const url = new URL(req.url ?? '/', 'http://localhost');
-    if (!authorized(req, url.searchParams)) {
+    const isPublicPage = routes.some((r) => r.public && r.path === url.pathname && r.method === req.method);
+    if (!isPublicPage && !authorized(req, url.searchParams)) {
       return json(401, { error: 'Missing or wrong token' }, { 'www-authenticate': 'Bearer' });
     }
     const matching = routes.filter((r) => r.path === url.pathname);

@@ -164,7 +164,7 @@ describe('local network only', () => {
 });
 
 describe('route table', () => {
-  it('exposes only notify and status (no transport control)', () => {
+  it('exposes only notify and status as built-ins (no transport control)', () => {
     expect(ROUTES.map((r) => `${r.method} ${r.path}`).sort()).toEqual([
       'GET /api/status',
       'POST /api/notify',
@@ -174,7 +174,7 @@ describe('route table', () => {
   it('answers 404 or 405 to transport-like routes and never moves the core', async () => {
     const { core, call } = await setup();
     const before = JSON.stringify(core.getState());
-    const paths = ['/', '/api', '/api/play', '/api/pause', '/api/stop', '/api/start', '/api/speed',
+    const paths = ['/api', '/api/play', '/api/pause', '/api/stop', '/api/start', '/api/speed',
       '/api/scroll', '/api/jump', '/api/position', '/api/script', '/api/load', '/api/loadScript',
       '/api/command', '/api/dispatch', '/api/notify/../play', '/api/status/play', '/play', '/pause'];
     for (const path of paths) {

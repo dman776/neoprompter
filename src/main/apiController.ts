@@ -6,17 +6,25 @@ import {
   type ApiSettingsStore,
   type ApiView,
 } from '../api';
+import { createProducerRoutes, createMemoryQuickMessageStore, type QuickMessageStore } from '../api/producer';
 import type { Core } from '../core';
 
 /** Owns the running API server: starts it from saved settings and restarts it when they change. */
-export function createApiController(core: Core, store: ApiSettingsStore) {
+export function createApiController(core: Core, store: ApiSettingsStore,
+  quickMessages: QuickMessageStore = createMemoryQuickMessageStore(),
+) {
   let settings = store.load();
   let server: ApiServer | null = null;
   let error: string | null = null;
 
   async function startup(): Promise<void> {
     await server?.stop();
-    server = createApiServer({ core, port: settings.port, token: settings.token });
+    server = createApiServer({
+      core,
+      port: settings.port,
+      token: settings.token,
+      extraRoutes: createProducerRoutes(quickMessages),
+    });
     try {
       await server.start();
       error = null;

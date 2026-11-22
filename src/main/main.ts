@@ -8,6 +8,7 @@ import { IPC } from '../shared/ipc';
 import { createFilePresetStore } from './filePresetStore';
 import { createFileSessionStore } from './fileSessionStore';
 import { createApiController } from './apiController';
+import { createFileQuickMessageStore } from './fileQuickMessageStore';
 import { createFileApiSettingsStore } from './fileApiSettingsStore';
 import { createOutputWindowManager, type OutputSettings } from '../output-window';
 
@@ -155,6 +156,7 @@ app.whenReady().then(() => {
   const api = createApiController(
     core,
     createFileApiSettingsStore(path.join(app.getPath('userData'), 'api-settings.json')),
+    createFileQuickMessageStore(path.join(app.getPath('userData'), 'quick-messages.json')),
   );
   ipcMain.handle(IPC.apiGet, () => api.getView());
   ipcMain.handle(IPC.apiSet, (_e, settings) => api.apply(settings));
