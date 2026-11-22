@@ -7,6 +7,8 @@ import { createFileLibraryStorage } from '../library';
 import { IPC } from '../shared/ipc';
 import { createFilePresetStore } from './filePresetStore';
 import { createFileSessionStore } from './fileSessionStore';
+import { createApiController } from './apiController';
+import { createFileApiSettingsStore } from './fileApiSettingsStore';
 import { createOutputWindowManager, type OutputSettings } from '../output-window';
 
 function createLibraryStorage() {
@@ -149,6 +151,15 @@ app.whenReady().then(() => {
     if (s.playing || s.ringDeflection !== 0 || has || hadNotifications) broadcast();
     hadNotifications = has;
   }, 16);
+
+  const api = createApiController(
+    core,
+    createFileApiSettingsStore(path.join(app.getPath('userData'), 'api-settings.json')),
+  );
+  ipcMain.handle(IPC.apiGet, () => api.getView());
+  ipcMain.handle(IPC.apiSet, (_e, settings) => api.apply(settings));
+  void api.startup();
+  app.on('will-quit', () => void api.stop());
 
   operatorWin = openWindow('operator', 'Neoprompter - Operator view', 40);
 

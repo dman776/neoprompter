@@ -30,6 +30,13 @@ export function normalizeApiSettings(raw: Partial<ApiSettings> | null | undefine
   };
 }
 
+/** What the Operator view shows about the API: settings plus whether it is listening. */
+export interface ApiView extends ApiSettings {
+  running: boolean;
+  /** Clear failure message (e.g. port taken) when it could not start; null otherwise. */
+  error: string | null;
+}
+
 export interface ApiRequest {
   method: string;
   path: string;
