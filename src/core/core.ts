@@ -34,7 +34,9 @@ export function createCore(options: CoreOptions = {}): Core {
   }
 
   function snapshot(): CoreState {
-    return { script, position, speed, playing };
+    const total = script.lines.length;
+    const progress = total > 0 ? Math.min(1, Math.max(0, position / total)) : 0;
+    return { script, position, progress, speed, playing };
   }
 
   return {
