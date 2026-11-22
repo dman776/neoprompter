@@ -11,13 +11,21 @@
     "typecheck": "tsc --noEmit",
     "dist:mac": "npm run build && electron-builder --mac --publish never",
     "dist:win": "npm run build && electron-builder --win --x64 --publish never",
-    "dist:check": "node scripts/check-installers.mjs"
+    "dist:check": "node scripts/check-installers.mjs",
+    "prepare": "husky",
+    "check": "npm run typecheck && npm test",
+    "test:e2e": "npm run build && vitest run --config e2e/vitest.config.ts"
   },
   "devDependencies": {
     "@types/node": "^26.6.6",
     "electron": "^45.4.1",
     "electron-builder": "^26.18.0",
     "esbuild": "^0.28.2",
+    "husky": "^9.1.7",
+    "jsdom": "^31.0.1",
+    "lint-staged": "^17.6.2",
+    "playwright-core": "^1.65.1",
+    "prettier": "^3.10.1",
     "typescript": "^7.0.2",
     "vitest": "^5.1.1"
   },
