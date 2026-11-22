@@ -191,9 +191,9 @@ describe('route table', () => {
 describe('start', () => {
   it('fails with a clear message when the port is taken', async () => {
     const blocker = net.createServer();
-    await new Promise<void>((r) => blocker.listen(0, '127.0.0.1', r));
+    await new Promise<void>((r) => blocker.listen(0, r));
     const taken = (blocker.address() as net.AddressInfo).port;
-    const server = createApiServer({ core: createCore({ clock: createFakeClock() }), port: taken, host: '127.0.0.1' });
+    const server = createApiServer({ core: createCore({ clock: createFakeClock() }), port: taken });
     servers.push(server);
     await expect(server.start()).rejects.toThrow(new RegExp(`port ${taken}.*already in use`, 'i'));
     await new Promise((r) => blocker.close(r));

@@ -1,18 +1,8 @@
-import fs from 'node:fs';
 import type { PresetStore } from '../core';
+import { createJsonFile } from './jsonFile';
 
 /** Presets persisted as JSON on disk (main process only). */
 export function createFilePresetStore(file: string): PresetStore {
-  return {
-    load() {
-      try {
-        return JSON.parse(fs.readFileSync(file, 'utf8'));
-      } catch {
-        return {};
-      }
-    },
-    save(presets) {
-      fs.writeFileSync(file, JSON.stringify(presets, null, 2));
-    },
-  };
+  const json = createJsonFile<ReturnType<PresetStore['load']>>(file, { fallback: () => ({}), indent: 2 });
+  return { load: json.read, save: json.write };
 }

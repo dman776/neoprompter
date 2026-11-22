@@ -7,6 +7,7 @@ import { createFileLibraryStorage } from '../library';
 import { IPC } from '../shared/ipc';
 import { createFilePresetStore } from './filePresetStore';
 import { createFileSessionStore } from './fileSessionStore';
+import { createJsonFile, libraryFileIo } from './jsonFile';
 import { createApiController } from './apiController';
 import { createFileQuickMessageStore } from './fileQuickMessageStore';
 import { createFileApiSettingsStore } from './fileApiSettingsStore';
@@ -14,13 +15,7 @@ import { createOutputWindowManager, type OutputSettings } from '../output-window
 
 function createLibraryStorage() {
   const file = path.join(app.getPath('userData'), 'library.json');
-  return createFileLibraryStorage(file, {
-    readFile: (p) => (fs.existsSync(p) ? fs.readFileSync(p, 'utf8') : null),
-    writeFile: (p, d) => {
-      fs.mkdirSync(path.dirname(p), { recursive: true });
-      fs.writeFileSync(p, d);
-    },
-  });
+  return createFileLibraryStorage(file, libraryFileIo);
 }
 
 const core = createCore({
@@ -76,16 +71,12 @@ function createOutputManager() {
             : screen.getPrimaryDisplay().id,
         ),
     },
-    store: {
-      load: (): OutputSettings => {
-        try {
-          return JSON.parse(fs.readFileSync(file, 'utf8')) as OutputSettings;
-        } catch {
-          return { windowed: false, monitorBySetup: {} };
-        }
-      },
-      save: (s) => fs.writeFileSync(file, JSON.stringify(s)),
-    },
+    store: (() => {
+      const json = createJsonFile<OutputSettings>(file, {
+        fallback: () => ({ windowed: false, monitorBySetup: {} }),
+      });
+      return { load: json.read, save: json.write };
+    })(),
     host: {
       // Only ever one Output window: reuse it, otherwise create it.
       show: (placement) => {
