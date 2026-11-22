@@ -27,6 +27,8 @@ Layout (renderers and main depend on `core`, never the reverse):
 - `src/operator/`, `src/output/`: thin renderers of core state (`index.html` + `<name>.ts`, bundled to `dist/<name>/<name>.js`). A new renderer page must be added to the page list in `scripts/build.mjs`.
 - New headless modules (import, API server, shuttle adapter) get their own `src/<module>/` folder with an `index.ts` and colocated tests.
 
+- `src/output-window/`: headless Output placement (chosen monitor per display setup, Windowed Output). Display list, settings store and window host are injected; main wires them to Electron.
+
 ## Installers
 
 - `npm run dist:mac` builds `release/Neoprompter-<ver>.dmg`; `npm run dist:win` builds `release/Neoprompter Setup <ver>.exe` (NSIS; cross-builds from macOS without wine). `npm run dist:check` verifies the artifacts exist. Config: `electron-builder.yml`. `release/` is git-ignored.
