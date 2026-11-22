@@ -1,9 +1,22 @@
 import { app, BrowserWindow, ipcMain } from 'electron';
 import path from 'node:path';
 import { createCore, type Command } from '../core';
+import fs from 'node:fs';
+import { createFileLibraryStorage } from '../library';
 import { IPC } from '../shared/ipc';
 
-const core = createCore();
+function createLibraryStorage() {
+  const file = path.join(app.getPath('userData'), 'library.json');
+  return createFileLibraryStorage(file, {
+    readFile: (p) => (fs.existsSync(p) ? fs.readFileSync(p, 'utf8') : null),
+    writeFile: (p, d) => {
+      fs.mkdirSync(path.dirname(p), { recursive: true });
+      fs.writeFileSync(p, d);
+    },
+  });
+}
+
+const core = createCore({ libraryStorage: createLibraryStorage() });
 const windows = new Set<BrowserWindow>();
 
 function openWindow(page: 'operator' | 'output', title: string, x: number): void {
