@@ -6,6 +6,7 @@ const statusEl = document.getElementById('status')!;
 import { renderAppearance } from './appearancePanel';
 import { renderEditor } from './editorPanel';
 import { renderShuttle } from './shuttlePanel';
+import './apiPanel';
 let playing = false;
 
 function render(state: CoreState): void {

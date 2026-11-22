@@ -14,4 +14,8 @@ export const IPC = {
   outputChooseMonitor: 'output:choose-monitor',
   /** renderer -> main (invoke): toggle Windowed Output, returns the new view */
   outputSetWindowed: 'output:set-windowed',
+  /** renderer -> main (invoke): Companion API settings and status */
+  apiGet: 'api:get',
+  /** renderer -> main (invoke): save Companion API settings (port, token), returns the new view */
+  apiSet: 'api:set',
 } as const;
