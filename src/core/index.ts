@@ -15,7 +15,7 @@ export type {
   ScriptLine,
 } from './types';
 export { lineHeading, lineRuns, lineText } from './richScript';
-export { contrastRatio, displayColor, MIN_CONTRAST } from './readableColor';
+export { contrastRatio, displayColor, readableTextOn, MIN_CONTRAST } from './readableColor';
 export { createMemoryLibraryStorage } from './library';
 export type { LibraryStorage, StoredScript } from './library';
 export { defaultAppearance, outputState, DEFAULT_NOTIFICATION_MS } from './types';

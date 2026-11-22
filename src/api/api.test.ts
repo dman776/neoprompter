@@ -217,3 +217,12 @@ describe('extension', () => {
     expect((await fetch(`http://127.0.0.1:${port}/?token=t`)).status).toBe(200);
   });
 });
+
+describe('POST /api/notify display time cap', () => {
+  it('caps a huge durationMs at the display-time maximum', async () => {
+    const { clock, core, post } = await setup();
+    expect((await post({ text: 'x', durationMs: 1e9 })).status).toBe(202);
+    clock.advance(60000);
+    expect(texts(core)).toEqual([]);
+  });
+});

@@ -47,3 +47,12 @@ describe('displayColor', () => {
     expect(MIN_CONTRAST).toBe(3);
   });
 });
+
+describe('displayColor final fallback', () => {
+  it('never returns a theme color that matches the background', () => {
+    const out = displayColor('#000000', '#000000', '#000000');
+    expect(contrastRatio(out, '#000000')).toBeGreaterThanOrEqual(MIN_CONTRAST);
+    const out2 = displayColor(undefined, '#ffffff', '#fefefe');
+    expect(contrastRatio(out2, '#ffffff')).toBeGreaterThanOrEqual(MIN_CONTRAST);
+  });
+});

@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { createCore } from './core';
 import { createFakeClock } from './clock';
 import { createMemoryPresetStore, type PresetStore } from './presets';
+import { contrastRatio, MIN_CONTRAST } from './readableColor';
+import { defaultAppearance } from './types';
 
 function setup(store: PresetStore = createMemoryPresetStore()) {
   const core = createCore({ clock: createFakeClock(), presetStore: store });
@@ -88,5 +90,37 @@ describe('presets', () => {
     expect(core2.getState().presets).toEqual(['Talent']);
     core2.dispatch({ type: 'loadPreset', name: 'Talent' });
     expect(core2.getState().appearance.fontSize).toBe(55);
+  });
+});
+
+describe('readable appearance', () => {
+  it('corrects a text color that matches the background', () => {
+    const { core } = setup();
+    core.dispatch({ type: 'setAppearance', changes: { textColor: '#000000' } });
+    const a = core.getState().appearance;
+    expect(a.backgroundColor).toBe('#000000');
+    expect(contrastRatio(a.textColor, a.backgroundColor)).toBeGreaterThanOrEqual(MIN_CONTRAST);
+  });
+
+  it('keeps the text readable when the background moves onto it', () => {
+    const { core } = setup();
+    core.dispatch({ type: 'setAppearance', changes: { backgroundColor: '#ffffff' } });
+    const a = core.getState().appearance;
+    expect(contrastRatio(a.textColor, a.backgroundColor)).toBeGreaterThanOrEqual(MIN_CONTRAST);
+  });
+
+  it('keeps a readable pair as chosen', () => {
+    const { core } = setup();
+    core.dispatch({ type: 'setAppearance', changes: { textColor: '#ffff00', backgroundColor: '#000080' } });
+    expect(core.getState().appearance.textColor).toBe('#ffff00');
+  });
+
+  it('does not load a low-contrast Preset as-is', () => {
+    const store = createMemoryPresetStore();
+    store.save({ bad: { ...defaultAppearance, textColor: '#111111' } });
+    const core = createCore({ clock: createFakeClock(), presetStore: store });
+    core.dispatch({ type: 'loadPreset', name: 'bad' });
+    const a = core.getState().appearance;
+    expect(contrastRatio(a.textColor, a.backgroundColor)).toBeGreaterThanOrEqual(MIN_CONTRAST);
   });
 });

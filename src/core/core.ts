@@ -18,6 +18,7 @@ import { createMemoryPresetStore, type PresetStore } from './presets';
 import { defaultAppearance, type Appearance } from './types';
 import { colorLineRange, editLineText, remapPosition } from './editing';
 import { PALETTE_COLORS } from './palette';
+import { contrastRatio, MIN_CONTRAST, readableTextOn } from './readableColor';
 import { lineText } from './richScript';
 import { createMemorySessionStore, type SessionStore } from './session';
 
@@ -39,6 +40,13 @@ export interface Core {
   getState(): CoreState;
   /** Called after every command that changes state. Returns an unsubscribe function. */
   subscribe(listener: (state: CoreState) => void): () => void;
+}
+
+/** An appearance whose text is unreadable on its background gets black or white text instead. */
+function readable(a: Appearance): Appearance {
+  return contrastRatio(a.textColor, a.backgroundColor) >= MIN_CONTRAST
+    ? a
+    : { ...a, textColor: readableTextOn(a.backgroundColor) };
 }
 
 export function createCore(options: CoreOptions = {}): Core {
@@ -118,7 +126,7 @@ export function createCore(options: CoreOptions = {}): Core {
       playStart = position;
     }
     speedLevel = clampLevel(restored.speedLevel);
-    appearance = { ...defaultAppearance, ...restored.appearance };
+    appearance = readable({ ...defaultAppearance, ...restored.appearance });
     activePreset =
       restored.activePreset && presets[restored.activePreset] ? restored.activePreset : null;
     outputBlank = true;
@@ -308,7 +316,7 @@ export function createCore(options: CoreOptions = {}): Core {
           break;
         }
         case 'setAppearance':
-          appearance = { ...appearance, ...command.changes };
+          appearance = readable({ ...appearance, ...command.changes });
           break;
         case 'toggleMirror':
           appearance = { ...appearance, mirror: !appearance.mirror };
@@ -323,7 +331,7 @@ export function createCore(options: CoreOptions = {}): Core {
         }
         case 'loadPreset':
           if (!presets[command.name]) return;
-          appearance = { ...presets[command.name] };
+          appearance = readable({ ...presets[command.name] });
           activePreset = command.name;
           break;
         case 'confirmOutput':
@@ -332,9 +340,14 @@ export function createCore(options: CoreOptions = {}): Core {
         case 'notify': {
           const text = command.text.trim();
           if (!text) return;
+          if (
+            command.durationMs !== undefined &&
+            !(Number.isFinite(command.durationMs) && command.durationMs > 0)
+          )
+            return;
           const ms =
-            command.durationMs !== undefined && command.durationMs > 0
-              ? command.durationMs
+            command.durationMs !== undefined
+              ? Math.min(command.durationMs, MAX_NOTIFICATION_MS)
               : notificationDurationMs;
           notifications = [
             ...notifications,

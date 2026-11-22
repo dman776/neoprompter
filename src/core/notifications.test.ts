@@ -42,11 +42,11 @@ describe('Notifications', () => {
     expect(texts(core)).toEqual([]);
   });
 
-  it('ignores blank text and invalid durations fall back to the setting', () => {
+  it('ignores blank text', () => {
     const { clock, core } = setup();
     core.dispatch({ type: 'notify', text: '   ' });
     expect(texts(core)).toEqual([]);
-    core.dispatch({ type: 'notify', text: 'x', durationMs: -5 });
+    core.dispatch({ type: 'notify', text: 'x' });
     clock.advance(DEFAULT_NOTIFICATION_MS - 1);
     expect(texts(core)).toEqual(['x']);
   });
@@ -131,5 +131,24 @@ describe('Notifications', () => {
     const again = createCore({ clock, sessionStore });
     expect(again.getState().notificationDurationMs).toBe(3000);
     expect(again.getState().notifications).toEqual([]);
+  });
+});
+
+describe('per-request display time', () => {
+  it('is capped at the maximum display time', () => {
+    const { clock, core } = setup();
+    core.dispatch({ type: 'notify', text: 'long', durationMs: 10 * 60 * 1000 });
+    clock.advance(59999);
+    expect(texts(core)).toEqual(['long']);
+    clock.advance(1);
+    expect(texts(core)).toEqual([]);
+  });
+
+  it('rejects non-positive and non-finite values', () => {
+    const { core } = setup();
+    for (const durationMs of [0, -5, NaN, Infinity]) {
+      core.dispatch({ type: 'notify', text: 'bad', durationMs });
+    }
+    expect(texts(core)).toEqual([]);
   });
 });

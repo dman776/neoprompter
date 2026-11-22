@@ -32,15 +32,27 @@ export function contrastRatio(a: string, b: string): number {
   return (hi + 0.05) / (lo + 0.05);
 }
 
+/** Black or white, whichever contrasts more with `background` (white if it is not a valid color). */
+export function readableTextOn(background: string): string {
+  const bg = parseHex(background);
+  if (!bg) return '#ffffff';
+  return contrastRatio('#ffffff', background) >= contrastRatio('#000000', background)
+    ? '#ffffff'
+    : '#000000';
+}
+
 /**
  * The color to show for a run: its source color if readable on the Output background,
- * otherwise the theme text color. Applied at render time; the Script is never rewritten.
+ * otherwise the theme text color, otherwise black or white (the theme color itself may
+ * match the background). Applied at render time; the Script is never rewritten.
  */
 export function displayColor(
   source: string | undefined,
   background: string,
   themeColor: string,
 ): string {
-  if (!source || !parseHex(source)) return themeColor;
-  return contrastRatio(source, background) >= MIN_CONTRAST ? source : themeColor;
+  if (source && parseHex(source) && contrastRatio(source, background) >= MIN_CONTRAST) return source;
+  return contrastRatio(themeColor, background) >= MIN_CONTRAST
+    ? themeColor
+    : readableTextOn(background);
 }
