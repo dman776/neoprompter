@@ -1,4 +1,4 @@
-import { lineRuns, lineText, PALETTE, type CoreState } from '../core';
+import { displayColor, lineRuns, lineText, PALETTE, type CoreState } from '../core';
 
 const root = document.getElementById('editor')!;
 const toolbar = document.createElement('div');
@@ -34,24 +34,33 @@ const addSwatch = (label: string, color: string | null, bg: string) => {
 for (const p of PALETTE) addSwatch(p.name, p.color, p.color);
 addSwatch('No color', null, '#ddd');
 
-let rows: { input: HTMLInputElement; preview: HTMLElement }[] = [];
+let rows: { input: HTMLInputElement; colorSample: HTMLElement }[] = [];
 let renderedKey = '';
 
-function paint(preview: HTMLElement, line: CoreState['script']['lines'][number]): void {
-  preview.textContent = '';
+/** Shows a line's runs as the Output would: on the Preset's colors, through the readable-color guard. */
+function paint(
+  colorSample: HTMLElement,
+  line: CoreState['script']['lines'][number],
+  appearance: CoreState['appearance'],
+): void {
+  colorSample.textContent = '';
+  colorSample.style.background = appearance.backgroundColor;
+  colorSample.style.color = appearance.textColor;
   for (const run of lineRuns(line)) {
     const span = document.createElement('span');
     span.textContent = run.text;
-    if (run.color) span.style.color = run.color;
+    if (run.color)
+      span.style.color = displayColor(run.color, appearance.backgroundColor, appearance.textColor);
     if (run.bold) span.style.fontWeight = 'bold';
     if (run.italic) span.style.fontStyle = 'italic';
-    preview.append(span);
+    colorSample.append(span);
   }
 }
 
 export function renderEditor(state: CoreState): void {
   const lines = state.script.lines;
-  const key = JSON.stringify(lines);
+  const { backgroundColor, textColor } = state.appearance;
+  const key = JSON.stringify([lines, backgroundColor, textColor]);
   if (key === renderedKey) return;
   renderedKey = key;
   if (rows.length !== lines.length) {
@@ -64,23 +73,23 @@ export function renderEditor(state: CoreState): void {
       input.addEventListener('input', () =>
         window.neoprompter.dispatch({ type: 'editLine', line: i, text: input.value }),
       );
-      const preview = document.createElement('span');
-      preview.style.cssText = 'margin:0 8px;background:#000;padding:2px 6px';
+      const colorSample = document.createElement('span');
+      colorSample.style.cssText = 'margin:0 8px;padding:2px 6px';
       const cut = document.createElement('button');
       cut.textContent = 'Cut line';
       cut.addEventListener('click', () =>
         window.neoprompter.dispatch({ type: 'cutLines', from: i, count: 1 }),
       );
-      row.append(input, preview, cut);
+      row.append(input, colorSample, cut);
       list.append(row);
-      return { input, preview };
+      return { input, colorSample };
     });
     active = null;
   }
   lines.forEach((line, i) => {
-    const { input, preview } = rows[i];
+    const { input, colorSample } = rows[i];
     const text = lineText(line);
     if (input.value !== text) input.value = text;
-    paint(preview, line);
+    paint(colorSample, line, state.appearance);
   });
 }

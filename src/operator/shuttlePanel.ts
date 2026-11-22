@@ -15,7 +15,7 @@ const STORAGE_KEY = 'neoprompter.buttonMapping';
 let state: CoreState | null = null;
 
 /** The mapper's view of the core: commands go over IPC, state is the last broadcast. */
-const remoteCore = {
+const operatorCoreProxy = {
   dispatch(command: Command) {
     // Keep rapid repeated actions (jog turns, key repeat) from reading stale state.
     if (state && command.type === 'setSpeed') {
@@ -41,7 +41,7 @@ function saveMapping(mapping: ButtonMapping): void {
   }
 }
 
-export const mapper = createInputMapper(remoteCore, loadMapping());
+export const mapper = createInputMapper(operatorCoreProxy, loadMapping());
 
 const label: Record<string, string> = {
   none: 'Unassigned',
@@ -182,8 +182,8 @@ document.addEventListener('keydown', (e) => {
 document.addEventListener(
   'wheel',
   (e) => {
-    const t = e.target as HTMLElement;
-    if (t.closest('textarea, select, #library')) return;
+    // Only the Virtual shuttle area repositions; everywhere else the page scrolls normally.
+    if (!(e.target as HTMLElement).closest('#shuttle')) return;
     e.preventDefault();
     mapper.handle({ kind: 'scroll', lines: wheelToLines(e.deltaY, e.deltaMode) });
   },
