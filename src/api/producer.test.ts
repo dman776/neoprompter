@@ -43,15 +43,68 @@ describe('Producer page', () => {
     expect(html).not.toMatch(/<link[^>]+href=/i);
     expect(html).not.toMatch(/<script[^>]+src=/i);
   });
+});
 
-  it('is served without a token (so it can prompt for one) and never embeds the token', async () => {
+/** What a browser sends once its own password box has been filled in: the token is the password. */
+const basic = (password: string, user = '') => ({
+  authorization: `Basic ${Buffer.from(`${user}:${password}`).toString('base64')}`,
+});
+
+describe('Producer page token', () => {
+  it('needs the token to open, and asks the browser for it', async () => {
     const { call } = await setup({ token: 'sekret-123' });
     const res = await call('/');
-    expect(res.status).toBe(200);
-    expect(await res.text()).not.toContain('sekret-123');
-    // but the data routes still need it
-    expect((await call('/api/quick-messages')).status).toBe(401);
-    expect((await call('/api/notify', { method: 'POST', body: '{"text":"x"}' })).status).toBe(401);
+    expect(res.status).toBe(401);
+    expect(res.headers.get('www-authenticate')).toMatch(/^Basic /i);
+    expect(await res.text()).not.toContain('<html');
+  });
+
+  it('opens with the token as the Basic password, whatever the username', async () => {
+    const { call } = await setup({ token: 'sekret-123' });
+    for (const user of ['', 'producer']) {
+      const res = await call('/', { headers: basic('sekret-123', user) });
+      expect(res.status).toBe(200);
+      expect(res.headers.get('content-type')).toMatch(/text\/html/);
+      expect(await res.text()).not.toContain('sekret-123');
+    }
+  });
+
+  it('rejects a wrong password, an empty one, and a token in the URL', async () => {
+    const { call } = await setup({ token: 'sekret-123' });
+    expect((await call('/', { headers: basic('wrong') })).status).toBe(401);
+    expect((await call('/', { headers: basic('') })).status).toBe(401);
+    expect((await call('/?token=sekret-123')).status).toBe(401);
+  });
+
+  it('takes a token that contains a colon', async () => {
+    const { call } = await setup({ token: 'a:b:c' });
+    expect((await call('/', { headers: basic('a:b:c') })).status).toBe(200);
+  });
+
+  it('lets the page reach the data routes with the same browser credentials', async () => {
+    const { core, call } = await setup({ token: 'sekret-123' });
+    const h = basic('sekret-123');
+    expect((await call('/api/quick-messages', { headers: h })).status).toBe(200);
+    const sent = await call('/api/notify', {
+      method: 'POST',
+      headers: h,
+      body: JSON.stringify({ text: 'Wrap up' }),
+    });
+    expect(sent.status).toBe(202);
+    expect(core.getState().notifications.map((n) => n.text)).toEqual(['Wrap up']);
+  });
+
+  it('still accepts the Bearer and X-Neoprompter-Token headers that Companion sends', async () => {
+    const { call } = await setup({ token: 'sekret-123' });
+    expect((await call('/', { headers: { authorization: 'Bearer sekret-123' } })).status).toBe(200);
+    expect((await call('/', { headers: { 'x-neoprompter-token': 'sekret-123' } })).status).toBe(
+      200,
+    );
+  });
+
+  it('is open when no token is set', async () => {
+    const { call } = await setup();
+    expect((await call('/')).status).toBe(200);
   });
 });
 
@@ -116,12 +169,14 @@ describe('sending from the page', () => {
     expect(core.getState().notifications.map((n) => n.text)).toEqual(['Slow down']);
   });
 
-  it('the page script posts to /api/notify and sends the token as a header', async () => {
+  it('the page script posts to /api/notify and keeps no token of its own', async () => {
     const { call } = await setup();
     const html = await (await call('/')).text();
     expect(html).toContain('/api/notify');
     expect(html).toContain('/api/quick-messages');
-    expect(html).toContain('X-Neoprompter-Token');
+    // The browser holds the credentials after its own prompt; the page stores and sends none.
+    expect(html).not.toContain('localStorage');
+    expect(html).not.toContain('X-Neoprompter-Token');
   });
 });
 

@@ -29,11 +29,9 @@ export function normalizeQuickMessages(raw: unknown): string[] | null {
 /** The Producer page plus the quick-message list. Nothing here touches transport. */
 export function createProducerRoutes(store: QuickMessageStore): Route[] {
   return [
-    // The page is static and holds no data, so it is served without the token; that lets it ask for one.
     {
       method: 'GET',
       path: '/',
-      public: true,
       handler: (_req, res) => res.send(200, 'text/html; charset=utf-8', PRODUCER_PAGE),
     },
     {

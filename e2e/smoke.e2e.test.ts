@@ -102,4 +102,78 @@ describe('the running app', () => {
     await operator.screenshot({ path: join(artifacts, 'operator.png') });
     expect(await operator.title()).toContain('Operator view');
   });
+
+  describe('the Producer page with a token set', () => {
+    const port = 47811;
+    const TOKEN = 'e2e-token';
+
+    /** Opens the page in a second Chromium window that answers the browser's password prompt. */
+    const openAs = (password: string | null) =>
+      app.evaluate(
+        async ({ BrowserWindow }, { port, password }) => {
+          const win = new BrowserWindow({ show: false });
+          // A different phone has no cached login: forget any earlier window's credentials.
+          await win.webContents.session.clearAuthCache();
+          let answered = false;
+          win.webContents.on('login', (event, _request, _authInfo, callback) => {
+            event.preventDefault();
+            // Answer the prompt once; if it comes back (wrong token), the person gives up.
+            if (password === null || answered) callback();
+            else {
+              answered = true;
+              callback('', password);
+            }
+          });
+          await win.loadURL(`http://127.0.0.1:${port}/`);
+          // Give the page's own requests (the quick-message list) time to finish.
+          for (let i = 0; i < 50; i++) {
+            const buttons = await win.webContents.executeJavaScript(
+              "document.querySelectorAll('#quick button').length",
+            );
+            if (buttons > 0) break;
+            await new Promise((r) => setTimeout(r, 100));
+          }
+          const result = await win.webContents.executeJavaScript(
+            "({ buttons: document.querySelectorAll('#quick button').length, text: document.body.innerText.slice(0, 200) })",
+          );
+          win.destroy();
+          return result as { buttons: number; text: string };
+        },
+        { port, password },
+      );
+
+    beforeAll(async () => {
+      await operator.evaluate((s) => (window as any).neoprompter.setApiSettings(s), {
+        port,
+        token: TOKEN,
+      });
+      // The server restarts on the new port; wait until it answers.
+      for (let i = 0; i < 50; i++) {
+        const status = await fetch(`http://127.0.0.1:${port}/api/status`).then(
+          (r) => r.status,
+          () => 0,
+        );
+        if (status === 401) return;
+        await new Promise((r) => setTimeout(r, 100));
+      }
+      throw new Error('The API did not restart on the new port');
+    });
+
+    it('shows the page, with its quick-message buttons, once the browser sends the token', async () => {
+      const page = await openAs(TOKEN);
+      expect(page.buttons).toBeGreaterThan(0);
+    });
+
+    it('does not show the page when the browser has no token to give', async () => {
+      const page = await openAs(null);
+      expect(page.buttons).toBe(0);
+      expect(page.text).toContain('Missing or wrong token');
+    });
+
+    it('does not show the page for the wrong token', async () => {
+      const page = await openAs('not-the-token');
+      expect(page.buttons).toBe(0);
+      expect(page.text).toContain('Missing or wrong token');
+    });
+  });
 });

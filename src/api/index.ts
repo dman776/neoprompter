@@ -51,8 +51,6 @@ export interface ApiResponse {
 export interface Route {
   method: 'GET' | 'POST';
   path: string;
-  /** Skips the token check (still behind the address gate). Only for static pages that hold no data. */
-  public?: boolean;
   handler(req: ApiRequest, res: ApiResponse): void;
 }
 
@@ -168,20 +166,31 @@ export function createApiServer(options: ApiServerOptions): ApiServer {
   };
   const routes: Route[] = [notify, status, ...(options.extraRoutes ?? [])];
 
-  function authorized(req: http.IncomingMessage): boolean {
-    if (!token) return true;
-    const bearer = /^Bearer (.+)$/i.exec(req.headers.authorization ?? '')?.[1];
+  /**
+   * The token arrives as `Authorization: Bearer`, `X-Neoprompter-Token` (Companion), or as the
+   * password of HTTP Basic (a browser's own prompt for the Producer page; the username is ignored).
+   */
+  function givenToken(req: http.IncomingMessage): string {
+    const auth = req.headers.authorization ?? '';
+    const bearer = /^Bearer (.+)$/i.exec(auth)?.[1];
+    if (bearer !== undefined) return bearer;
+    const basic = /^Basic (.+)$/i.exec(auth)?.[1];
+    if (basic !== undefined) {
+      const credentials = Buffer.from(basic, 'base64').toString('utf8');
+      return credentials.slice(credentials.indexOf(':') + 1);
+    }
     const header = req.headers['x-neoprompter-token'];
-    const given = bearer ?? (typeof header === 'string' ? header : undefined) ?? '';
-    return tokensMatch(given, token);
+    return typeof header === 'string' ? header : '';
   }
+  const authorized = (req: http.IncomingMessage): boolean =>
+    !token || tokensMatch(givenToken(req), token);
 
   const server = http.createServer((req, httpRes) => {
     const send = (
       status: number,
       contentType: string,
       body: string,
-      extra: Record<string, string> = {},
+      extra: Record<string, string | string[]> = {},
     ) => {
       httpRes.writeHead(status, {
         'content-type': contentType,
@@ -190,17 +199,19 @@ export function createApiServer(options: ApiServerOptions): ApiServer {
       });
       httpRes.end(body);
     };
-    const json = (status: number, body: unknown, extra?: Record<string, string>) =>
+    const json = (status: number, body: unknown, extra?: Record<string, string | string[]>) =>
       send(status, 'application/json; charset=utf-8', JSON.stringify(body), extra);
 
     // 1. Address gate, 2. token, 3. routing. Everything, including 404s, passes the first two.
     if (!allowed(req.socket.remoteAddress)) return json(403, { error: 'Local network only' });
     const url = new URL(req.url ?? '/', 'http://localhost');
-    const isPublicPage = routes.some(
-      (r) => r.public && r.path === url.pathname && r.method === req.method,
-    );
-    if (!isPublicPage && !authorized(req)) {
-      return json(401, { error: 'Missing or wrong token' }, { 'www-authenticate': 'Bearer' });
+    if (!authorized(req)) {
+      // Basic makes a browser ask for the token; Bearer tells API clients what to send.
+      return json(
+        401,
+        { error: 'Missing or wrong token' },
+        { 'www-authenticate': ['Basic realm="Neoprompter", charset="UTF-8"', 'Bearer'] },
+      );
     }
     const matching = routes.filter((r) => r.path === url.pathname);
     if (matching.length === 0) return json(404, { error: 'Not found' });

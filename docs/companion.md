@@ -8,8 +8,9 @@ If a token is set, every request must carry it, or it gets `401`. Either of:
 
 - header `Authorization: Bearer <token>`
 - header `X-Neoprompter-Token: <token>`
+- HTTP Basic, with the token as the password and any username (this is what a browser's own password box sends)
 
-A `?token=` query string is not accepted (URLs end up in logs and browser history).
+The Producer page needs the token too: the browser asks for it in its own password box when the page opens (any username, the token as the password). A `?token=` query string is not accepted (URLs end up in logs and browser history).
 
 Requests from outside the local network get `403` whatever the token.
 

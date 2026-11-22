@@ -1,6 +1,7 @@
 /**
  * The Producer page: one self-contained HTML document (inline CSS and JS, no remote resources).
- * It never contains the API token; the page asks for it in the browser and keeps it in localStorage.
+ * It never contains the API token. With a token set, the browser asks for it in its own password
+ * box (HTTP Basic) before showing the page, then sends it on the page's requests itself.
  */
 export const PRODUCER_PAGE = `<!doctype html>
 <html lang="en">
@@ -33,14 +34,6 @@ export const PRODUCER_PAGE = `<!doctype html>
 <main>
   <h1>Neoprompter: send a Notification to the Operator</h1>
 
-  <section id="tokenBox" hidden>
-    <p>This Neoprompter needs an access token. Ask the Operator for it.</p>
-    <div class="row">
-      <input id="tokenInput" type="password" autocomplete="off" autocapitalize="off" placeholder="Access token" aria-label="Access token">
-      <button id="tokenSave" class="small">Use token</button>
-    </div>
-  </section>
-
   <section>
     <textarea id="text" maxlength="500" placeholder="Short plain-text Notification" aria-label="Notification"></textarea>
     <button id="send" class="primary">Send</button>
@@ -67,25 +60,19 @@ export const PRODUCER_PAGE = `<!doctype html>
 </main>
 <script>
 (function () {
-  var KEY = 'neoprompter-token';
   var $ = function (id) { return document.getElementById(id); };
   var messages = [];
-  var token = '';
-  try { token = localStorage.getItem(KEY) || ''; } catch (e) {}
 
   function setStatus(text, kind) {
     var s = $('status');
     s.textContent = text;
     s.className = kind || '';
   }
-  function needToken(wrong) {
-    $('tokenBox').hidden = false;
-    setStatus(wrong ? 'Wrong or missing token. Enter the token and try again.' : 'Enter the access token to continue.', 'bad');
+  function denied() {
+    setStatus('Access denied. Reload and enter the access token.', 'bad');
   }
   function call(path, method, body) {
-    var headers = { 'Content-Type': 'application/json' };
-    if (token) headers['X-Neoprompter-Token'] = token;
-    return fetch(path, { method: method, headers: headers, body: body === undefined ? undefined : JSON.stringify(body) })
+    return fetch(path, { method: method, headers: { 'Content-Type': 'application/json' }, body: body === undefined ? undefined : JSON.stringify(body) })
       .then(function (res) {
         if (res.status === 401) { var err = new Error('token'); err.auth = true; throw err; }
         return res.json().catch(function () { return {}; }).then(function (data) {
@@ -95,7 +82,7 @@ export const PRODUCER_PAGE = `<!doctype html>
       });
   }
   function fail(e, what) {
-    if (e && e.auth) return needToken(!!token);
+    if (e && e.auth) return denied();
     var offline = e instanceof TypeError;
     setStatus(offline ? 'Could not reach Neoprompter. Check you are on the same network.' : what + ' failed: ' + e.message, 'bad');
   }
@@ -152,7 +139,7 @@ export const PRODUCER_PAGE = `<!doctype html>
 
   function load() {
     return call('/api/quick-messages', 'GET')
-      .then(function (data) { messages = data.messages || []; renderQuick(); $('tokenBox').hidden = true; if (/token/i.test($('status').textContent)) setStatus('', ''); })
+      .then(function (data) { messages = data.messages || []; renderQuick(); })
       .catch(function (e) { fail(e, 'Loading buttons'); });
   }
 
@@ -166,12 +153,6 @@ export const PRODUCER_PAGE = `<!doctype html>
     call('/api/quick-messages', 'POST', { messages: list })
       .then(function (data) { messages = data.messages; renderQuick(); closeEditor(); setStatus('Buttons saved.', 'ok'); })
       .catch(function (e) { fail(e, 'Saving buttons'); });
-  };
-  $('tokenSave').onclick = function () {
-    token = $('tokenInput').value.trim();
-    try { localStorage.setItem(KEY, token); } catch (e) {}
-    $('tokenInput').value = '';
-    load();
   };
   load();
 })();
