@@ -8,6 +8,8 @@ export interface Session {
   speedLevel: number;
   appearance: Appearance;
   activePreset: string | null;
+  /** Optional so older session files still load. */
+  notificationDurationMs?: number;
 }
 
 /** Persistence for the last session. Injected so tests never touch the disk. */

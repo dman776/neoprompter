@@ -32,7 +32,7 @@ export const defaultButtonMapping: ButtonMapping = {
   2: 'jumpBack',
   3: 'jumpForward',
   4: 'none',
-  /** Reserved; does nothing until a later ticket registers it. */
+  /** Dismisses the newest Notification. */
   5: 'dismissNotification',
 };
 
@@ -80,8 +80,7 @@ export function createInputMapper(
     ['returnToPlayStart', () => core.dispatch({ type: 'returnToPlayStart' })],
     ['speedUp', () => core.dispatch({ type: 'setSpeed', level: core.getState().speedLevel + 1 })],
     ['speedDown', () => core.dispatch({ type: 'setSpeed', level: core.getState().speedLevel - 1 })],
-    // Reserved for ticket 15; no-op until registered.
-    ['dismissNotification', () => {}],
+    ['dismissNotification', () => core.dispatch({ type: 'dismissNotification' })],
   ]);
   let mapping: ButtonMapping = { ...defaultButtonMapping };
   let lastJog: number | null = null;

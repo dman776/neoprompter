@@ -1,7 +1,11 @@
 import { systemClock, type Clock } from './clock';
 import { sampleScript } from './sampleScript';
 import {
+  DEFAULT_NOTIFICATION_MS,
   LEAD_IN_LINES,
+  MAX_NOTIFICATIONS,
+  MAX_NOTIFICATION_MS,
+  MIN_NOTIFICATION_MS,
   LINES_PER_SECOND_PER_LEVEL,
   MAX_SPEED_LEVEL,
   RING_MAX_LINES_PER_SECOND,
@@ -64,6 +68,13 @@ export function createCore(options: CoreOptions = {}): Core {
   let lastSave = clock.now();
   const SAVE_INTERVAL_MS = 1000;
 
+  let notificationDurationMs = DEFAULT_NOTIFICATION_MS;
+  const clampDuration = (ms: number) =>
+    Math.max(MIN_NOTIFICATION_MS, Math.min(MAX_NOTIFICATION_MS, Math.round(ms)));
+  /** Oldest first; each carries its own expiry. Never persisted, never logged. */
+  let notifications: { id: number; text: string; expiresAt: number }[] = [];
+  let nextNotificationId = 1;
+
   const restored = sessionStore.load();
   if (restored) {
     const entry = restored.loadedScriptId
@@ -81,10 +92,21 @@ export function createCore(options: CoreOptions = {}): Core {
       restored.activePreset && presets[restored.activePreset] ? restored.activePreset : null;
     outputBlank = true;
   }
+  if (restored?.notificationDurationMs !== undefined) {
+    notificationDurationMs = clampDuration(restored.notificationDurationMs);
+  }
 
   function autosave(): void {
     lastSave = clock.now();
-    sessionStore.save({ script, loadedScriptId, position, speedLevel, appearance, activePreset });
+    sessionStore.save({
+      script,
+      loadedScriptId,
+      position,
+      speedLevel,
+      appearance,
+      activePreset,
+      notificationDurationMs,
+    });
   }
 
   const listeners = new Set<(state: CoreState) => void>();
@@ -98,6 +120,7 @@ export function createCore(options: CoreOptions = {}): Core {
       if (playing && position >= maxPosition()) playing = false;
     }
     lastTick = now;
+    notifications = notifications.filter((n) => n.expiresAt > now);
   }
 
   function snapshot(): CoreState {
@@ -119,6 +142,8 @@ export function createCore(options: CoreOptions = {}): Core {
       presets: Object.keys(presets),
       activePreset,
       outputBlank,
+      notifications: notifications.map(({ id, text }) => ({ id, text })).reverse(),
+      notificationDurationMs,
     };
   }
 
@@ -207,6 +232,27 @@ export function createCore(options: CoreOptions = {}): Core {
           break;
         case 'confirmOutput':
           outputBlank = false;
+          break;
+        case 'notify': {
+          const text = command.text.trim();
+          if (!text) return;
+          const ms =
+            command.durationMs !== undefined && command.durationMs > 0
+              ? command.durationMs
+              : notificationDurationMs;
+          notifications = [
+            ...notifications,
+            { id: nextNotificationId++, text, expiresAt: clock.now() + ms },
+          ].slice(-MAX_NOTIFICATIONS);
+          break;
+        }
+        case 'dismissNotification': {
+          const target = command.id ?? notifications[notifications.length - 1]?.id;
+          notifications = notifications.filter((n) => n.id !== target);
+          break;
+        }
+        case 'setNotificationDuration':
+          notificationDurationMs = clampDuration(command.ms);
           break;
         case 'deletePreset': {
           if (!presets[command.name]) return;

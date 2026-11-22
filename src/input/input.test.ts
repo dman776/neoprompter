@@ -101,6 +101,14 @@ describe('input mapping', () => {
     expect(dismissed).toBe(1);
   });
 
+  it('button 5 dismisses the newest Notification by default', () => {
+    const { core, mapper } = setup();
+    core.dispatch({ type: 'notify', text: 'a' });
+    core.dispatch({ type: 'notify', text: 'b' });
+    mapper.handle({ kind: 'button', button: 5, pressed: true });
+    expect(core.getState().notifications.map((n) => n.text)).toEqual(['a']);
+  });
+
   it('speed up and speed down actions move the speed level', () => {
     const { core, mapper } = setup();
     const base = core.getState().speedLevel;

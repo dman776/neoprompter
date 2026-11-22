@@ -7,6 +7,8 @@ export type {
   Command,
   CoreState,
   LibraryEntry,
+  Notification,
+  OutputState,
   RichLine,
   Run,
   Script,
@@ -15,7 +17,7 @@ export type {
 export { lineHeading, lineRuns, lineText } from './richScript';
 export { createMemoryLibraryStorage } from './library';
 export type { LibraryStorage, StoredScript } from './library';
-export { defaultAppearance } from './types';
+export { defaultAppearance, outputState, DEFAULT_NOTIFICATION_MS } from './types';
 export { createMemoryPresetStore } from './presets';
 export type { PresetStore } from './presets';
 export { createMemorySessionStore } from './session';
