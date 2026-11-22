@@ -4,12 +4,14 @@ const toggle = document.getElementById('toggle') as HTMLButtonElement;
 const nameEl = document.getElementById('script-name')!;
 const statusEl = document.getElementById('status')!;
 import { renderAppearance } from './appearancePanel';
+import { renderEditor } from './editorPanel';
 import { renderShuttle } from './shuttlePanel';
 let playing = false;
 
 function render(state: CoreState): void {
   renderAppearance(state);
   renderShuttle(state);
+  renderEditor(state);
   playing = state.playing;
   nameEl.textContent = state.script.name;
   toggle.textContent = state.playing ? 'Pause' : 'Play';

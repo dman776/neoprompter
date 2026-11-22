@@ -42,6 +42,12 @@ export type Command =
   | { type: 'loadScript'; id: string }
   | { type: 'renameScript'; id: string; name: string }
   | { type: 'deleteScript'; id: string }
+  /** Minimal editing. Replace the text of one line (newlines split it); styling on unchanged text is kept. */
+  | { type: 'editLine'; line: number; text: string }
+  /** Remove `count` lines starting at `from`. */
+  | { type: 'cutLines'; from: number; count: number }
+  /** Color characters [start, end) of a line with a palette color; null clears it. */
+  | { type: 'colorRange'; line: number; start: number; end: number; color: string | null }
   | { type: 'setAppearance'; changes: Partial<Appearance> }
   /** Deliberately a separate command so shuttle button mapping can exclude it. */
   | { type: 'toggleMirror' }

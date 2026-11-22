@@ -20,3 +20,4 @@ export { createMemoryPresetStore } from './presets';
 export type { PresetStore } from './presets';
 export { createMemorySessionStore } from './session';
 export type { Session, SessionStore } from './session';
+export { PALETTE, PALETTE_COLORS } from './palette';
