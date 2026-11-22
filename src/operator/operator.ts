@@ -57,6 +57,12 @@ document.getElementById('save')!.addEventListener('click', () => {
   newText.value = '';
 });
 
+const importNote = document.getElementById('import-note')!;
+document.getElementById('import')!.addEventListener('click', async () => {
+  const result = await window.neoprompter.importScript();
+  if (result) importNote.textContent = result.message;
+});
+
 toggle.addEventListener('click', () => {
   window.neoprompter.dispatch({ type: playing ? 'pause' : 'play' });
 });

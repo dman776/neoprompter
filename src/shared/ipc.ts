@@ -6,6 +6,8 @@ export const IPC = {
   command: 'core:command',
   /** renderer -> main (invoke): fetch current CoreState */
   getState: 'core:get-state',
+  /** renderer -> main (invoke): pick a Word file and import it into the library */
+  importScript: 'library:import',
   /** renderer -> main (invoke): Output monitor settings view */
   outputGetView: 'output:get-view',
   /** renderer -> main (invoke): choose Output monitor, returns the new view */

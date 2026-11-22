@@ -6,6 +6,9 @@ import type { OutputWindowView } from '../output-window';
 const api = {
   getState: (): Promise<CoreState> => ipcRenderer.invoke(IPC.getState),
   dispatch: (command: Command): void => ipcRenderer.send(IPC.command, command),
+  /** Opens a file picker and imports the chosen file; resolves to a message to show, or null if cancelled. */
+  importScript: (): Promise<{ ok: boolean; message: string } | null> =>
+    ipcRenderer.invoke(IPC.importScript),
   getOutputView: (): Promise<OutputWindowView> => ipcRenderer.invoke(IPC.outputGetView),
   chooseOutputMonitor: (id: string): Promise<OutputWindowView> =>
     ipcRenderer.invoke(IPC.outputChooseMonitor, id),

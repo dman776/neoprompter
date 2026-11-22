@@ -1,7 +1,8 @@
-import { app, BrowserWindow, ipcMain, screen } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, screen } from 'electron';
+import { importDocx } from '../import';
 import fs from 'node:fs';
 import path from 'node:path';
-import { createCore, type Command } from '../core';
+import { createCore, lineText, type Command } from '../core';
 import { createFileLibraryStorage } from '../library';
 import { IPC } from '../shared/ipc';
 import { createFilePresetStore } from './filePresetStore';
@@ -102,6 +103,32 @@ function createOutputManager() {
 app.whenReady().then(() => {
   ipcMain.handle(IPC.getState, () => core.getState());
   ipcMain.on(IPC.command, (_e, command: Command) => core.dispatch(command));
+  ipcMain.handle(IPC.importScript, async () => {
+    const picked = await dialog.showOpenDialog({
+      title: 'Import Script',
+      properties: ['openFile'],
+      filters: [{ name: 'Word document', extensions: ['docx'] }],
+    });
+    if (picked.canceled || picked.filePaths.length === 0) return null;
+    const file = picked.filePaths[0];
+    const name = path.basename(file);
+    let bytes: Uint8Array;
+    try {
+      bytes = fs.readFileSync(file);
+    } catch {
+      return { ok: false, message: `"${name}" could not be read.` };
+    }
+    const result = importDocx(bytes, name);
+    if (!result.ok) return result;
+    const { script } = result;
+    core.dispatch({
+      type: 'saveScript',
+      name: script.name,
+      text: script.lines.map(lineText).join('\n'),
+      lines: script.lines,
+    });
+    return { ok: true, message: `Imported "${script.name}" into the library.` };
+  });
 
   // Broadcast on command changes, plus a steady tick so scrolling is visible.
   const broadcast = () => {
