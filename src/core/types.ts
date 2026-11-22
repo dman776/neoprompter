@@ -24,6 +24,8 @@ export interface CoreState {
   script: Script;
   /** Reading position in lines from the top of the Script. */
   position: number;
+  /** Fraction of the Script read, 0 to 1. Drives the Progress bar. */
+  progress: number;
   /** Scroll speed in lines per second (independent of font size). */
   speed: number;
   playing: boolean;
