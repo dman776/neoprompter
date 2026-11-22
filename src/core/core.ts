@@ -11,6 +11,7 @@ import {
 import { createMemoryLibraryStorage, type LibraryStorage } from './library';
 import { createMemoryPresetStore, type PresetStore } from './presets';
 import { defaultAppearance, type Appearance } from './types';
+import { createMemorySessionStore, type SessionStore } from './session';
 
 export interface CoreOptions {
   clock?: Clock;
@@ -20,6 +21,8 @@ export interface CoreOptions {
   /** Where the Script library is stored. Defaults to in-memory. */
   libraryStorage?: LibraryStorage;
   presetStore?: PresetStore;
+  /** Where the last session is autosaved. Defaults to in-memory. */
+  sessionStore?: SessionStore;
 }
 
 export interface Core {
@@ -54,6 +57,34 @@ export function createCore(options: CoreOptions = {}): Core {
   let playStart = minPosition;
   let playing = false;
   let lastTick = clock.now();
+  const sessionStore = options.sessionStore ?? createMemorySessionStore();
+  let outputBlank = false;
+  let lastSave = clock.now();
+  const SAVE_INTERVAL_MS = 1000;
+
+  const restored = sessionStore.load();
+  if (restored) {
+    const entry = restored.loadedScriptId
+      ? stored.find((s) => s.id === restored.loadedScriptId)
+      : undefined;
+    if (restored.loadedScriptId === null || entry) {
+      script = restored.script;
+      loadedScriptId = entry ? entry.id : null;
+      position = clampPosition(restored.position);
+      playStart = position;
+    }
+    speedLevel = clampLevel(restored.speedLevel);
+    appearance = { ...defaultAppearance, ...restored.appearance };
+    activePreset =
+      restored.activePreset && presets[restored.activePreset] ? restored.activePreset : null;
+    outputBlank = true;
+  }
+
+  function autosave(): void {
+    lastSave = clock.now();
+    sessionStore.save({ script, loadedScriptId, position, speedLevel, appearance, activePreset });
+  }
+
   const listeners = new Set<(state: CoreState) => void>();
 
   function tick(): void {
@@ -84,6 +115,7 @@ export function createCore(options: CoreOptions = {}): Core {
       appearance: { ...appearance },
       presets: Object.keys(presets),
       activePreset,
+      outputBlank,
     };
   }
 
@@ -159,6 +191,9 @@ export function createCore(options: CoreOptions = {}): Core {
           appearance = { ...presets[command.name] };
           activePreset = command.name;
           break;
+        case 'confirmOutput':
+          outputBlank = false;
+          break;
         case 'deletePreset': {
           if (!presets[command.name]) return;
           const { [command.name]: _gone, ...rest } = presets;
@@ -168,11 +203,13 @@ export function createCore(options: CoreOptions = {}): Core {
           break;
         }
       }
+      autosave();
       const state = snapshot();
       listeners.forEach((l) => l(state));
     },
     getState() {
       tick();
+      if (playing && clock.now() - lastSave >= SAVE_INTERVAL_MS) autosave();
       return snapshot();
     },
     subscribe(listener) {

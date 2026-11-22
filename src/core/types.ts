@@ -24,7 +24,9 @@ export type Command =
   | { type: 'toggleMirror' }
   | { type: 'savePreset'; name: string }
   | { type: 'loadPreset'; name: string }
-  | { type: 'deletePreset'; name: string };
+  | { type: 'deletePreset'; name: string }
+  /** Operator confirms after a restore; until then the Output stays blank. */
+  | { type: 'confirmOutput' };
 
 export const MAX_SPEED_LEVEL = 10;
 /** Lines per second for each speed level step. */
@@ -91,4 +93,6 @@ export interface CoreState {
   /** Names of saved Presets. */
   presets: string[];
   activePreset: string | null;
+  /** True after a restore until the Operator confirms; the Output renders nothing. */
+  outputBlank: boolean;
 }
