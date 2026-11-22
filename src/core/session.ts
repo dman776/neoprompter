@@ -1,8 +1,8 @@
-import type { Appearance } from './types';
+import type { Appearance, Script } from './types';
 
 /** What survives a crash or restart. Never includes "playing": a restore is always paused. */
 export interface Session {
-  script: { name: string; lines: string[] };
+  script: Script;
   loadedScriptId: string | null;
   position: number;
   speedLevel: number;
