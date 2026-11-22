@@ -26,3 +26,4 @@ Layout (renderers and main depend on `core`, never the reverse):
 - `src/main/`: Electron main process and preload; owns the core instance and bridges IPC (`src/shared/ipc.ts`). Renderers use `window.neoprompter` (`getState`, `dispatch`, `onState`).
 - `src/operator/`, `src/output/`: thin renderers of core state (`index.html` + `<name>.ts`, bundled to `dist/<name>/<name>.js`). A new renderer page must be added to the page list in `scripts/build.mjs`.
 - New headless modules (import, API server, shuttle adapter) get their own `src/<module>/` folder with an `index.ts` and colocated tests.
+- `src/output-window/`: headless Output placement (chosen monitor per display setup, Windowed Output). Display list, settings store and window host are injected; main wires them to Electron.
