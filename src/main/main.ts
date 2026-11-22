@@ -2,7 +2,7 @@ import { app, BrowserWindow, dialog, ipcMain, screen } from 'electron';
 import { importDocx } from '../import';
 import fs from 'node:fs';
 import path from 'node:path';
-import { createCore, lineText, type Command } from '../core';
+import { createCore, lineText, outputState, type Command, type CoreState } from '../core';
 import { createFileLibraryStorage } from '../library';
 import { IPC } from '../shared/ipc';
 import { createFilePresetStore } from './filePresetStore';
@@ -103,7 +103,10 @@ function createOutputManager() {
 }
 
 app.whenReady().then(() => {
-  ipcMain.handle(IPC.getState, () => core.getState());
+  // Notifications are Operator-only: the Output window only ever receives `outputState`.
+  const stateFor = (contents: Electron.WebContents, state: CoreState) =>
+    outputWin && contents === outputWin.webContents ? outputState(state) : state;
+  ipcMain.handle(IPC.getState, (e) => stateFor(e.sender, core.getState()));
   ipcMain.on(IPC.command, (_e, command: Command) => core.dispatch(command));
   ipcMain.handle(IPC.importScript, async () => {
     const picked = await dialog.showOpenDialog({
@@ -135,12 +138,16 @@ app.whenReady().then(() => {
   // Broadcast on command changes, plus a steady tick so scrolling is visible.
   const broadcast = () => {
     const state = core.getState();
-    windows.forEach((w) => w.webContents.send(IPC.state, state));
+    windows.forEach((w) => w.webContents.send(IPC.state, stateFor(w.webContents, state)));
   };
+  let hadNotifications = false;
   core.subscribe(broadcast);
   setInterval(() => {
     const s = core.getState();
-    if (s.playing || s.ringDeflection !== 0) broadcast();
+    // Notifications expire with the clock, so keep broadcasting until the last one is gone.
+    const has = s.notifications.length > 0;
+    if (s.playing || s.ringDeflection !== 0 || has || hadNotifications) broadcast();
+    hadNotifications = has;
   }, 16);
 
   operatorWin = openWindow('operator', 'Neoprompter - Operator view', 40);
