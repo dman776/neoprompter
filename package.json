@@ -13,8 +13,9 @@
     "dist:win": "npm run build && electron-builder --win --x64 --publish never",
     "dist:check": "node scripts/check-installers.mjs",
     "prepare": "husky",
-    "check": "npm run typecheck && npm test",
-    "test:e2e": "npm run build && vitest run --config e2e/vitest.config.ts"
+    "check": "npm run conventions && npm run typecheck && npm test",
+    "test:e2e": "npm run build && vitest run --config e2e/vitest.config.ts",
+    "conventions": "node scripts/check-conventions.mjs"
   },
   "devDependencies": {
     "@types/node": "^26.6.6",

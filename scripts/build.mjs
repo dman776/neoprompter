@@ -1,6 +1,6 @@
 // Bundles main/preload (node, CJS) and each renderer (browser, IIFE) into dist/.
 import { build } from 'esbuild';
-import { cpSync, mkdirSync, rmSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, readdirSync, rmSync } from 'node:fs';
 
 rmSync('dist', { recursive: true, force: true });
 
@@ -15,7 +15,10 @@ await build({
   external: ['electron'],
 });
 
-for (const page of ['operator', 'output']) {
+// Every src/<name>/ with an index.html is a renderer page, bundled from src/<name>/<name>.ts.
+const pages = readdirSync('src').filter((name) => existsSync(`src/${name}/index.html`));
+
+for (const page of pages) {
   mkdirSync(`dist/${page}`, { recursive: true });
   await build({
     ...common,
