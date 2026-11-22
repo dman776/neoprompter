@@ -1,21 +1,31 @@
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, ipcMain, screen } from 'electron';
+import fs from 'node:fs';
 import path from 'node:path';
 import { createCore, type Command } from '../core';
 import { IPC } from '../shared/ipc';
 import { createFilePresetStore } from './filePresetStore';
+import { createOutputWindowManager, type OutputSettings } from '../output-window';
 
 const core = createCore({
   presetStore: createFilePresetStore(path.join(app.getPath('userData'), 'presets.json')),
 });
 const windows = new Set<BrowserWindow>();
+let operatorWin: BrowserWindow | null = null;
+let outputWin: BrowserWindow | null = null;
 
-function openWindow(page: 'operator' | 'output', title: string, x: number): void {
+function openWindow(
+  page: 'operator' | 'output',
+  title: string,
+  x: number,
+  extra: Electron.BrowserWindowConstructorOptions = {},
+): BrowserWindow {
   const win = new BrowserWindow({
     title,
     x,
     y: 60,
     width: 640,
     height: 480,
+    ...extra,
     backgroundColor: page === 'output' ? '#000000' : '#202020',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -26,6 +36,54 @@ function openWindow(page: 'operator' | 'output', title: string, x: number): void
   win.loadFile(path.join(__dirname, '..', page, 'index.html'));
   windows.add(win);
   win.on('closed', () => windows.delete(win));
+  return win;
+}
+
+function closeOutput(): void {
+  outputWin?.close();
+  outputWin = null;
+}
+
+function createOutputManager() {
+  const file = path.join(app.getPath('userData'), 'output-settings.json');
+  return createOutputWindowManager({
+    displays: {
+      list: () =>
+        screen.getAllDisplays().map((d) => ({ id: String(d.id), bounds: d.bounds })),
+      operatorDisplayId: () =>
+        String(
+          operatorWin && !operatorWin.isDestroyed()
+            ? screen.getDisplayMatching(operatorWin.getBounds()).id
+            : screen.getPrimaryDisplay().id,
+        ),
+    },
+    store: {
+      load: (): OutputSettings => {
+        try {
+          return JSON.parse(fs.readFileSync(file, 'utf8')) as OutputSettings;
+        } catch {
+          return { windowed: false, monitorBySetup: {} };
+        }
+      },
+      save: (s) => fs.writeFileSync(file, JSON.stringify(s)),
+    },
+    host: {
+      // Only ever one Output window: reuse it, otherwise create it.
+      show: (placement) => {
+        closeOutput();
+        if (placement.mode === 'fullscreen') {
+          outputWin = openWindow('output', 'Neoprompter - Output', placement.bounds.x, {
+            ...placement.bounds,
+            frame: false,
+            fullscreen: true,
+          });
+        } else {
+          outputWin = openWindow('output', 'Neoprompter - Output (windowed)', 720);
+        }
+      },
+      hide: closeOutput,
+    },
+  });
 }
 
 app.whenReady().then(() => {
@@ -42,9 +100,23 @@ app.whenReady().then(() => {
     if (core.getState().playing) broadcast();
   }, 16);
 
-  // Windowed Output: both windows are ordinary windows (the full-screen Output comes later).
-  openWindow('operator', 'Neoprompter - Operator view', 40);
-  openWindow('output', 'Neoprompter - Output (windowed)', 720);
+  operatorWin = openWindow('operator', 'Neoprompter - Operator view', 40);
+
+  // The Output opens full screen on the chosen monitor; with it missing it stays closed.
+  const output = createOutputManager();
+  ipcMain.handle(IPC.outputGetView, () => output.getView());
+  ipcMain.handle(IPC.outputChooseMonitor, (_e, id: string) => {
+    output.chooseMonitor(id);
+    return output.getView();
+  });
+  ipcMain.handle(IPC.outputSetWindowed, (_e, windowed: boolean) => {
+    output.setWindowed(windowed);
+    return output.getView();
+  });
+  screen.on('display-added', () => output.refresh());
+  screen.on('display-removed', () => output.refresh());
+  screen.on('display-metrics-changed', () => output.refresh());
+  output.refresh();
 });
 
 app.on('window-all-closed', () => app.quit());
