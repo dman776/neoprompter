@@ -54,9 +54,12 @@ export function createCore(options: CoreOptions = {}): Core {
   }
 
   function snapshot(): CoreState {
+    const range = maxPosition() - minPosition;
+    const progress = range > 0 ? Math.min(1, Math.max(0, (position - minPosition) / range)) : 0;
     return {
       script,
       position,
+      progress,
       speed: speedLevel * LINES_PER_SECOND_PER_LEVEL,
       speedLevel,
       playing,
