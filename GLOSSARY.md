@@ -21,11 +21,31 @@ The text the Talent reads, prepared in advance and loaded into the app.
 _Avoid_: Document, rundown, file
 
 **Operator view**:
-The Operator's own screen, holding controls, the Script library, and Notifications.
+The Operator's main window, in Edit mode or Run mode, with a native menu bar and a Button bar.
 _Avoid_: Control window, dashboard
 
+**Edit mode**:
+The Operator view for preparing Scripts: the Script library and a full Script editor.
+_Avoid_: Authoring mode, design mode
+
+**Run mode**:
+The Operator view for a live production: transport controls, the reading position, and Notifications. The Script is locked against typing until the Operator deliberately unlocks it for a live fix.
+_Avoid_: Live mode, show mode, presenter mode
+
+**Live view**:
+In Run mode, a scaled copy of the Output showing exactly what the Talent sees, including the Reading line and Progress bar.
+_Avoid_: Preview
+
+**Button bar**:
+The row of labeled buttons under the menu bar. It always shows the mode switch and the Output switch, and the buttons in between change with the mode.
+_Avoid_: Toolbar, ribbon
+
+**Preferences**:
+A separate window holding the settings, grouped by category.
+_Avoid_: Settings panel, options, config
+
 **Output**:
-The clean, full-screen, text-only window the Talent reads, sent to the prompter display.
+The clean, full-screen, text-only window the Talent reads, sent to the prompter display. The Operator can switch it on or off and choose its monitor; there is only ever one.
 _Avoid_: Prompter screen, display, program
 
 **Notification**:
@@ -57,7 +77,7 @@ The visible height of the Output minus one line, which is how far "back one scre
 _Avoid_: Page
 
 **Virtual shuttle**:
-An on-screen copy of the ShuttleXPress (ring, jog wheel, and five buttons) in the Operator view, so the prompter can be controlled and tested without the hardware.
+An on-screen copy of the ShuttleXPress (ring, jog wheel, and five buttons) in its own small window, opened from the Window menu and closed by default, so the prompter can be controlled and tested without the hardware.
 _Avoid_: Simulator, emulator, mock shuttle
 
 **Windowed Output**:
