@@ -1,7 +1,11 @@
 import { systemClock, type Clock } from './clock';
 import { sampleScript } from './sampleScript';
 import {
+  DEFAULT_NOTIFICATION_MS,
   LEAD_IN_LINES,
+  MAX_NOTIFICATIONS,
+  MAX_NOTIFICATION_MS,
+  MIN_NOTIFICATION_MS,
   LINES_PER_SECOND_PER_LEVEL,
   MAX_SPEED_LEVEL,
   RING_MAX_LINES_PER_SECOND,
@@ -12,6 +16,9 @@ import {
 import { createMemoryLibraryStorage, type LibraryStorage } from './library';
 import { createMemoryPresetStore, type PresetStore } from './presets';
 import { defaultAppearance, type Appearance } from './types';
+import { colorLineRange, editLineText, remapPosition } from './editing';
+import { PALETTE_COLORS } from './palette';
+import { lineText } from './richScript';
 import { createMemorySessionStore, type SessionStore } from './session';
 
 export interface CoreOptions {
@@ -64,6 +71,13 @@ export function createCore(options: CoreOptions = {}): Core {
   let lastSave = clock.now();
   const SAVE_INTERVAL_MS = 1000;
 
+  let notificationDurationMs = DEFAULT_NOTIFICATION_MS;
+  const clampDuration = (ms: number) =>
+    Math.max(MIN_NOTIFICATION_MS, Math.min(MAX_NOTIFICATION_MS, Math.round(ms)));
+  /** Oldest first; each carries its own expiry. Never persisted, never logged. */
+  let notifications: { id: number; text: string; expiresAt: number }[] = [];
+  let nextNotificationId = 1;
+
   const restored = sessionStore.load();
   if (restored) {
     const entry = restored.loadedScriptId
@@ -81,10 +95,41 @@ export function createCore(options: CoreOptions = {}): Core {
       restored.activePreset && presets[restored.activePreset] ? restored.activePreset : null;
     outputBlank = true;
   }
+  if (restored?.notificationDurationMs !== undefined) {
+    notificationDurationMs = clampDuration(restored.notificationDurationMs);
+  }
 
   function autosave(): void {
     lastSave = clock.now();
-    sessionStore.save({ script, loadedScriptId, position, speedLevel, appearance, activePreset });
+    sessionStore.save({
+      script,
+      loadedScriptId,
+      position,
+      speedLevel,
+      appearance,
+      activePreset,
+      notificationDurationMs,
+    });
+  }
+
+  /** Replace `removed` lines at `at` with `added`, keeping the reading position on the same text. */
+  function spliceLines(at: number, removed: number, added: Script['lines']): void {
+    const lines = [...script.lines];
+    lines.splice(at, removed, ...added);
+    script = { ...script, lines };
+    position = clampPosition(remapPosition(position, at, removed, added.length));
+    playStart = clampPosition(remapPosition(playStart, at, removed, added.length));
+    const entry = loadedScriptId ? stored.find((s) => s.id === loadedScriptId) : undefined;
+    if (entry) {
+      const { lines: _old, ...rest } = entry;
+      const updated = {
+        ...rest,
+        text: lines.map(lineText).join('\n'),
+        ...(lines.some((l) => typeof l !== 'string') && { lines }),
+      };
+      stored = stored.map((s) => (s.id === entry.id ? updated : s));
+      storage.writeAll(stored);
+    }
   }
 
   const listeners = new Set<(state: CoreState) => void>();
@@ -98,6 +143,7 @@ export function createCore(options: CoreOptions = {}): Core {
       if (playing && position >= maxPosition()) playing = false;
     }
     lastTick = now;
+    notifications = notifications.filter((n) => n.expiresAt > now);
   }
 
   function snapshot(): CoreState {
@@ -119,6 +165,8 @@ export function createCore(options: CoreOptions = {}): Core {
       presets: Object.keys(presets),
       activePreset,
       outputBlank,
+      notifications: notifications.map(({ id, text }) => ({ id, text })).reverse(),
+      notificationDurationMs,
     };
   }
 
@@ -186,6 +234,28 @@ export function createCore(options: CoreOptions = {}): Core {
           storage.writeAll(stored);
           if (loadedScriptId === command.id) loadedScriptId = null;
           break;
+        case 'editLine': {
+          const old = script.lines[command.line];
+          if (old === undefined) return;
+          spliceLines(command.line, 1, editLineText(old, command.text));
+          break;
+        }
+        case 'cutLines': {
+          const from = Math.max(0, Math.floor(command.from));
+          const count = Math.min(Math.floor(command.count), script.lines.length - from);
+          if (!(count > 0)) return;
+          spliceLines(from, count, []);
+          break;
+        }
+        case 'colorRange': {
+          const old = script.lines[command.line];
+          if (old === undefined) return;
+          if (command.color !== null && !PALETTE_COLORS.includes(command.color)) return;
+          spliceLines(command.line, 1, [
+            colorLineRange(old, command.start, command.end, command.color),
+          ]);
+          break;
+        }
         case 'setAppearance':
           appearance = { ...appearance, ...command.changes };
           break;
@@ -207,6 +277,27 @@ export function createCore(options: CoreOptions = {}): Core {
           break;
         case 'confirmOutput':
           outputBlank = false;
+          break;
+        case 'notify': {
+          const text = command.text.trim();
+          if (!text) return;
+          const ms =
+            command.durationMs !== undefined && command.durationMs > 0
+              ? command.durationMs
+              : notificationDurationMs;
+          notifications = [
+            ...notifications,
+            { id: nextNotificationId++, text, expiresAt: clock.now() + ms },
+          ].slice(-MAX_NOTIFICATIONS);
+          break;
+        }
+        case 'dismissNotification': {
+          const target = command.id ?? notifications[notifications.length - 1]?.id;
+          notifications = notifications.filter((n) => n.id !== target);
+          break;
+        }
+        case 'setNotificationDuration':
+          notificationDurationMs = clampDuration(command.ms);
           break;
         case 'deletePreset': {
           if (!presets[command.name]) return;

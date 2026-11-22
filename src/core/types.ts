@@ -42,6 +42,12 @@ export type Command =
   | { type: 'loadScript'; id: string }
   | { type: 'renameScript'; id: string; name: string }
   | { type: 'deleteScript'; id: string }
+  /** Minimal editing. Replace the text of one line (newlines split it); styling on unchanged text is kept. */
+  | { type: 'editLine'; line: number; text: string }
+  /** Remove `count` lines starting at `from`. */
+  | { type: 'cutLines'; from: number; count: number }
+  /** Color characters [start, end) of a line with a palette color; null clears it. */
+  | { type: 'colorRange'; line: number; start: number; end: number; color: string | null }
   | { type: 'setAppearance'; changes: Partial<Appearance> }
   /** Deliberately a separate command so shuttle button mapping can exclude it. */
   | { type: 'toggleMirror' }
@@ -49,7 +55,28 @@ export type Command =
   | { type: 'loadPreset'; name: string }
   | { type: 'deletePreset'; name: string }
   /** Operator confirms after a restore; until then the Output stays blank. */
-  | { type: 'confirmOutput' };
+  | { type: 'confirmOutput' }
+  /**
+   * Show a plain-text Notification banner in the Operator view (never the Output). Called by
+   * the HTTP API (ticket 16) from the main process. `durationMs` overrides the display time.
+   */
+  | { type: 'notify'; text: string; durationMs?: number }
+  /** Dismiss the Notification with `id`, or the newest visible one when omitted. */
+  | { type: 'dismissNotification'; id?: number }
+  /** How long a Notification shows before it disappears on its own (persisted). */
+  | { type: 'setNotificationDuration'; ms: number };
+
+/** Default, minimum and maximum Notification display time (ms), and how many stack at once. */
+export const DEFAULT_NOTIFICATION_MS = 8000;
+export const MIN_NOTIFICATION_MS = 1000;
+export const MAX_NOTIFICATION_MS = 60000;
+export const MAX_NOTIFICATIONS = 5;
+
+/** A plain-text Notification currently visible in the Operator view. */
+export interface Notification {
+  id: number;
+  text: string;
+}
 
 export const MAX_SPEED_LEVEL = 10;
 /** Lines per second at full ring deflection. */
@@ -122,4 +149,16 @@ export interface CoreState {
   activePreset: string | null;
   /** True after a restore until the Operator confirms; the Output renders nothing. */
   outputBlank: boolean;
+  /** Visible Notifications, newest first. Operator view only; see `outputState`. */
+  notifications: Notification[];
+  /** Default Notification display time in ms. */
+  notificationDurationMs: number;
+}
+
+/** What the Output may see: the core state without anything Operator-only (Notifications). */
+export type OutputState = Omit<CoreState, 'notifications' | 'notificationDurationMs'>;
+
+export function outputState(state: CoreState): OutputState {
+  const { notifications: _n, notificationDurationMs: _d, ...rest } = state;
+  return rest;
 }

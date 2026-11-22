@@ -4,12 +4,15 @@ const toggle = document.getElementById('toggle') as HTMLButtonElement;
 const nameEl = document.getElementById('script-name')!;
 const statusEl = document.getElementById('status')!;
 import { renderAppearance } from './appearancePanel';
+import { renderEditor } from './editorPanel';
 import { renderShuttle } from './shuttlePanel';
 let playing = false;
 
 function render(state: CoreState): void {
   renderAppearance(state);
   renderShuttle(state);
+  renderNotifications(state);
+  renderEditor(state);
   playing = state.playing;
   nameEl.textContent = state.script.name;
   toggle.textContent = state.playing ? 'Pause' : 'Play';
@@ -17,6 +20,42 @@ function render(state: CoreState): void {
   renderLibrary(state);
   document.getElementById('restore-note')!.hidden = !state.outputBlank;
 }
+
+const bannersEl = document.getElementById('notifications')!;
+const secondsEl = document.getElementById('notification-seconds') as HTMLInputElement;
+let bannersKey = '';
+
+/** Banners are plain text (textContent), silent, and carry no log or acknowledgment. */
+function renderNotifications(state: CoreState): void {
+  if (document.activeElement !== secondsEl) {
+    secondsEl.value = String(state.notificationDurationMs / 1000);
+  }
+  const key = JSON.stringify(state.notifications);
+  if (key === bannersKey) return;
+  bannersKey = key;
+  bannersEl.replaceChildren(
+    ...state.notifications.map((n) => {
+      const row = document.createElement('div');
+      row.className = 'banner';
+      const text = document.createElement('span');
+      text.textContent = n.text;
+      const close = document.createElement('button');
+      close.textContent = 'Dismiss';
+      close.addEventListener('click', () =>
+        window.neoprompter.dispatch({ type: 'dismissNotification', id: n.id }),
+      );
+      row.append(text, close);
+      return row;
+    }),
+  );
+}
+
+secondsEl.addEventListener('change', () => {
+  const seconds = Number(secondsEl.value);
+  if (seconds > 0) {
+    window.neoprompter.dispatch({ type: 'setNotificationDuration', ms: seconds * 1000 });
+  }
+});
 
 document.getElementById('confirm-output')!.addEventListener('click', () => {
   window.neoprompter.dispatch({ type: 'confirmOutput' });

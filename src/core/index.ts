@@ -7,16 +7,20 @@ export type {
   Command,
   CoreState,
   LibraryEntry,
+  Notification,
+  OutputState,
   RichLine,
   Run,
   Script,
   ScriptLine,
 } from './types';
 export { lineHeading, lineRuns, lineText } from './richScript';
+export { contrastRatio, displayColor, MIN_CONTRAST } from './readableColor';
 export { createMemoryLibraryStorage } from './library';
 export type { LibraryStorage, StoredScript } from './library';
-export { defaultAppearance } from './types';
+export { defaultAppearance, outputState, DEFAULT_NOTIFICATION_MS } from './types';
 export { createMemoryPresetStore } from './presets';
 export type { PresetStore } from './presets';
 export { createMemorySessionStore } from './session';
 export type { Session, SessionStore } from './session';
+export { PALETTE, PALETTE_COLORS } from './palette';

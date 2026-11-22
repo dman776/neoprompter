@@ -1,4 +1,4 @@
-import { lineHeading, lineRuns, lineText, type CoreState } from '../core';
+import { displayColor, lineHeading, lineRuns, lineText, type CoreState } from '../core';
 
 const textEl = document.getElementById('text')!;
 const lineEl = document.getElementById('reading-line')!;
@@ -22,7 +22,8 @@ function render(state: CoreState): void {
           span.textContent = run.text;
           if (run.bold) span.style.fontWeight = 'bold';
           if (run.italic) span.style.fontStyle = 'italic';
-          if (run.color) span.style.color = run.color;
+          // Source color is kept on the span; the readable-color guard runs every render.
+          if (run.color) span.dataset.sourceColor = run.color;
           p.append(span);
         }
         // Keep empty lines one line tall.
@@ -34,6 +35,9 @@ function render(state: CoreState): void {
   }
   document.body.style.background = a.backgroundColor;
   document.body.style.color = a.textColor;
+  for (const span of textEl.querySelectorAll<HTMLElement>('span[data-source-color]')) {
+    span.style.color = displayColor(span.dataset.sourceColor, a.backgroundColor, a.textColor);
+  }
   document.body.style.transform = a.mirror ? 'scaleX(-1)' : '';
   textEl.style.font = `${a.fontSize}px/${a.lineSpacing} system-ui, sans-serif`;
   const side = Math.max(a.margin, (100 - a.textWidth) / 2);
