@@ -22,6 +22,7 @@
     "vitest": "^5.1.1"
   },
   "dependencies": {
+    "cfb": "^1.2.2",
     "fast-xml-parser": "^5.12.1",
     "fflate": "^0.8.3"
   }

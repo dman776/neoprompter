@@ -1,5 +1,5 @@
 import { app, BrowserWindow, dialog, ipcMain, screen } from 'electron';
-import { importDocx } from '../import';
+import { importDocument } from '../import';
 import fs from 'node:fs';
 import path from 'node:path';
 import { createCore, lineText, type Command } from '../core';
@@ -109,7 +109,7 @@ app.whenReady().then(() => {
     const picked = await dialog.showOpenDialog({
       title: 'Import Script',
       properties: ['openFile'],
-      filters: [{ name: 'Word document', extensions: ['docx'] }],
+      filters: [{ name: 'Word document', extensions: ['docx', 'doc'] }],
     });
     if (picked.canceled || picked.filePaths.length === 0) return null;
     const file = picked.filePaths[0];
@@ -120,7 +120,7 @@ app.whenReady().then(() => {
     } catch {
       return { ok: false, message: `"${name}" could not be read.` };
     }
-    const result = importDocx(bytes, name);
+    const result = importDocument(bytes, name);
     if (!result.ok) return result;
     const { script } = result;
     core.dispatch({
