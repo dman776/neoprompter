@@ -57,8 +57,35 @@ export function createCore(options: CoreOptions = {}): Core {
   let appearance: Appearance = { ...defaultAppearance };
   let activePreset: string | null = null;
   const minPosition = -LEAD_IN_LINES;
-  /** Furthest the Script scrolls: last line at the bottom of the Output. */
-  const maxPosition = () => Math.max(minPosition, script.lines.length - viewportLines);
+  /**
+   * Position, speed and the viewport are in visual lines. A Script line is a paragraph and
+   * may wrap, so `extents[i]` is how many visual lines Script line i occupies (as measured by
+   * the Output; 1 until reported). Always the same length as `script.lines`.
+   */
+  let extents: number[] = script.lines.map(() => 1);
+  let scriptRevision = 0;
+  const totalVisual = () => extents.reduce((a, b) => a + b, 0);
+  /** Furthest the Script scrolls: last visual line at the bottom of the Output. */
+  const maxPosition = () => Math.max(minPosition, totalVisual() - viewportLines);
+  /** Visual position -> fractional Script line index (identity inside the lead-in). */
+  function toLineIndex(visual: number): number {
+    if (visual <= 0) return visual;
+    let cum = 0;
+    for (let i = 0; i < extents.length; i++) {
+      if (visual < cum + extents[i]) return i + (visual - cum) / extents[i];
+      cum += extents[i];
+    }
+    return extents.length + (visual - cum);
+  }
+  /** Fractional Script line index -> visual position, using the current `extents`. */
+  function toVisual(index: number): number {
+    if (index <= 0) return index;
+    const i = Math.floor(index);
+    if (i >= extents.length) return totalVisual() + (index - extents.length);
+    let cum = 0;
+    for (let k = 0; k < i; k++) cum += extents[k];
+    return cum + (index - i) * extents[i];
+  }
   const clampPosition = (p: number) => Math.max(minPosition, Math.min(maxPosition(), p));
 
   let position = minPosition;
@@ -85,6 +112,7 @@ export function createCore(options: CoreOptions = {}): Core {
       : undefined;
     if (restored.loadedScriptId === null || entry) {
       script = restored.script;
+      extents = script.lines.map(() => 1);
       loadedScriptId = entry ? entry.id : null;
       position = clampPosition(restored.position);
       playStart = position;
@@ -116,9 +144,17 @@ export function createCore(options: CoreOptions = {}): Core {
   function spliceLines(at: number, removed: number, added: Script['lines']): void {
     const lines = [...script.lines];
     lines.splice(at, removed, ...added);
+    const remap = (p: number) => remapPosition(toLineIndex(p), at, removed, added.length);
+    const nextPosition = remap(position);
+    const nextPlayStart = remap(playStart);
+    // New lines count as one visual line until the Output measures them.
+    const nextExtents = [...extents];
+    nextExtents.splice(at, removed, ...added.map(() => 1));
     script = { ...script, lines };
-    position = clampPosition(remapPosition(position, at, removed, added.length));
-    playStart = clampPosition(remapPosition(playStart, at, removed, added.length));
+    extents = nextExtents;
+    scriptRevision++;
+    position = clampPosition(toVisual(nextPosition));
+    playStart = clampPosition(toVisual(nextPlayStart));
     const entry = loadedScriptId ? stored.find((s) => s.id === loadedScriptId) : undefined;
     if (entry) {
       const { lines: _old, ...rest } = entry;
@@ -151,6 +187,7 @@ export function createCore(options: CoreOptions = {}): Core {
     const progress = range > 0 ? Math.min(1, Math.max(0, (position - minPosition) / range)) : 0;
     return {
       script,
+      scriptRevision,
       position,
       progress,
       speed: speedLevel * LINES_PER_SECOND_PER_LEVEL,
@@ -188,6 +225,18 @@ export function createCore(options: CoreOptions = {}): Core {
           viewportLines = Math.max(1, Math.round(command.lines));
           position = clampPosition(position);
           break;
+        case 'setLineExtents': {
+          if (command.revision !== scriptRevision) return;
+          if (command.extents.length !== script.lines.length) return;
+          const next = command.extents.map((e) => Math.max(1, Math.round(e) || 1));
+          // Keep the reading position (and play start) on the same text under the new layout.
+          const pos = toLineIndex(position);
+          const start = toLineIndex(playStart);
+          extents = next;
+          position = clampPosition(toVisual(pos));
+          playStart = clampPosition(toVisual(start));
+          break;
+        }
         case 'setRing':
           ring = Math.max(-1, Math.min(1, command.deflection || 0));
           break;
@@ -216,6 +265,8 @@ export function createCore(options: CoreOptions = {}): Core {
           const found = stored.find((s) => s.id === command.id);
           if (!found) return;
           script = { name: found.name, lines: found.lines ?? found.text.split(/\r?\n/) };
+          extents = script.lines.map(() => 1);
+          scriptRevision++;
           loadedScriptId = found.id;
           position = minPosition;
           playStart = minPosition;

@@ -3,7 +3,8 @@ import { displayColor, lineHeading, lineRuns, lineText, type CoreState } from '.
 const textEl = document.getElementById('text')!;
 const lineEl = document.getElementById('reading-line')!;
 const progressEl = document.getElementById('progress')!;
-let renderedScript: string | null = null;
+let renderedRevision: number | null = null;
+let measuredKey = '';
 let reportedViewport = 0;
 let lastState: CoreState | null = null;
 
@@ -11,7 +12,7 @@ function render(state: CoreState): void {
   lastState = state;
   const a = state.appearance;
   document.body.style.visibility = state.outputBlank ? 'hidden' : 'visible';
-  if (renderedScript !== state.script.name) {
+  if (renderedRevision !== state.scriptRevision) {
     textEl.replaceChildren(
       ...state.script.lines.map((line) => {
         const p = document.createElement('div');
@@ -31,7 +32,8 @@ function render(state: CoreState): void {
         return p;
       }),
     );
-    renderedScript = state.script.name;
+    renderedRevision = state.scriptRevision;
+    measuredKey = '';
   }
   document.body.style.background = a.backgroundColor;
   document.body.style.color = a.textColor;
@@ -44,17 +46,22 @@ function render(state: CoreState): void {
   textEl.style.left = `${side}%`;
   textEl.style.right = `${side}%`;
   lineEl.style.display = a.readingLine ? 'block' : 'none';
-  const lineHeight = textEl.firstElementChild
-    ? (textEl.firstElementChild as HTMLElement).getBoundingClientRect().height
-    : 0;
+  // One visual line, in px. Position, speed and the viewport are in these units; a Script line
+  // (paragraph) that wraps occupies several, which the core learns from the measurement below.
+  const lineHeight = a.fontSize * a.lineSpacing;
   textEl.style.transform = `translateY(${-state.position * lineHeight}px)`;
-  // Tell the core how many lines fit, so Screen jumps and end-of-Script stop are right.
-  if (lineHeight > 0) {
-    const lines = Math.max(1, Math.floor(window.innerHeight / lineHeight));
-    if (lines !== reportedViewport) {
-      reportedViewport = lines;
-      window.neoprompter.dispatch({ type: 'setViewport', lines });
-    }
+  const key = [state.scriptRevision, a.fontSize, a.lineSpacing, a.textWidth, a.margin, window.innerWidth].join('|');
+  if (key !== measuredKey && lineHeight > 0) {
+    measuredKey = key;
+    const extents = Array.from(textEl.children, (el) =>
+      Math.max(1, Math.round((el as HTMLElement).offsetHeight / lineHeight)),
+    );
+    window.neoprompter.dispatch({ type: 'setLineExtents', extents, revision: state.scriptRevision });
+  }
+  const lines = Math.max(1, Math.floor(window.innerHeight / lineHeight));
+  if (lines !== reportedViewport) {
+    reportedViewport = lines;
+    window.neoprompter.dispatch({ type: 'setViewport', lines });
   }
   progressEl.style.transform = `scaleX(${state.progress})`;
 }

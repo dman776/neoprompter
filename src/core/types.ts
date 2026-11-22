@@ -30,6 +30,12 @@ export type Command =
   | { type: 'setSpeed'; level: number }
   /** How many lines the Output shows (changes with font size, never with speed). */
   | { type: 'setViewport'; lines: number }
+  /**
+   * The Output's measurement of the Script: how many visual lines each Script line (a
+   * paragraph that may wrap) occupies. `revision` is the `scriptRevision` the Output measured;
+   * a stale measurement is ignored.
+   */
+  | { type: 'setLineExtents'; extents: number[]; revision: number }
   /** Spring-loaded ring deflection from -1 (full back) to 1 (full forward); 0 is released. */
   | { type: 'setRing'; deflection: number }
   /** Reposition by a number of lines (mouse and trackpad scrolling); negative goes back. */
@@ -58,7 +64,7 @@ export type Command =
   | { type: 'confirmOutput' }
   /**
    * Show a plain-text Notification banner in the Operator view (never the Output). Called by
-   * the HTTP API (ticket 16) from the main process. `durationMs` overrides the display time.
+   * the HTTP API from the main process. `durationMs` overrides the display time.
    */
   | { type: 'notify'; text: string; durationMs?: number }
   /** Dismiss the Notification with `id`, or the newest visible one when omitted. */
@@ -124,11 +130,13 @@ export const defaultAppearance: Appearance = {
 /** State comes out. Operator view and Output are thin renderers of this. */
 export interface CoreState {
   script: Script;
-  /** Reading position in lines from the top of the Script. */
+  /** Bumps whenever the Script's content changes (edit, cut, color, load); the Output re-renders on it. */
+  scriptRevision: number;
+  /** Reading position in visual lines (wrapped paragraphs count each line) from the top of the Script. */
   position: number;
   /** Fraction of the Script read, 0 to 1. Drives the Progress bar. */
   progress: number;
-  /** Scroll speed in lines per second (independent of font size). */
+  /** Scroll speed in visual lines per second (independent of font size). */
   speed: number;
   /** Speed as a level, 0 (stopped) to MAX_SPEED_LEVEL. */
   speedLevel: number;
