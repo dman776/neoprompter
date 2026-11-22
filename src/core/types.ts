@@ -30,6 +30,10 @@ export type Command =
   | { type: 'setSpeed'; level: number }
   /** How many lines the Output shows (changes with font size, never with speed). */
   | { type: 'setViewport'; lines: number }
+  /** Spring-loaded ring deflection from -1 (full back) to 1 (full forward); 0 is released. */
+  | { type: 'setRing'; deflection: number }
+  /** Reposition by a number of lines (mouse and trackpad scrolling); negative goes back. */
+  | { type: 'scrollBy'; lines: number }
   | { type: 'jumpBack' }
   | { type: 'jumpForward' }
   | { type: 'returnToPlayStart' }
@@ -48,6 +52,8 @@ export type Command =
   | { type: 'confirmOutput' };
 
 export const MAX_SPEED_LEVEL = 10;
+/** Lines per second at full ring deflection. */
+export const RING_MAX_LINES_PER_SECOND = 20;
 /** Lines per second for each speed level step. */
 export const LINES_PER_SECOND_PER_LEVEL = 0.5;
 /** Blank lines before the first line of the Script. */
@@ -100,6 +106,8 @@ export interface CoreState {
   /** Speed as a level, 0 (stopped) to MAX_SPEED_LEVEL. */
   speedLevel: number;
   playing: boolean;
+  /** Current ring deflection, -1 to 1; 0 when released. */
+  ringDeflection: number;
   /** Visible Output height in lines. A Screen is this minus one. */
   viewportLines: number;
   /** Blank lines before the first line; the starting position is minus this. */

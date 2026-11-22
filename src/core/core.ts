@@ -4,6 +4,7 @@ import {
   LEAD_IN_LINES,
   LINES_PER_SECOND_PER_LEVEL,
   MAX_SPEED_LEVEL,
+  RING_MAX_LINES_PER_SECOND,
   type Command,
   type CoreState,
   type Script,
@@ -56,6 +57,7 @@ export function createCore(options: CoreOptions = {}): Core {
   let position = minPosition;
   let playStart = minPosition;
   let playing = false;
+  let ring = 0;
   let lastTick = clock.now();
   const sessionStore = options.sessionStore ?? createMemorySessionStore();
   let outputBlank = false;
@@ -89,11 +91,11 @@ export function createCore(options: CoreOptions = {}): Core {
 
   function tick(): void {
     const now = clock.now();
-    if (playing) {
-      position = clampPosition(
-        position + ((now - lastTick) / 1000) * speedLevel * LINES_PER_SECOND_PER_LEVEL,
-      );
-      if (position >= maxPosition()) playing = false;
+    if (playing || ring !== 0) {
+      const rate =
+        (playing ? speedLevel * LINES_PER_SECOND_PER_LEVEL : 0) + ring * RING_MAX_LINES_PER_SECOND;
+      position = clampPosition(position + ((now - lastTick) / 1000) * rate);
+      if (playing && position >= maxPosition()) playing = false;
     }
     lastTick = now;
   }
@@ -108,6 +110,7 @@ export function createCore(options: CoreOptions = {}): Core {
       speed: speedLevel * LINES_PER_SECOND_PER_LEVEL,
       speedLevel,
       playing,
+      ringDeflection: ring,
       viewportLines,
       leadIn: LEAD_IN_LINES,
       library: stored.map(({ id, name }) => ({ id, name })),
@@ -136,6 +139,12 @@ export function createCore(options: CoreOptions = {}): Core {
         case 'setViewport':
           viewportLines = Math.max(1, Math.round(command.lines));
           position = clampPosition(position);
+          break;
+        case 'setRing':
+          ring = Math.max(-1, Math.min(1, command.deflection || 0));
+          break;
+        case 'scrollBy':
+          position = clampPosition(position + command.lines);
           break;
         case 'jumpBack':
           position = clampPosition(position - (viewportLines - 1));

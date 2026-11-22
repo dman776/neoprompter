@@ -139,7 +139,8 @@ app.whenReady().then(() => {
   };
   core.subscribe(broadcast);
   setInterval(() => {
-    if (core.getState().playing) broadcast();
+    const s = core.getState();
+    if (s.playing || s.ringDeflection !== 0) broadcast();
   }, 16);
 
   operatorWin = openWindow('operator', 'Neoprompter - Operator view', 40);
