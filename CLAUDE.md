@@ -19,6 +19,7 @@ Electron + TypeScript (ADR 0001), Node 24, npm, Vitest, esbuild.
 - `npm install`, then `node node_modules/electron/install.js` if the Electron binary is missing (npm may skip install scripts).
 - `npm test`: run all tests (`src/**/*.test.ts`, colocated with the code). `npm run typecheck`: `tsc --noEmit`.
 - `npm run build`: bundle to `dist/` via `scripts/build.mjs`. `npm start`: build and launch the app.
+- `npm run check` is what the pre-commit hook runs. Renderer change? Run the app and look at it: `docs/run-and-test.md`.
 
 Layout (renderers and main depend on `core`, never the reverse):
 

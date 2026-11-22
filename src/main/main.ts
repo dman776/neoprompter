@@ -13,6 +13,11 @@ import { createFileQuickMessageStore } from './fileQuickMessageStore';
 import { createFileApiSettingsStore } from './fileApiSettingsStore';
 import { createOutputWindowManager, type OutputSettings } from '../output-window';
 
+// Tests (e2e/) point the app at a throwaway data directory so they never touch the real library.
+if (process.env.NEOPROMPTER_USER_DATA) {
+  app.setPath('userData', process.env.NEOPROMPTER_USER_DATA);
+}
+
 function createLibraryStorage() {
   const file = path.join(app.getPath('userData'), 'library.json');
   return createFileLibraryStorage(file, libraryFileIo);
