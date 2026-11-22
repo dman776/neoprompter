@@ -1,4 +1,4 @@
-import type { CoreState } from '../core';
+import { lineHeading, lineRuns, lineText, type CoreState } from '../core';
 
 const textEl = document.getElementById('text')!;
 const lineEl = document.getElementById('reading-line')!;
@@ -11,7 +11,18 @@ function render(state: CoreState): void {
     textEl.replaceChildren(
       ...state.script.lines.map((line) => {
         const p = document.createElement('div');
-        p.textContent = line;
+        // A heading is bold; its size stays the Preset's so line spacing and scrolling hold.
+        if (lineHeading(line) !== undefined) p.style.fontWeight = 'bold';
+        for (const run of lineRuns(line)) {
+          const span = document.createElement('span');
+          span.textContent = run.text;
+          if (run.bold) span.style.fontWeight = 'bold';
+          if (run.italic) span.style.fontStyle = 'italic';
+          if (run.color) span.style.color = run.color;
+          p.append(span);
+        }
+        // Keep empty lines one line tall.
+        if (!p.hasChildNodes() || lineText(line) === '') p.append(document.createTextNode(' '));
         return p;
       }),
     );

@@ -115,13 +115,18 @@ export function createCore(options: CoreOptions = {}): Core {
           position = clampPosition(playStart);
           break;
         case 'saveScript':
-          stored = [...stored, { id: String(nextId++), name: command.name, text: command.text }];
+          stored = [...stored, {
+              id: String(nextId++),
+              name: command.name,
+              text: command.text,
+              ...(command.lines && { lines: command.lines }),
+            }];
           storage.writeAll(stored);
           break;
         case 'loadScript': {
           const found = stored.find((s) => s.id === command.id);
           if (!found) return;
-          script = { name: found.name, lines: found.text.split(/\r?\n/) };
+          script = { name: found.name, lines: found.lines ?? found.text.split(/\r?\n/) };
           loadedScriptId = found.id;
           position = minPosition;
           playStart = minPosition;

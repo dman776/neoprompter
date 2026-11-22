@@ -1,7 +1,25 @@
-/** A Script, as the core sees it. Later tickets extend this with structure and emphasis. */
+/** A styled piece of text within a line. Fonts, sizes and spacing are never stored. */
+export interface Run {
+  text: string;
+  bold?: boolean;
+  italic?: boolean;
+  /** Source color as `#rrggbb`, kept as-is. Absent means "use the Output text color". */
+  color?: string;
+}
+
+/** One paragraph of a rich Script: styled runs plus an optional heading level (1 to 6). */
+export interface RichLine {
+  heading?: number;
+  runs: Run[];
+}
+
+/** A Script line: a plain string (one unstyled run) or a RichLine. */
+export type ScriptLine = string | RichLine;
+
+/** A Script, as the core sees it. Plain-text Scripts are just all-string lines. */
 export interface Script {
   name: string;
-  lines: string[];
+  lines: ScriptLine[];
 }
 
 /** Commands go in. Every input and surface (Operator view, shuttle, keyboard, API) uses these. */
@@ -15,7 +33,8 @@ export type Command =
   | { type: 'jumpBack' }
   | { type: 'jumpForward' }
   | { type: 'returnToPlayStart' }
-  | { type: 'saveScript'; name: string; text: string }
+  /** `text` is the plain-text form; `lines` (optional) carries the styled form. */
+  | { type: 'saveScript'; name: string; text: string; lines?: ScriptLine[] }
   | { type: 'loadScript'; id: string }
   | { type: 'renameScript'; id: string; name: string }
   | { type: 'deleteScript'; id: string }
