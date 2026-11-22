@@ -51,6 +51,11 @@ export interface MonitorOption {
 export interface OutputWindowView {
   windowed: boolean;
   chosenMonitorId: string | null;
+  /**
+   * Set when no monitor is chosen for the current display setup but one remembered for a
+   * larger setup (the current displays plus others) is no longer connected: it was unplugged.
+   */
+  missingMonitorId: string | null;
   monitors: MonitorOption[];
 }
 
@@ -80,6 +85,18 @@ export function createOutputWindowManager(deps: {
 
   const chosenId = (): string | null =>
     settings.monitorBySetup[displaySetupKey(displays.list())] ?? null;
+
+  /** The remembered monitor of a saved setup that contains all current displays plus more. */
+  function missingMonitor(): string | null {
+    if (settings.windowed || chosenId() !== null) return null;
+    const connected = new Set(displaySetupKey(displays.list()).split('|').filter(Boolean));
+    const connectedIds = new Set(displays.list().map((d) => d.id));
+    for (const [key, id] of Object.entries(settings.monitorBySetup)) {
+      const parts = key.split('|');
+      if ([...connected].every((c) => parts.includes(c)) && !connectedIds.has(id)) return id;
+    }
+    return null;
+  }
 
   function decide(): OutputPlacement {
     if (settings.windowed) return { mode: 'windowed' };
@@ -117,6 +134,7 @@ export function createOutputWindowManager(deps: {
       return {
         windowed: settings.windowed,
         chosenMonitorId: chosenId(),
+        missingMonitorId: missingMonitor(),
         monitors: displays.list().map((d, i) => ({
           id: d.id,
           label: `Display ${i + 1} (${d.bounds.width}x${d.bounds.height})`,

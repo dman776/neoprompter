@@ -131,8 +131,8 @@ function renderOutput(view: Awaited<ReturnType<typeof window.neoprompter.getOutp
   monitorSel.value = view.chosenMonitorId ?? '';
   windowedBox.checked = view.windowed;
   outputNote.textContent =
-    !view.windowed && view.chosenMonitorId && !view.monitors.some((m) => m.id === view.chosenMonitorId)
-      ? 'Chosen monitor is not connected; the Output is closed.'
+    !view.windowed && view.missingMonitorId
+      ? 'The monitor chosen for this Output is not connected, so the Output is closed. Reconnect it, or choose another monitor.'
       : '';
 }
 

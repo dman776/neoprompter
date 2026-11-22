@@ -103,6 +103,7 @@ describe('Output monitor selection', () => {
     expect(t.manager.getView()).toEqual({
       windowed: false,
       chosenMonitorId: 'prompter',
+      missingMonitorId: null,
       monitors: [
         { id: 'laptop', label: 'Display 1 (1440x900)', isOperatorDisplay: true },
         { id: 'prompter', label: 'Display 2 (1920x1080)', isOperatorDisplay: false },
@@ -124,5 +125,36 @@ describe('Output monitor selection', () => {
     t.manager.chooseMonitor('prompter');
     t.manager.chooseMonitor('third');
     expect(t.log.at(-1)).toEqual({ mode: 'fullscreen', bounds: third.bounds });
+  });
+});
+
+describe('remembered monitor missing', () => {
+  it('reports the remembered monitor when it was unplugged, and keeps the Output closed', () => {
+    const t = setup([laptop, prompter]);
+    t.manager.chooseMonitor('prompter');
+    expect(t.manager.getView().missingMonitorId).toBeNull();
+    t.setDisplays([laptop]);
+    t.manager.refresh();
+    expect(t.isOpen()).toBe(false);
+    expect(t.manager.getView().chosenMonitorId).toBeNull();
+    expect(t.manager.getView().missingMonitorId).toBe('prompter');
+  });
+
+  it('clears once a monitor is chosen for the new setup, or when reconnected', () => {
+    const t = setup([laptop, prompter]);
+    t.manager.chooseMonitor('prompter');
+    t.setDisplays([laptop]);
+    t.setDisplays([laptop, prompter]);
+    expect(t.manager.getView().missingMonitorId).toBeNull();
+  });
+
+  it('is not reported for an unrelated saved setup or in Windowed Output', () => {
+    const t = setup([laptop, prompter]);
+    t.manager.chooseMonitor('prompter');
+    t.setDisplays([laptop, projector]);
+    expect(t.manager.getView().missingMonitorId).toBeNull();
+    t.setDisplays([laptop]);
+    t.manager.setWindowed(true);
+    expect(t.manager.getView().missingMonitorId).toBeNull();
   });
 });
