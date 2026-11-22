@@ -107,3 +107,51 @@ describe('importDocx', () => {
     if (!result.ok) expect(result.message).toMatch(/no text/i);
   });
 });
+
+describe('importDocx style inheritance', () => {
+  const W = '<w:styles xmlns:w="W">';
+  it('reads bold, italic and color from character styles, following basedOn', () => {
+    const styles =
+      W +
+      '<w:style w:type="character" w:styleId="Strong"><w:rPr><w:b/></w:rPr></w:style>' +
+      '<w:style w:type="character" w:styleId="Red"><w:basedOn w:val="Strong"/><w:rPr><w:i/><w:color w:val="FF0000"/></w:rPr></w:style></w:styles>';
+    expect(
+      lines(
+        para([run('a', '<w:rStyle w:val="Strong"/>'), run('b', '<w:rStyle w:val="Red"/>'), run('c')]),
+        styles,
+      ),
+    ).toEqual([
+      { runs: [{ text: 'a', bold: true }, { text: 'b', bold: true, italic: true, color: '#ff0000' }, { text: 'c' }] },
+    ]);
+  });
+
+  it('reads emphasis from paragraph styles and lets direct formatting override them', () => {
+    const styles =
+      W +
+      '<w:style w:type="paragraph" w:styleId="Quote"><w:rPr><w:i/><w:color w:val="0000FF"/></w:rPr></w:style></w:styles>';
+    expect(
+      lines(para([run('q'), run('n', '<w:i w:val="0"/><w:color w:val="00FF00"/>')], 'Quote'), styles),
+    ).toEqual([{ runs: [{ text: 'q', italic: true, color: '#0000ff' }, { text: 'n', color: '#00ff00' }] }]);
+  });
+
+  it('applies document defaults and basedOn chains of paragraph styles, including heading styles', () => {
+    const styles =
+      W +
+      '<w:docDefaults><w:rPrDefault><w:rPr><w:color w:val="333333"/></w:rPr></w:rPrDefault></w:docDefaults>' +
+      '<w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/></w:style>' +
+      '<w:style w:type="paragraph" w:styleId="Heading1"><w:name w:val="heading 1"/><w:basedOn w:val="Normal"/><w:rPr><w:b/></w:rPr></w:style>' +
+      '<w:style w:type="paragraph" w:styleId="Fancy"><w:basedOn w:val="Heading1"/><w:rPr><w:b w:val="0"/><w:i/></w:rPr></w:style></w:styles>';
+    expect(lines(para([run('H')], 'Heading1') + para([run('F')], 'Fancy') + para([run('P')]), styles)).toEqual([
+      { heading: 1, runs: [{ text: 'H', bold: true, color: '#333333' }] },
+      { runs: [{ text: 'F', italic: true, color: '#333333' }] },
+      { runs: [{ text: 'P', color: '#333333' }] },
+    ]);
+  });
+
+  it('survives a basedOn loop', () => {
+    const styles =
+      W +
+      '<w:style w:styleId="A"><w:basedOn w:val="B"/><w:rPr><w:b/></w:rPr></w:style><w:style w:styleId="B"><w:basedOn w:val="A"/></w:style></w:styles>';
+    expect(lines(para([run('x')], 'A'), styles)).toEqual([{ runs: [{ text: 'x', bold: true }] }]);
+  });
+});
