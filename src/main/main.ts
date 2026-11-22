@@ -2,8 +2,11 @@ import { app, BrowserWindow, ipcMain } from 'electron';
 import path from 'node:path';
 import { createCore, type Command } from '../core';
 import { IPC } from '../shared/ipc';
+import { createFilePresetStore } from './filePresetStore';
 
-const core = createCore();
+const core = createCore({
+  presetStore: createFilePresetStore(path.join(app.getPath('userData'), 'presets.json')),
+});
 const windows = new Set<BrowserWindow>();
 
 function openWindow(page: 'operator' | 'output', title: string, x: number): void {

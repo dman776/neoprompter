@@ -3,9 +3,11 @@ import type { CoreState } from '../core';
 const toggle = document.getElementById('toggle') as HTMLButtonElement;
 const nameEl = document.getElementById('script-name')!;
 const statusEl = document.getElementById('status')!;
+import { renderAppearance } from './appearancePanel';
 let playing = false;
 
 function render(state: CoreState): void {
+  renderAppearance(state);
   playing = state.playing;
   nameEl.textContent = state.script.name;
   toggle.textContent = state.playing ? 'Pause' : 'Play';

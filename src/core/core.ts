@@ -1,12 +1,14 @@
 import { systemClock, type Clock } from './clock';
 import { sampleScript } from './sampleScript';
-import type { Command, CoreState, Script } from './types';
+import { createMemoryPresetStore, type PresetStore } from './presets';
+import { defaultAppearance, type Appearance, type Command, type CoreState, type Script } from './types';
 
 export interface CoreOptions {
   clock?: Clock;
   script?: Script;
   /** Lines per second. */
   speed?: number;
+  presetStore?: PresetStore;
 }
 
 export interface Core {
@@ -22,6 +24,10 @@ export function createCore(options: CoreOptions = {}): Core {
   const script = options.script ?? sampleScript;
   const speed = options.speed ?? 3;
 
+  const presetStore = options.presetStore ?? createMemoryPresetStore();
+  let presets: Record<string, Appearance> = presetStore.load();
+  let appearance: Appearance = { ...defaultAppearance };
+  let activePreset: string | null = null;
   let position = 0;
   let playing = false;
   let lastTick = clock.now();
@@ -34,7 +40,15 @@ export function createCore(options: CoreOptions = {}): Core {
   }
 
   function snapshot(): CoreState {
-    return { script, position, speed, playing };
+    return {
+      script,
+      position,
+      speed,
+      playing,
+      appearance: { ...appearance },
+      presets: Object.keys(presets),
+      activePreset,
+    };
   }
 
   return {
@@ -47,6 +61,33 @@ export function createCore(options: CoreOptions = {}): Core {
         case 'pause':
           playing = false;
           break;
+        case 'setAppearance':
+          appearance = { ...appearance, ...command.changes };
+          break;
+        case 'toggleMirror':
+          appearance = { ...appearance, mirror: !appearance.mirror };
+          break;
+        case 'savePreset': {
+          const name = command.name.trim();
+          if (!name) return;
+          presets = { ...presets, [name]: { ...appearance } };
+          activePreset = name;
+          presetStore.save(presets);
+          break;
+        }
+        case 'loadPreset':
+          if (!presets[command.name]) return;
+          appearance = { ...presets[command.name] };
+          activePreset = command.name;
+          break;
+        case 'deletePreset': {
+          if (!presets[command.name]) return;
+          const { [command.name]: _gone, ...rest } = presets;
+          presets = rest;
+          if (activePreset === command.name) activePreset = null;
+          presetStore.save(presets);
+          break;
+        }
       }
       const state = snapshot();
       listeners.forEach((l) => l(state));
