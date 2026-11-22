@@ -1,6 +1,7 @@
 import type { CoreState } from '../core';
 
 const textEl = document.getElementById('text')!;
+const progressEl = document.getElementById('progress')!;
 let renderedScript: string | null = null;
 
 function render(state: CoreState): void {
@@ -18,6 +19,7 @@ function render(state: CoreState): void {
     ? (textEl.firstElementChild as HTMLElement).getBoundingClientRect().height
     : 0;
   textEl.style.transform = `translateY(${-state.position * lineHeight}px)`;
+  progressEl.style.transform = `scaleX(${state.progress})`;
 }
 
 window.neoprompter.onState(render);
