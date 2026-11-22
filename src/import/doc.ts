@@ -41,6 +41,44 @@ export function importDoc(bytes: Uint8Array, fileName: string): ImportResult {
   return { ok: true, script: { name: fileName.replace(/\.doc$/i, ''), lines } };
 }
 
+// FIB (File Information Block) layout, from the Word 97-2003 binary format spec.
+const FIB_MAGIC = 0xa5ec;
+const FIB_VERSION_WORD97 = 0xc1;
+const FIB_OFFSET_VERSION = 2;
+const FIB_OFFSET_FLAGS = 0x0a;
+const FIB_FLAG_ENCRYPTED = 0x0100;
+const FIB_FLAG_TABLE_1 = 0x0200;
+/** The FIB's csw count (of 16-bit words) sits at this offset; the words follow it. */
+const FIB_OFFSET_CSW = 32;
+const FIB_BASE_SIZE_WITH_CSW = 34;
+/** Index of ccpText among the FibRgLw97 longs. */
+const FIB_LW_CCP_TEXT = 3;
+/** Indexes of the (fc, lcb) pairs in FibRgFcLcb97. */
+const FCLCB_STSHF = 1;
+const FCLCB_PLCFBTECHPX = 12;
+const FCLCB_PLCFBTEPAPX = 13;
+const FCLCB_CLX = 33;
+/** Piece table (CLX) markers, and the piece descriptor flags. */
+const CLX_PRC = 0x01;
+const CLX_PCDT = 0x02;
+const PIECE_COMPRESSED_FLAG = 0x40000000;
+const PIECE_OFFSET_MASK = 0x3fffffff;
+const PIECE_DESCRIPTOR_SIZE = 8;
+const PLC_PIECE_ENTRY_SIZE = 12;
+/** Special characters in the text stream. */
+const CH_FIELD_BEGIN = 0x13;
+const CH_FIELD_SEPARATOR = 0x14;
+const CH_FIELD_END = 0x15;
+const CH_PARAGRAPH = 0x0d;
+const CH_CELL = 0x07;
+const CH_LINE_BREAK = 0x0b;
+const CH_TAB = 0x09;
+const CH_NON_BREAKING_HYPHEN = 0x1e;
+const CH_OPTIONAL_HYPHEN = 0x1f;
+const CH_PAGE_BREAK = 0x0c;
+/** Character style reference (sprmCIstd). */
+const SPRM_CISTD = 0x4a30;
+
 function readDoc(bytes: Uint8Array): RichLine[] {
   const cfb = CFB.read(bytes, { type: 'array' });
   const wordStream = CFB.find(cfb, '/WordDocument')?.content;
@@ -49,19 +87,19 @@ function readDoc(bytes: Uint8Array): RichLine[] {
   const v = new DataView(wd.buffer);
   const at = (n: number) => (n < 0 || n > wd.length ? fail('out of range') : n);
 
-  if (v.getUint16(0, true) !== 0xa5ec) fail('not a Word document');
-  if (v.getUint16(2, true) < 0xc1) fail('older than Word 97');
-  const flags = v.getUint16(0x0a, true);
-  if (flags & 0x0100) fail('encrypted');
-  const tableName = flags & 0x0200 ? '/1Table' : '/0Table';
+  if (v.getUint16(0, true) !== FIB_MAGIC) fail('not a Word document');
+  if (v.getUint16(FIB_OFFSET_VERSION, true) < FIB_VERSION_WORD97) fail('older than Word 97');
+  const flags = v.getUint16(FIB_OFFSET_FLAGS, true);
+  if (flags & FIB_FLAG_ENCRYPTED) fail('encrypted');
+  const tableName = flags & FIB_FLAG_TABLE_1 ? '/1Table' : '/0Table';
   const tableStream = CFB.find(cfb, tableName)?.content;
   if (!tableStream) return fail('no table stream');
   const table = Uint8Array.from(tableStream as ArrayLike<number>);
   const tv = new DataView(table.buffer);
 
-  const cswEnd = 34 + v.getUint16(32, true) * 2;
+  const cswEnd = FIB_BASE_SIZE_WITH_CSW + v.getUint16(FIB_OFFSET_CSW, true) * 2;
   const lwStart = cswEnd + 2;
-  const ccpText = v.getInt32(lwStart + 3 * 4, true);
+  const ccpText = v.getInt32(lwStart + FIB_LW_CCP_TEXT * 4, true);
   const fcLcbStart = lwStart + v.getUint16(cswEnd, true) * 4 + 2;
   const pair = (i: number) => ({
     fc: v.getUint32(fcLcbStart + i * 8, true),
@@ -69,29 +107,29 @@ function readDoc(bytes: Uint8Array): RichLine[] {
   });
 
   // Piece table: character position (cp) to file offset.
-  const clx = pair(33);
+  const clx = pair(FCLCB_CLX);
   let p = at(clx.fc);
   const clxEnd = clx.fc + clx.lcb;
-  while (p < clxEnd && table[p] === 0x01) p += 3 + tv.getUint16(p + 1, true);
-  if (table[p] !== 0x02) fail('no piece table');
+  while (p < clxEnd && table[p] === CLX_PRC) p += 3 + tv.getUint16(p + 1, true);
+  if (table[p] !== CLX_PCDT) fail('no piece table');
   const plcLen = tv.getUint32(p + 1, true);
   const plc = p + 5;
-  const pieceCount = (plcLen - 4) / 12;
+  const pieceCount = (plcLen - 4) / PLC_PIECE_ENTRY_SIZE;
   if (!Number.isInteger(pieceCount) || pieceCount < 1) fail('bad piece table');
   const pieces = Array.from({ length: pieceCount }, (_, i) => {
-    const raw = tv.getUint32(plc + (pieceCount + 1) * 4 + i * 8 + 2, true);
-    const compressed = (raw & 0x40000000) !== 0;
+    const raw = tv.getUint32(plc + (pieceCount + 1) * 4 + i * PIECE_DESCRIPTOR_SIZE + 2, true);
+    const compressed = (raw & PIECE_COMPRESSED_FLAG) !== 0;
     return {
       cpStart: tv.getUint32(plc + i * 4, true),
       cpEnd: tv.getUint32(plc + (i + 1) * 4, true),
       compressed,
-      fc: compressed ? (raw & 0x3fffffff) / 2 : raw & 0x3fffffff,
+      fc: compressed ? (raw & PIECE_OFFSET_MASK) / 2 : raw & PIECE_OFFSET_MASK,
     };
   });
 
-  const chpx = readFkpSpans(wd, table, pair(12), 'chpx');
-  const papx = readFkpSpans(wd, table, pair(13), 'papx');
-  const styles = readStyles(table, pair(1));
+  const chpx = readFkpSpans(wd, table, pair(FCLCB_PLCFBTECHPX), 'chpx');
+  const papx = readFkpSpans(wd, table, pair(FCLCB_PLCFBTEPAPX), 'papx');
+  const styles = readStyles(table, pair(FCLCB_STSHF));
   const headings = headingStyles(styles);
 
   const resolveStyle = (istd: number | undefined): Fmt => {
@@ -138,35 +176,35 @@ function readDoc(bytes: Uint8Array): RichLine[] {
       const spans = findSpan(papx, off);
       const istd = spans ? (spans.data[0] | (spans.data[1] << 8)) : 0;
 
-      if (code === 0x13) {
+      if (code === CH_FIELD_BEGIN) {
         fieldDepth.push({ hidden: true });
-      } else if (code === 0x14) {
+      } else if (code === CH_FIELD_SEPARATOR) {
         if (fieldDepth.length) fieldDepth[fieldDepth.length - 1].hidden = false;
-      } else if (code === 0x15) {
+      } else if (code === CH_FIELD_END) {
         fieldDepth.pop();
       } else if (fieldDepth.some((f) => f.hidden)) {
         // field instructions are not text
-      } else if (code === 0x0d || code === 0x07) {
-        if (code === 0x07 && lastWasCell && atParaStart) {
+      } else if (code === CH_PARAGRAPH || code === CH_CELL) {
+        if (code === CH_CELL && lastWasCell && atParaStart) {
           lastWasCell = false; // row-end mark
           continue;
         }
-        lastWasCell = code === 0x07;
+        lastWasCell = code === CH_CELL;
         endParagraph(istd);
         atParaStart = true;
         continue;
-      } else if (code === 0x0b) {
+      } else if (code === CH_LINE_BREAK) {
         current.push([]);
-      } else if (code === 0x09) {
+      } else if (code === CH_TAB) {
         add(' ', direct(off));
-      } else if (code === 0x1e) {
+      } else if (code === CH_NON_BREAKING_HYPHEN) {
         add('-', direct(off));
-      } else if (code === 0x1f || code === 0x0c || code < 0x20) {
+      } else if (code === CH_OPTIONAL_HYPHEN || code === CH_PAGE_BREAK || code < 0x20) {
         // optional hyphen, page break, pictures and other control characters
       } else {
         add(ch, direct(off));
       }
-      if (code !== 0x13 && code !== 0x14 && code !== 0x15) {
+      if (code !== CH_FIELD_BEGIN && code !== CH_FIELD_SEPARATOR && code !== CH_FIELD_END) {
         atParaStart = false;
         lastWasCell = false;
       }
@@ -178,7 +216,7 @@ function readDoc(bytes: Uint8Array): RichLine[] {
         if (span) {
           const d = span.data;
           const sprms = parseSprms(d);
-          const charStyle = sprms.find((s) => s.op === 0x4a30);
+          const charStyle = sprms.find((s) => s.op === SPRM_CISTD);
           if (charStyle) Object.assign(fmt, resolveStyle(charStyle.val));
           for (const s of sprms) applySprm(fmt, s.op, s.val, s.bytes);
         }
