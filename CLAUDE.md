@@ -26,8 +26,15 @@ Layout (renderers and main depend on `core`, never the reverse):
 - `src/main/`: Electron main process and preload; owns the core instance and bridges IPC (`src/shared/ipc.ts`). Renderers use `window.neoprompter` (`getState`, `dispatch`, `onState`).
 - `src/operator/`, `src/output/`: thin renderers of core state (`index.html` + `<name>.ts`, bundled to `dist/<name>/<name>.js`). A new renderer page must be added to the page list in `scripts/build.mjs`.
 - New headless modules (import, API server, shuttle adapter) get their own `src/<module>/` folder with an `index.ts` and colocated tests.
+
 - `src/output-window/`: headless Output placement (chosen monitor per display setup, Windowed Output). Display list, settings store and window host are injected; main wires them to Electron.
 
 Script model (`src/core/types.ts`): `Script { name, lines: ScriptLine[] }`. A `ScriptLine` is a plain `string` (one unstyled run) or a `RichLine { heading?: 1-6, runs: Run[] }`; a `Run` is `{ text, bold?, italic?, color? }`. Color is the source color as `#rrggbb`, stored as-is (the readable-color rule is applied at render time, never on the Script). Fonts, sizes and spacing are never stored. Use `lineRuns`/`lineText`/`lineHeading` to read a line. The library stores `StoredScript { text, lines? }`: `text` is the plain form, `lines` the optional styled form; old text-only entries still load. `saveScript` takes optional `lines`. The Output renders runs as spans, headings bold at the Preset's size.
 
 Import (`src/import/`): `importDocx(bytes, fileName): { ok: true, script } | { ok: false, message }` is a pure function (the second test seam). Tests build `.docx` fixtures in code with `src/import/fixtures.ts`. Main wires the Operator view's "Import…" button (file picker, then `saveScript` with `lines`).
+
+## Installers
+
+- `npm run dist:mac` builds `release/Neoprompter-<ver>.dmg`; `npm run dist:win` builds `release/Neoprompter Setup <ver>.exe` (NSIS; cross-builds from macOS without wine). `npm run dist:check` verifies the artifacts exist. Config: `electron-builder.yml`. `release/` is git-ignored.
+- Unsigned, no auto-update: updates are done by hand. macOS: right-click > Open on first launch. Windows: SmartScreen "More info > Run anyway".
+- The app makes no network calls (`src/packaging/offline.test.ts` guards against remote resources). The Windows `.exe` is built but not run-tested here (no Windows machine).

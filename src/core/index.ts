@@ -18,3 +18,5 @@ export type { LibraryStorage, StoredScript } from './library';
 export { defaultAppearance } from './types';
 export { createMemoryPresetStore } from './presets';
 export type { PresetStore } from './presets';
+export { createMemorySessionStore } from './session';
+export type { Session, SessionStore } from './session';

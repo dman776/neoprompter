@@ -6,6 +6,7 @@ import { createCore, lineText, type Command } from '../core';
 import { createFileLibraryStorage } from '../library';
 import { IPC } from '../shared/ipc';
 import { createFilePresetStore } from './filePresetStore';
+import { createFileSessionStore } from './fileSessionStore';
 import { createOutputWindowManager, type OutputSettings } from '../output-window';
 
 function createLibraryStorage() {
@@ -22,6 +23,7 @@ function createLibraryStorage() {
 const core = createCore({
   libraryStorage: createLibraryStorage(),
   presetStore: createFilePresetStore(path.join(app.getPath('userData'), 'presets.json')),
+  sessionStore: createFileSessionStore(path.join(app.getPath('userData'), 'session.json')),
 });
 const windows = new Set<BrowserWindow>();
 let operatorWin: BrowserWindow | null = null;
