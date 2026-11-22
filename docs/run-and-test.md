@@ -22,4 +22,8 @@ To check a new behavior, add a test there: dispatch the commands, then assert on
 
 ## Launching by hand
 
-`npm start` builds and launches the app. If the Electron binary is missing, run `node node_modules/electron/install.js` (npm can skip the install script).
+`npm start` builds and launches the app.
+
+## Dependencies stay current by themselves
+
+npm can leave Electron's binary uninstalled. `npm start` and `npm run test:e2e` install it when missing (`scripts/ensure-electron.mjs`). After a merge, pull, or branch switch that changes `package-lock.json`, the git hooks (`.husky/post-merge`, `.husky/post-checkout`) run `npm ci` and then the same Electron check. In a fresh worktree, run `npm ci` and `node scripts/ensure-electron.mjs` yourself, because worktrees start without `node_modules`.
