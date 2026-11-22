@@ -261,12 +261,15 @@ export function createCore(options: CoreOptions = {}): Core {
           position = clampPosition(playStart);
           break;
         case 'saveScript':
-          stored = [...stored, {
+          stored = [
+            ...stored,
+            {
               id: String(nextId++),
               name: command.name,
               text: command.text,
               ...(command.lines && { lines: command.lines }),
-            }];
+            },
+          ];
           storage.writeAll(stored);
           break;
         case 'loadScript': {

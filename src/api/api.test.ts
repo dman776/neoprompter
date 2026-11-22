@@ -20,7 +20,8 @@ async function setup(opts: { token?: string; maxBodyBytes?: number; allow?: () =
   });
   servers.push(server);
   const { port } = await server.start();
-  const call = (path: string, init: RequestInit = {}) => fetch(`http://127.0.0.1:${port}${path}`, init);
+  const call = (path: string, init: RequestInit = {}) =>
+    fetch(`http://127.0.0.1:${port}${path}`, init);
   const post = (body: unknown, headers: Record<string, string> = {}, path = '/api/notify') =>
     call(path, {
       method: 'POST',
@@ -29,7 +30,8 @@ async function setup(opts: { token?: string; maxBodyBytes?: number; allow?: () =
     });
   return { clock, core, server, port, call, post };
 }
-const texts = (core: ReturnType<typeof createCore>) => core.getState().notifications.map((n) => n.text);
+const texts = (core: ReturnType<typeof createCore>) =>
+  core.getState().notifications.map((n) => n.text);
 
 describe('POST /api/notify', () => {
   it('shows a Notification for the default time', async () => {
@@ -108,15 +110,21 @@ describe('token', () => {
   it('rejects missing or wrong tokens with 401 and does not notify', async () => {
     const { core, call, post } = await setup({ token: 's3cret' });
     expect((await call('/api/status')).status).toBe(401);
-    expect((await call('/api/status', { headers: { authorization: 'Bearer nope' } })).status).toBe(401);
+    expect((await call('/api/status', { headers: { authorization: 'Bearer nope' } })).status).toBe(
+      401,
+    );
     expect((await post({ text: 'x' })).status).toBe(401);
     expect(texts(core)).toEqual([]);
   });
 
   it('accepts a bearer header or an X-Neoprompter-Token header, but not a ?token= query', async () => {
     const { core, call, post } = await setup({ token: 's3cret' });
-    expect((await call('/api/status', { headers: { authorization: 'Bearer s3cret' } })).status).toBe(200);
-    expect((await call('/api/status', { headers: { 'x-neoprompter-token': 's3cret' } })).status).toBe(200);
+    expect(
+      (await call('/api/status', { headers: { authorization: 'Bearer s3cret' } })).status,
+    ).toBe(200);
+    expect(
+      (await call('/api/status', { headers: { 'x-neoprompter-token': 's3cret' } })).status,
+    ).toBe(200);
     expect((await call('/api/status?token=s3cret')).status).toBe(401);
     expect((await post({ text: 'ok' }, { 'x-neoprompter-token': 's3cret' })).status).toBe(202);
     expect(texts(core)).toEqual(['ok']);
@@ -130,19 +138,44 @@ describe('token', () => {
   it('a token change takes effect without restarting', async () => {
     const { server, call } = await setup({ token: 'a' });
     server.setToken('b');
-    expect((await call('/api/status', { headers: { 'x-neoprompter-token': 'a' } })).status).toBe(401);
-    expect((await call('/api/status', { headers: { 'x-neoprompter-token': 'b' } })).status).toBe(200);
+    expect((await call('/api/status', { headers: { 'x-neoprompter-token': 'a' } })).status).toBe(
+      401,
+    );
+    expect((await call('/api/status', { headers: { 'x-neoprompter-token': 'b' } })).status).toBe(
+      200,
+    );
   });
 });
 
 describe('local network only', () => {
   it('classifies addresses', () => {
-    for (const ok of ['127.0.0.1', '10.1.2.3', '172.16.0.1', '172.31.255.255', '192.168.1.20',
-      '169.254.3.4', '::1', 'fe80::1', 'fd12:3456::1', '::ffff:192.168.1.5', '::ffff:127.0.0.1']) {
+    for (const ok of [
+      '127.0.0.1',
+      '10.1.2.3',
+      '172.16.0.1',
+      '172.31.255.255',
+      '192.168.1.20',
+      '169.254.3.4',
+      '::1',
+      'fe80::1',
+      'fd12:3456::1',
+      '::ffff:192.168.1.5',
+      '::ffff:127.0.0.1',
+    ]) {
       expect(isPrivateAddress(ok), ok).toBe(true);
     }
-    for (const bad of ['8.8.8.8', '172.32.0.1', '172.15.0.1', '192.169.0.1', '100.64.0.1',
-      '2001:4860:4860::8888', '::ffff:8.8.8.8', '', 'garbage', undefined]) {
+    for (const bad of [
+      '8.8.8.8',
+      '172.32.0.1',
+      '172.15.0.1',
+      '192.169.0.1',
+      '100.64.0.1',
+      '2001:4860:4860::8888',
+      '::ffff:8.8.8.8',
+      '',
+      'garbage',
+      undefined,
+    ]) {
       expect(isPrivateAddress(bad), String(bad)).toBe(false);
     }
   });
@@ -173,12 +206,32 @@ describe('route table', () => {
   it('answers 404 or 405 to transport-like routes and never moves the core', async () => {
     const { core, call } = await setup();
     const before = JSON.stringify(core.getState());
-    const paths = ['/api', '/api/play', '/api/pause', '/api/stop', '/api/start', '/api/speed',
-      '/api/scroll', '/api/jump', '/api/position', '/api/script', '/api/load', '/api/loadScript',
-      '/api/command', '/api/dispatch', '/api/notify/../play', '/api/status/play', '/play', '/pause'];
+    const paths = [
+      '/api',
+      '/api/play',
+      '/api/pause',
+      '/api/stop',
+      '/api/start',
+      '/api/speed',
+      '/api/scroll',
+      '/api/jump',
+      '/api/position',
+      '/api/script',
+      '/api/load',
+      '/api/loadScript',
+      '/api/command',
+      '/api/dispatch',
+      '/api/notify/../play',
+      '/api/status/play',
+      '/play',
+      '/pause',
+    ];
     for (const path of paths) {
       for (const method of ['GET', 'POST', 'PUT', 'DELETE', 'PATCH']) {
-        const res = await call(path, { method, body: method === 'GET' ? undefined : '{"type":"play"}' });
+        const res = await call(path, {
+          method,
+          body: method === 'GET' ? undefined : '{"type":"play"}',
+        });
         expect([404, 405], `${method} ${path}`).toContain(res.status);
         if (res.status === 405) expect(['/api/notify', '/api/status']).toContain(path);
       }
@@ -207,12 +260,17 @@ describe('extension', () => {
       core,
       port: 0,
       token: 't',
-      extraRoutes: [{ method: 'GET', path: '/', handler: (_req, res) => res.json(200, { page: true }) }],
+      extraRoutes: [
+        { method: 'GET', path: '/', handler: (_req, res) => res.json(200, { page: true }) },
+      ],
     });
     servers.push(server);
     const { port } = await server.start();
     expect((await fetch(`http://127.0.0.1:${port}/`)).status).toBe(401);
-    expect((await fetch(`http://127.0.0.1:${port}/`, { headers: { 'x-neoprompter-token': 't' } })).status).toBe(200);
+    expect(
+      (await fetch(`http://127.0.0.1:${port}/`, { headers: { 'x-neoprompter-token': 't' } }))
+        .status,
+    ).toBe(200);
   });
 });
 

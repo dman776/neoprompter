@@ -43,7 +43,8 @@ export function importDocx(bytes: Uint8Array, fileName: string): ImportResult {
     });
     if (!files['word/document.xml']) return unreadable;
     documentXml = parser.parse(strFromU8(files['word/document.xml'])) as XmlNode[];
-    if (files['word/styles.xml']) stylesXml = parser.parse(strFromU8(files['word/styles.xml'])) as XmlNode[];
+    if (files['word/styles.xml'])
+      stylesXml = parser.parse(strFromU8(files['word/styles.xml'])) as XmlNode[];
   } catch {
     return unreadable;
   }
@@ -59,8 +60,10 @@ export function importDocx(bytes: Uint8Array, fileName: string): ImportResult {
   return { ok: true, script: { name: fileName.replace(/\.docx$/i, ''), lines } };
 }
 
-const children = (node: XmlNode, tag: string): XmlNode[] => (node[tag] as XmlNode[] | undefined) ?? [];
-const attrs = (node: XmlNode): Record<string, string> => (node[':@'] as Record<string, string>) ?? {};
+const children = (node: XmlNode, tag: string): XmlNode[] =>
+  (node[tag] as XmlNode[] | undefined) ?? [];
+const attrs = (node: XmlNode): Record<string, string> =>
+  (node[':@'] as Record<string, string>) ?? {};
 const tagOf = (node: XmlNode): string => Object.keys(node).find((k) => k !== ':@') ?? '';
 
 function headingLevel(text: string | undefined): number | undefined {
@@ -102,12 +105,17 @@ function collectParagraphs(
   for (const node of nodes) {
     const tag = tagOf(node);
     if (tag === 'w:p') out.push(...readParagraph(children(node, tag), headings, formats));
-    else if (tag && tag !== '#text' && tag !== 'w:sectPr') collectParagraphs(children(node, tag), headings, formats, out);
+    else if (tag && tag !== '#text' && tag !== 'w:sectPr')
+      collectParagraphs(children(node, tag), headings, formats, out);
   }
 }
 
 /** One paragraph is one line, plus one more per line break inside it. */
-function readParagraph(nodes: XmlNode[], headings: Map<string, number>, formats: StyleFormats): RichLine[] {
+function readParagraph(
+  nodes: XmlNode[],
+  headings: Map<string, number>,
+  formats: StyleFormats,
+): RichLine[] {
   let heading: number | undefined;
   let paraStyleId: string | undefined;
   const lines: Run[][] = [[]];
@@ -115,7 +123,12 @@ function readParagraph(nodes: XmlNode[], headings: Map<string, number>, formats:
   const addText = (text: string, style: Omit<Run, 'text'>) => {
     const runs = lines[lines.length - 1];
     const last = runs[runs.length - 1];
-    if (last && last.bold === style.bold && last.italic === style.italic && last.color === style.color) {
+    if (
+      last &&
+      last.bold === style.bold &&
+      last.italic === style.italic &&
+      last.color === style.color
+    ) {
       last.text += text;
     } else {
       runs.push({ text, ...style });
@@ -154,7 +167,10 @@ function readParagraph(nodes: XmlNode[], headings: Map<string, number>, formats:
   };
   walk(nodes);
 
-  return lines.map((runs) => ({ ...(heading ? { heading } : {}), runs: runs.filter((r) => r.text !== '') }));
+  return lines.map((runs) => ({
+    ...(heading ? { heading } : {}),
+    runs: runs.filter((r) => r.text !== ''),
+  }));
 }
 
 function textOf(nodes: XmlNode[]): string {
@@ -185,7 +201,8 @@ function readRunFmt(rPr: XmlNode | undefined): Fmt {
     const on = !['0', 'false', 'off'].includes((val ?? '').toLowerCase());
     if (tag === 'w:b') fmt.bold = on;
     else if (tag === 'w:i') fmt.italic = on;
-    else if (tag === 'w:color' && val) fmt.color = /^[0-9a-f]{6}$/i.test(val) ? `#${val.toLowerCase()}` : null;
+    else if (tag === 'w:color' && val)
+      fmt.color = /^[0-9a-f]{6}$/i.test(val) ? `#${val.toLowerCase()}` : null;
   }
   return fmt;
 }
@@ -221,7 +238,11 @@ function readStyleFormats(styles: XmlNode[]): StyleFormats {
     if (hit) return hit;
     const chain: Fmt[] = [];
     const seen = new Set<string>();
-    for (let cur: string | undefined = id; cur && !seen.has(cur) && own.has(cur); cur = own.get(cur)?.basedOn) {
+    for (
+      let cur: string | undefined = id;
+      cur && !seen.has(cur) && own.has(cur);
+      cur = own.get(cur)?.basedOn
+    ) {
       seen.add(cur);
       chain.unshift(own.get(cur)!.fmt);
     }

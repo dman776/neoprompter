@@ -73,7 +73,8 @@ function renderLibrary(state: CoreState): void {
   for (const entry of state.library) {
     const li = document.createElement('li');
     const label = document.createElement('span');
-    label.textContent = entry.id === state.loadedScriptId ? `${entry.name} (loaded) ` : `${entry.name} `;
+    label.textContent =
+      entry.id === state.loadedScriptId ? `${entry.name} (loaded) ` : `${entry.name} `;
     li.append(label);
     const add = (text: string, onClick: () => void) => {
       const b = document.createElement('button');
@@ -99,7 +100,11 @@ const newName = document.getElementById('new-name') as HTMLInputElement;
 const newText = document.getElementById('new-text') as HTMLTextAreaElement;
 document.getElementById('save')!.addEventListener('click', () => {
   if (!newText.value.trim()) return;
-  window.neoprompter.dispatch({ type: 'saveScript', name: newName.value.trim() || 'Untitled', text: newText.value });
+  window.neoprompter.dispatch({
+    type: 'saveScript',
+    name: newName.value.trim() || 'Untitled',
+    text: newText.value,
+  });
   newName.value = '';
   newText.value = '';
 });

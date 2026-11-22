@@ -95,7 +95,10 @@ function setRingMark(deflection: number): void {
 
 const angleOf = (el: HTMLElement, e: PointerEvent): number => {
   const r = el.getBoundingClientRect();
-  return (Math.atan2(e.clientY - (r.top + r.height / 2), e.clientX - (r.left + r.width / 2)) * 180) / Math.PI;
+  return (
+    (Math.atan2(e.clientY - (r.top + r.height / 2), e.clientX - (r.left + r.width / 2)) * 180) /
+    Math.PI
+  );
 };
 
 // Ring: drag around the outside; it springs back to centre on release.
@@ -158,14 +161,19 @@ for (const id of BUTTON_IDS) {
   const btn = document.createElement('button');
   btn.textContent = String(id);
   const sel = document.createElement('select');
-  for (const action of mapper.availableActions()) sel.add(new Option(label[action] ?? action, action));
+  for (const action of mapper.availableActions())
+    sel.add(new Option(label[action] ?? action, action));
   sel.value = mapper.getMapping()[id as ButtonId];
   sel.addEventListener('change', () => {
     mapper.setButton(id, sel.value);
     saveMapping(mapper.getMapping());
   });
-  btn.addEventListener('pointerdown', () => mapper.handle({ kind: 'button', button: id, pressed: true }));
-  btn.addEventListener('pointerup', () => mapper.handle({ kind: 'button', button: id, pressed: false }));
+  btn.addEventListener('pointerdown', () =>
+    mapper.handle({ kind: 'button', button: id, pressed: true }),
+  );
+  btn.addEventListener('pointerup', () =>
+    mapper.handle({ kind: 'button', button: id, pressed: false }),
+  );
   cell.append(btn, document.createElement('br'), sel);
   buttonsEl.append(cell);
 }
@@ -173,7 +181,8 @@ for (const id of BUTTON_IDS) {
 // Keyboard and mouse/trackpad go through the same mapper.
 document.addEventListener('keydown', (e) => {
   const t = e.target as HTMLElement;
-  if (t.closest('input, textarea, select, button') && e.key !== 'PageUp' && e.key !== 'PageDown') return;
+  if (t.closest('input, textarea, select, button') && e.key !== 'PageUp' && e.key !== 'PageDown')
+    return;
   const action = keyToAction(e.key);
   if (!action) return;
   e.preventDefault();

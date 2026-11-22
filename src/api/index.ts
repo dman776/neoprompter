@@ -68,8 +68,11 @@ export function isPrivateAddress(address: string | undefined): boolean {
   if (net.isIPv4(a)) {
     const [o1, o2] = a.split('.').map(Number);
     return (
-      o1 === 127 || o1 === 10 || (o1 === 172 && o2 >= 16 && o2 <= 31) ||
-      (o1 === 192 && o2 === 168) || (o1 === 169 && o2 === 254)
+      o1 === 127 ||
+      o1 === 10 ||
+      (o1 === 172 && o2 >= 16 && o2 <= 31) ||
+      (o1 === 192 && o2 === 168) ||
+      (o1 === 169 && o2 === 254)
     );
   }
   if (net.isIPv6(a)) {
@@ -135,9 +138,14 @@ export function createApiServer(options: ApiServerOptions): ApiServer {
         return res.json(400, { error: '"text" must be a non-empty string' });
       }
       if (text.length > MAX_NOTIFICATION_TEXT) {
-        return res.json(400, { error: `"text" is longer than ${MAX_NOTIFICATION_TEXT} characters` });
+        return res.json(400, {
+          error: `"text" is longer than ${MAX_NOTIFICATION_TEXT} characters`,
+        });
       }
-      if (durationMs !== undefined && (typeof durationMs !== 'number' || !(durationMs > 0) || !isFinite(durationMs))) {
+      if (
+        durationMs !== undefined &&
+        (typeof durationMs !== 'number' || !(durationMs > 0) || !isFinite(durationMs))
+      ) {
         return res.json(400, { error: '"durationMs" must be a positive number of milliseconds' });
       }
       core.dispatch({ type: 'notify', text, durationMs });
@@ -169,8 +177,17 @@ export function createApiServer(options: ApiServerOptions): ApiServer {
   }
 
   const server = http.createServer((req, httpRes) => {
-    const send = (status: number, contentType: string, body: string, extra: Record<string, string> = {}) => {
-      httpRes.writeHead(status, { 'content-type': contentType, 'cache-control': 'no-store', ...extra });
+    const send = (
+      status: number,
+      contentType: string,
+      body: string,
+      extra: Record<string, string> = {},
+    ) => {
+      httpRes.writeHead(status, {
+        'content-type': contentType,
+        'cache-control': 'no-store',
+        ...extra,
+      });
       httpRes.end(body);
     };
     const json = (status: number, body: unknown, extra?: Record<string, string>) =>
@@ -179,7 +196,9 @@ export function createApiServer(options: ApiServerOptions): ApiServer {
     // 1. Address gate, 2. token, 3. routing. Everything, including 404s, passes the first two.
     if (!allowed(req.socket.remoteAddress)) return json(403, { error: 'Local network only' });
     const url = new URL(req.url ?? '/', 'http://localhost');
-    const isPublicPage = routes.some((r) => r.public && r.path === url.pathname && r.method === req.method);
+    const isPublicPage = routes.some(
+      (r) => r.public && r.path === url.pathname && r.method === req.method,
+    );
     if (!isPublicPage && !authorized(req)) {
       return json(401, { error: 'Missing or wrong token' }, { 'www-authenticate': 'Bearer' });
     }
@@ -187,7 +206,11 @@ export function createApiServer(options: ApiServerOptions): ApiServer {
     if (matching.length === 0) return json(404, { error: 'Not found' });
     const route = matching.find((r) => r.method === req.method);
     if (!route) {
-      return json(405, { error: 'Method not allowed' }, { allow: matching.map((r) => r.method).join(', ') });
+      return json(
+        405,
+        { error: 'Method not allowed' },
+        { allow: matching.map((r) => r.method).join(', ') },
+      );
     }
 
     const declared = Number(req.headers['content-length'] ?? 0);

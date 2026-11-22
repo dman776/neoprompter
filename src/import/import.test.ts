@@ -31,7 +31,9 @@ describe('importDocx', () => {
       '<w:styles xmlns:w="W"><w:style w:styleId="Big"><w:name w:val="heading 2"/></w:style></w:styles>';
     expect(
       lines(
-        para([run('Title')], 'Heading1') + para([run('Sub')], 'Big') + para([run('Body')], 'Normal'),
+        para([run('Title')], 'Heading1') +
+          para([run('Sub')], 'Big') +
+          para([run('Body')], 'Normal'),
         styles,
       ),
     ).toEqual([
@@ -66,7 +68,13 @@ describe('importDocx', () => {
         ]),
       ),
     ).toEqual([
-      { runs: [{ text: 'red', color: '#c00000' }, { text: 'auto' }, { text: 'pale', color: '#ffff00' }] },
+      {
+        runs: [
+          { text: 'red', color: '#c00000' },
+          { text: 'auto' },
+          { text: 'pale', color: '#ffff00' },
+        ],
+      },
     ]);
   });
 
@@ -76,7 +84,10 @@ describe('importDocx', () => {
         'plain',
         '<w:rFonts w:ascii="Comic Sans MS"/><w:sz w:val="72"/><w:szCs w:val="72"/><w:spacing w:val="40"/>',
       ),
-    ]).replace('<w:p>', '<w:p><w:pPr><w:spacing w:before="480" w:after="480"/><w:jc w:val="center"/></w:pPr>');
+    ]).replace(
+      '<w:p>',
+      '<w:p><w:pPr><w:spacing w:before="480" w:after="480"/><w:jc w:val="center"/></w:pPr>',
+    );
     expect(lines(body)).toEqual([{ runs: [{ text: 'plain' }] }]);
   });
 
@@ -117,11 +128,21 @@ describe('importDocx style inheritance', () => {
       '<w:style w:type="character" w:styleId="Red"><w:basedOn w:val="Strong"/><w:rPr><w:i/><w:color w:val="FF0000"/></w:rPr></w:style></w:styles>';
     expect(
       lines(
-        para([run('a', '<w:rStyle w:val="Strong"/>'), run('b', '<w:rStyle w:val="Red"/>'), run('c')]),
+        para([
+          run('a', '<w:rStyle w:val="Strong"/>'),
+          run('b', '<w:rStyle w:val="Red"/>'),
+          run('c'),
+        ]),
         styles,
       ),
     ).toEqual([
-      { runs: [{ text: 'a', bold: true }, { text: 'b', bold: true, italic: true, color: '#ff0000' }, { text: 'c' }] },
+      {
+        runs: [
+          { text: 'a', bold: true },
+          { text: 'b', bold: true, italic: true, color: '#ff0000' },
+          { text: 'c' },
+        ],
+      },
     ]);
   });
 
@@ -130,8 +151,18 @@ describe('importDocx style inheritance', () => {
       W +
       '<w:style w:type="paragraph" w:styleId="Quote"><w:rPr><w:i/><w:color w:val="0000FF"/></w:rPr></w:style></w:styles>';
     expect(
-      lines(para([run('q'), run('n', '<w:i w:val="0"/><w:color w:val="00FF00"/>')], 'Quote'), styles),
-    ).toEqual([{ runs: [{ text: 'q', italic: true, color: '#0000ff' }, { text: 'n', color: '#00ff00' }] }]);
+      lines(
+        para([run('q'), run('n', '<w:i w:val="0"/><w:color w:val="00FF00"/>')], 'Quote'),
+        styles,
+      ),
+    ).toEqual([
+      {
+        runs: [
+          { text: 'q', italic: true, color: '#0000ff' },
+          { text: 'n', color: '#00ff00' },
+        ],
+      },
+    ]);
   });
 
   it('applies document defaults and basedOn chains of paragraph styles, including heading styles', () => {
@@ -141,7 +172,9 @@ describe('importDocx style inheritance', () => {
       '<w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/></w:style>' +
       '<w:style w:type="paragraph" w:styleId="Heading1"><w:name w:val="heading 1"/><w:basedOn w:val="Normal"/><w:rPr><w:b/></w:rPr></w:style>' +
       '<w:style w:type="paragraph" w:styleId="Fancy"><w:basedOn w:val="Heading1"/><w:rPr><w:b w:val="0"/><w:i/></w:rPr></w:style></w:styles>';
-    expect(lines(para([run('H')], 'Heading1') + para([run('F')], 'Fancy') + para([run('P')]), styles)).toEqual([
+    expect(
+      lines(para([run('H')], 'Heading1') + para([run('F')], 'Fancy') + para([run('P')]), styles),
+    ).toEqual([
       { heading: 1, runs: [{ text: 'H', bold: true, color: '#333333' }] },
       { runs: [{ text: 'F', italic: true, color: '#333333' }] },
       { runs: [{ text: 'P', color: '#333333' }] },

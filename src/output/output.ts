@@ -50,13 +50,24 @@ function render(state: CoreState): void {
   // (paragraph) that wraps occupies several, which the core learns from the measurement below.
   const lineHeight = a.fontSize * a.lineSpacing;
   textEl.style.transform = `translateY(${-state.position * lineHeight}px)`;
-  const key = [state.scriptRevision, a.fontSize, a.lineSpacing, a.textWidth, a.margin, window.innerWidth].join('|');
+  const key = [
+    state.scriptRevision,
+    a.fontSize,
+    a.lineSpacing,
+    a.textWidth,
+    a.margin,
+    window.innerWidth,
+  ].join('|');
   if (key !== measuredKey && lineHeight > 0) {
     measuredKey = key;
     const extents = Array.from(textEl.children, (el) =>
       Math.max(1, Math.round((el as HTMLElement).offsetHeight / lineHeight)),
     );
-    window.neoprompter.dispatch({ type: 'setLineExtents', extents, revision: state.scriptRevision });
+    window.neoprompter.dispatch({
+      type: 'setLineExtents',
+      extents,
+      revision: state.scriptRevision,
+    });
   }
   const lines = Math.max(1, Math.floor(window.innerHeight / lineHeight));
   if (lines !== reportedViewport) {

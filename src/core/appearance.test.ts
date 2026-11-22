@@ -111,7 +111,10 @@ describe('readable appearance', () => {
 
   it('keeps a readable pair as chosen', () => {
     const { core } = setup();
-    core.dispatch({ type: 'setAppearance', changes: { textColor: '#ffff00', backgroundColor: '#000080' } });
+    core.dispatch({
+      type: 'setAppearance',
+      changes: { textColor: '#ffff00', backgroundColor: '#000080' },
+    });
     expect(core.getState().appearance.textColor).toBe('#ffff00');
   });
 

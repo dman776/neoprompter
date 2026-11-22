@@ -44,7 +44,9 @@ describe('importDoc (legacy .doc)', () => {
           ],
         },
       ]),
-    ).toEqual([{ runs: [{ text: 'a b ', bold: true }, { text: 'c ', italic: true }, { text: 'd ' }] }]);
+    ).toEqual([
+      { runs: [{ text: 'a b ', bold: true }, { text: 'c ', italic: true }, { text: 'd ' }] },
+    ]);
   });
 
   it('keeps source colors from the palette and from 24-bit values', () => {
@@ -58,7 +60,15 @@ describe('importDoc (legacy .doc)', () => {
           ],
         },
       ]),
-    ).toEqual([{ runs: [{ text: 'red', color: '#ff0000' }, { text: 'auto' }, { text: 'orange', color: '#ff8000' }] }]);
+    ).toEqual([
+      {
+        runs: [
+          { text: 'red', color: '#ff0000' },
+          { text: 'auto' },
+          { text: 'orange', color: '#ff8000' },
+        ],
+      },
+    ]);
   });
 
   it('keeps headings from the paragraph style', () => {
@@ -86,19 +96,42 @@ describe('importDoc (legacy .doc)', () => {
       lines(
         [
           { runs: [{ text: 'q' }, { text: 'n', italic: false }], style: 1 },
-          { runs: [{ text: 'x', charStyle: 2 }, { text: 'y', charStyle: 3 }] },
+          {
+            runs: [
+              { text: 'x', charStyle: 2 },
+              { text: 'y', charStyle: 3 },
+            ],
+          },
         ],
         { styles },
       ),
     ).toEqual([
-      { runs: [{ text: 'q', italic: true, color: '#0000ff' }, { text: 'n', color: '#0000ff' }] },
-      { runs: [{ text: 'x', bold: true }, { text: 'y', bold: true, color: '#ff0000' }] },
+      {
+        runs: [
+          { text: 'q', italic: true, color: '#0000ff' },
+          { text: 'n', color: '#0000ff' },
+        ],
+      },
+      {
+        runs: [
+          { text: 'x', bold: true },
+          { text: 'y', bold: true, color: '#ff0000' },
+        ],
+      },
     ]);
   });
 
   it('splits line breaks, drops field codes and non-text controls', () => {
     expect(
-      lines([{ runs: [{ text: 'x\vy' }, { text: '\x13 HYPERLINK "u" \x14link\x15' }, { text: '\x01\x08z' }] }]),
+      lines([
+        {
+          runs: [
+            { text: 'x\vy' },
+            { text: '\x13 HYPERLINK "u" \x14link\x15' },
+            { text: '\x01\x08z' },
+          ],
+        },
+      ]),
     ).toEqual([{ runs: [{ text: 'x' }] }, { runs: [{ text: 'ylinkz' }] }]);
   });
 
@@ -111,7 +144,10 @@ describe('importDoc (legacy .doc)', () => {
   });
 
   it('gives a clear message for a corrupt file', () => {
-    for (const bytes of [strToU8('definitely not a cfb'), makeDoc([{ runs: [{ text: 'x' }] }]).slice(0, 700)]) {
+    for (const bytes of [
+      strToU8('definitely not a cfb'),
+      makeDoc([{ runs: [{ text: 'x' }] }]).slice(0, 700),
+    ]) {
       const result = importDoc(bytes, 'bad.doc');
       expect(result.ok).toBe(false);
       if (!result.ok) expect(result.message).toMatch(/bad\.doc.*not a readable Word/i);

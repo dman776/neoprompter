@@ -1,4 +1,8 @@
-import { DEFAULT_QUICK_MESSAGES, normalizeQuickMessages, type QuickMessageStore } from '../api/producer';
+import {
+  DEFAULT_QUICK_MESSAGES,
+  normalizeQuickMessages,
+  type QuickMessageStore,
+} from '../api/producer';
 import { createJsonFile } from './jsonFile';
 
 /** The shared Producer quick-message list persisted as JSON on disk (main process only). */

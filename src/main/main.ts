@@ -62,8 +62,7 @@ function createOutputManager() {
   const file = path.join(app.getPath('userData'), 'output-settings.json');
   return createOutputWindowManager({
     displays: {
-      list: () =>
-        screen.getAllDisplays().map((d) => ({ id: String(d.id), bounds: d.bounds })),
+      list: () => screen.getAllDisplays().map((d) => ({ id: String(d.id), bounds: d.bounds })),
       operatorDisplayId: () =>
         String(
           operatorWin && !operatorWin.isDestroyed()

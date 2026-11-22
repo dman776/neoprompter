@@ -14,9 +14,7 @@ export interface Display {
 }
 
 export type OutputPlacement =
-  | { mode: 'fullscreen'; bounds: Bounds }
-  | { mode: 'windowed' }
-  | { mode: 'closed' };
+  { mode: 'fullscreen'; bounds: Bounds } | { mode: 'windowed' } | { mode: 'closed' };
 
 export interface OutputSettings {
   /** Windowed Output: a test setting that shows the Output in an ordinary window. */

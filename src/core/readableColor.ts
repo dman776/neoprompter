@@ -51,7 +51,8 @@ export function displayColor(
   background: string,
   themeColor: string,
 ): string {
-  if (source && parseHex(source) && contrastRatio(source, background) >= MIN_CONTRAST) return source;
+  if (source && parseHex(source) && contrastRatio(source, background) >= MIN_CONTRAST)
+    return source;
   return contrastRatio(themeColor, background) >= MIN_CONTRAST
     ? themeColor
     : readableTextOn(background);

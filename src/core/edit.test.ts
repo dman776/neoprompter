@@ -25,7 +25,12 @@ describe('minimal editor', () => {
 
   it('keeps styling on untouched text when editing a styled line', () => {
     const { core } = setup([
-      { runs: [{ text: 'hello ', bold: true }, { text: 'wrld', color: PALETTE[0].color }] },
+      {
+        runs: [
+          { text: 'hello ', bold: true },
+          { text: 'wrld', color: PALETTE[0].color },
+        ],
+      },
     ]);
     core.dispatch({ type: 'editLine', line: 0, text: 'hello world' });
     expect(lineRuns(core.getState().script.lines[0])).toEqual([

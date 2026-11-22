@@ -15,8 +15,23 @@ const fail = (why: string): never => {
 
 // Word 97 color palette (ico), index 1..16.
 const ICO = [
-  '', '#000000', '#0000ff', '#00ffff', '#00ff00', '#ff00ff', '#ff0000', '#ffff00', '#ffffff',
-  '#000080', '#008080', '#008000', '#800080', '#800000', '#808000', '#808080', '#c0c0c0',
+  '',
+  '#000000',
+  '#0000ff',
+  '#00ffff',
+  '#00ff00',
+  '#ff00ff',
+  '#ff0000',
+  '#ffff00',
+  '#ffffff',
+  '#000080',
+  '#008080',
+  '#008000',
+  '#800080',
+  '#800000',
+  '#808000',
+  '#808080',
+  '#c0c0c0',
 ];
 
 type Fmt = { bold?: boolean; italic?: boolean; color?: string | null };
@@ -33,11 +48,15 @@ export function importDoc(bytes: Uint8Array, fileName: string): ImportResult {
     lines = readDoc(bytes);
   } catch (e) {
     if (e instanceof Unreadable && e.message === 'encrypted') {
-      return { ok: false, message: `"${fileName}" is password-protected; save an unprotected copy first.` };
+      return {
+        ok: false,
+        message: `"${fileName}" is password-protected; save an unprotected copy first.`,
+      };
     }
     return unreadable();
   }
-  if (!lines.some((l) => l.runs.length > 0)) return { ok: false, message: `"${fileName}" has no text to import.` };
+  if (!lines.some((l) => l.runs.length > 0))
+    return { ok: false, message: `"${fileName}" has no text to import.` };
   return { ok: true, script: { name: fileName.replace(/\.doc$/i, ''), lines } };
 }
 
@@ -135,7 +154,11 @@ function readDoc(bytes: Uint8Array): RichLine[] {
   const resolveStyle = (istd: number | undefined): Fmt => {
     const chain: Fmt[] = [];
     const seen = new Set<number>();
-    for (let s = istd; s !== undefined && s !== 0xfff && !seen.has(s) && styles.has(s); s = styles.get(s)!.basedOn) {
+    for (
+      let s = istd;
+      s !== undefined && s !== 0xfff && !seen.has(s) && styles.has(s);
+      s = styles.get(s)!.basedOn
+    ) {
       seen.add(s);
       chain.unshift(styles.get(s)!.chpx);
     }
@@ -157,7 +180,13 @@ function readDoc(bytes: Uint8Array): RichLine[] {
       ...(fmt.italic ? { italic: true } : {}),
       ...(fmt.color ? { color: fmt.color } : {}),
     };
-    if (last && last.bold === style.bold && last.italic === style.italic && last.color === style.color) last.text += ch;
+    if (
+      last &&
+      last.bold === style.bold &&
+      last.italic === style.italic &&
+      last.color === style.color
+    )
+      last.text += ch;
     else runs.push({ text: ch, ...style });
   };
   const endParagraph = (istd: number) => {
@@ -174,7 +203,7 @@ function readDoc(bytes: Uint8Array): RichLine[] {
       const code = piece.compressed ? cp1252(wd[at(off)]) : v.getUint16(at(off), true);
       const ch = String.fromCharCode(code);
       const spans = findSpan(papx, off);
-      const istd = spans ? (spans.data[0] | (spans.data[1] << 8)) : 0;
+      const istd = spans ? spans.data[0] | (spans.data[1] << 8) : 0;
 
       if (code === CH_FIELD_BEGIN) {
         fieldDepth.push({ hidden: true });
@@ -232,9 +261,9 @@ function readDoc(bytes: Uint8Array): RichLine[] {
 function cp1252(b: number): number {
   if (b < 0x80 || b >= 0xa0) return b;
   const table = [
-    0x20ac, 0x81, 0x201a, 0x192, 0x201e, 0x2026, 0x2020, 0x2021, 0x2c6, 0x2030, 0x160, 0x2039, 0x152, 0x8d, 0x17d,
-    0x8f, 0x90, 0x2018, 0x2019, 0x201c, 0x201d, 0x2022, 0x2013, 0x2014, 0x2dc, 0x2122, 0x161, 0x203a, 0x153, 0x9d,
-    0x17e, 0x178,
+    0x20ac, 0x81, 0x201a, 0x192, 0x201e, 0x2026, 0x2020, 0x2021, 0x2c6, 0x2030, 0x160, 0x2039,
+    0x152, 0x8d, 0x17d, 0x8f, 0x90, 0x2018, 0x2019, 0x201c, 0x201d, 0x2022, 0x2013, 0x2014, 0x2dc,
+    0x2122, 0x161, 0x203a, 0x153, 0x9d, 0x17e, 0x178,
   ];
   return table[b - 0x80];
 }
@@ -264,13 +293,16 @@ function parseSprms(d: Uint8Array): Sprm[] {
 
 /** Applies the three properties we keep; other modifiers (fonts, sizes...) are ignored. */
 function applySprm(fmt: Fmt, op: number, val: number, bytes: Uint8Array): void {
-  const toggle = (cur: boolean | undefined) => (val === 0x80 ? cur : val === 0x81 ? !cur : (val & 1) === 1);
+  const toggle = (cur: boolean | undefined) =>
+    val === 0x80 ? cur : val === 0x81 ? !cur : (val & 1) === 1;
   if (op === 0x0835) fmt.bold = toggle(fmt.bold);
   else if (op === 0x0836) fmt.italic = toggle(fmt.italic);
   else if (op === 0x2a42) fmt.color = ICO[val & 0xff] || null;
   else if (op === 0x6870 && bytes.length === 4) {
     const auto = bytes[3] === 0xff;
-    fmt.color = auto ? null : `#${[0, 1, 2].map((k) => bytes[k].toString(16).padStart(2, '0')).join('')}`;
+    fmt.color = auto
+      ? null
+      : `#${[0, 1, 2].map((k) => bytes[k].toString(16).padStart(2, '0')).join('')}`;
   }
 }
 
@@ -326,7 +358,10 @@ function findSpan(spans: Span[], off: number): Span | undefined {
 }
 
 /** Reads the style sheet: each style's base, kind and own bold/italic/color. */
-function readStyles(table: Uint8Array, loc: { fc: number; lcb: number }): Map<number, Style & { name: string }> {
+function readStyles(
+  table: Uint8Array,
+  loc: { fc: number; lcb: number },
+): Map<number, Style & { name: string }> {
   const out = new Map<number, Style & { name: string }>();
   if (loc.lcb === 0) return out;
   const tv = new DataView(table.buffer);
@@ -347,9 +382,10 @@ function readStyles(table: Uint8Array, loc: { fc: number; lcb: number }): Map<nu
     const cupx = w2 & 0xf;
     const cch = tv.getUint16(std + cbBase, true);
     let q = std + cbBase + 2 + cch * 2 + 2;
-    q += q % 2 === (std % 2) ? 0 : 1;
+    q += q % 2 === std % 2 ? 0 : 1;
     let name = '';
-    for (let i = 0; i < cch; i++) name += String.fromCharCode(tv.getUint16(std + cbBase + 2 + i * 2, true));
+    for (let i = 0; i < cch; i++)
+      name += String.fromCharCode(tv.getUint16(std + cbBase + 2 + i * 2, true));
     const upxs: Uint8Array[] = [];
     for (let k = 0; k < cupx && q + 2 <= std + cb; k++) {
       const len = tv.getUint16(q, true);
@@ -359,7 +395,7 @@ function readStyles(table: Uint8Array, loc: { fc: number; lcb: number }): Map<nu
     const chpxBytes = para ? upxs[1] : upxs[0];
     const chpx: Fmt = {};
     if (chpxBytes) for (const s of parseSprms(chpxBytes)) applySprm(chpx, s.op, s.val, s.bytes);
-    out.set(istd, { name, para, basedOn: (w1 >> 4) === 0xfff ? undefined : w1 >> 4, chpx });
+    out.set(istd, { name, para, basedOn: w1 >> 4 === 0xfff ? undefined : w1 >> 4, chpx });
   }
   return out;
 }

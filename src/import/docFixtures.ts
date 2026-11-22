@@ -43,7 +43,8 @@ function chpxSprms(r: {
   if (r.bold !== undefined) out.push(...u16(0x0835), r.bold ? 1 : 0);
   if (r.italic !== undefined) out.push(...u16(0x0836), r.italic ? 1 : 0);
   if (r.ico !== undefined) out.push(...u16(0x2a42), r.ico);
-  if (r.rgb !== undefined) out.push(...u16(0x6870), (r.rgb >> 16) & 0xff, (r.rgb >> 8) & 0xff, r.rgb & 0xff, 0);
+  if (r.rgb !== undefined)
+    out.push(...u16(0x6870), (r.rgb >> 16) & 0xff, (r.rgb >> 8) & 0xff, r.rgb & 0xff, 0);
   return out;
 }
 
@@ -131,7 +132,9 @@ export function makeDoc(paragraphs: DocPara[], options: DocOptions = {}): Uint8A
   alignTo512();
   const chpxPage = wd.length / 512;
   if (chpx.length > 0) {
-    wd.push(...fkp(chpx.map((e) => ({ ...e, data: [e.sprms.length, ...e.sprms], bx: (off) => [off] }))));
+    wd.push(
+      ...fkp(chpx.map((e) => ({ ...e, data: [e.sprms.length, ...e.sprms], bx: (off) => [off] }))),
+    );
   }
   const papxPage = wd.length / 512;
   const papxData = (istd: number) => {
@@ -139,7 +142,13 @@ export function makeDoc(paragraphs: DocPara[], options: DocOptions = {}): Uint8A
     return [(body.length + 1) / 2, ...body];
   };
   wd.push(
-    ...fkp(papx.map((e) => ({ ...e, data: papxData(e.istd), bx: (off) => [off, ...new Array(12).fill(0)] }))),
+    ...fkp(
+      papx.map((e) => ({
+        ...e,
+        data: papxData(e.istd),
+        bx: (off) => [off, ...new Array(12).fill(0)],
+      })),
+    ),
   );
 
   // Table stream: Clx, PlcfBteChpx, PlcfBtePapx, STSH.
@@ -159,13 +168,23 @@ export function makeDoc(paragraphs: DocPara[], options: DocOptions = {}): Uint8A
   table.push(...stshStream(styles));
   stshLoc.lcb = table.length - stshLoc.fc;
 
-  const fib: number[] = [...u16(0xa5ec), ...u16(0x00c1), ...u16(0), ...u16(0x0409), ...u16(0), ...u16(0x0200)];
+  const fib: number[] = [
+    ...u16(0xa5ec),
+    ...u16(0x00c1),
+    ...u16(0),
+    ...u16(0x0409),
+    ...u16(0),
+    ...u16(0x0200),
+  ];
   while (fib.length < 32) fib.push(0);
   fib.push(...u16(14), ...new Array(28).fill(0)); // csw + fibRgW
   const rgLw = new Array(22).fill(0);
   rgLw[3] = ccpText;
   fib.push(...u16(22), ...rgLw.flatMap(u32)); // cslw + fibRgLw
-  const pairs: { fc: number; lcb: number }[] = Array.from({ length: 93 }, () => ({ fc: 0, lcb: 0 }));
+  const pairs: { fc: number; lcb: number }[] = Array.from({ length: 93 }, () => ({
+    fc: 0,
+    lcb: 0,
+  }));
   pairs[1] = stshLoc;
   pairs[12] = chpxLoc;
   pairs[13] = papxLoc;

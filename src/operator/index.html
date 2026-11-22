@@ -4,12 +4,38 @@
     <meta charset="utf-8" />
     <title>Neoprompter - Operator view</title>
     <style>
-      body { font-family: system-ui, sans-serif; background: #202020; color: #eee; padding: 16px; }
-      button { font-size: 18px; padding: 8px 20px; }
-      #notifications { position: fixed; top: 8px; left: 16px; right: 16px; z-index: 10; }
-      #notifications .banner { background: #f5c542; color: #111; padding: 10px 14px; margin-bottom: 6px;
-        border-radius: 6px; font-size: 20px; display: flex; justify-content: space-between; gap: 12px; }
-      #notifications .banner button { font-size: 14px; padding: 2px 10px; }
+      body {
+        font-family: system-ui, sans-serif;
+        background: #202020;
+        color: #eee;
+        padding: 16px;
+      }
+      button {
+        font-size: 18px;
+        padding: 8px 20px;
+      }
+      #notifications {
+        position: fixed;
+        top: 8px;
+        left: 16px;
+        right: 16px;
+        z-index: 10;
+      }
+      #notifications .banner {
+        background: #f5c542;
+        color: #111;
+        padding: 10px 14px;
+        margin-bottom: 6px;
+        border-radius: 6px;
+        font-size: 20px;
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+      }
+      #notifications .banner button {
+        font-size: 14px;
+        padding: 2px 10px;
+      }
     </style>
   </head>
   <body>
@@ -24,12 +50,19 @@
     </p>
     <fieldset id="companion-api"><legend>Companion API</legend></fieldset>
     <fieldset id="appearance"><legend>Appearance</legend></fieldset>
-    <details><summary>Edit Script (typos and small cuts)</summary><div id="editor"></div></details>
+    <details>
+      <summary>Edit Script (typos and small cuts)</summary>
+      <div id="editor"></div>
+    </details>
     <h2>Output</h2>
-    <label>Monitor <select id="output-monitor"></select></label>
+    <label
+      >Monitor
+      <select id="output-monitor"></select
+    ></label>
     <label><input type="checkbox" id="output-windowed" /> Windowed Output (testing)</label>
     <p id="output-note"></p>
-    <label>Notification display time (seconds)
+    <label
+      >Notification display time (seconds)
       <input id="notification-seconds" type="number" min="1" max="60" step="1" />
     </label>
     <h2>Script library</h2>

@@ -1,0 +1,8 @@
+dist/
+release/
+node_modules/
+.scratch/
+.claude/
+.agents/
+package-lock.json
+skills-lock.json

@@ -15,7 +15,10 @@ describe('rich Script lines', () => {
   it('reads text and heading from a styled line', () => {
     const line: ScriptLine = {
       heading: 2,
-      runs: [{ text: 'Hi ', bold: true }, { text: 'there', color: '#ff0000' }],
+      runs: [
+        { text: 'Hi ', bold: true },
+        { text: 'there', color: '#ff0000' },
+      ],
     };
     expect(lineText(line)).toBe('Hi there');
     expect(lineHeading(line)).toBe(2);

@@ -24,7 +24,8 @@ async function setup(opts: { token?: string; store?: QuickMessageStore } = {}) {
   });
   servers.push(server);
   const { port } = await server.start();
-  const call = (path: string, init: RequestInit = {}) => fetch(`http://127.0.0.1:${port}${path}`, init);
+  const call = (path: string, init: RequestInit = {}) =>
+    fetch(`http://127.0.0.1:${port}${path}`, init);
   const save = (messages: unknown, headers: Record<string, string> = {}) =>
     call('/api/quick-messages', { method: 'POST', headers, body: JSON.stringify({ messages }) });
   return { core, store, call, save };
@@ -59,7 +60,9 @@ describe('quick messages', () => {
     const { call } = await setup();
     const body = await (await call('/api/quick-messages')).json();
     expect(body.messages).toEqual(DEFAULT_QUICK_MESSAGES);
-    expect(DEFAULT_QUICK_MESSAGES).toEqual(expect.arrayContaining(['Slow down', 'Wrap up', 'Pause']));
+    expect(DEFAULT_QUICK_MESSAGES).toEqual(
+      expect.arrayContaining(['Slow down', 'Wrap up', 'Pause']),
+    );
   });
 
   it('saves an edited list, shared with every reader and persisted in the store', async () => {
@@ -68,7 +71,10 @@ describe('quick messages', () => {
     const res = await save(['  Louder ', 'Wrap up', 'Louder', ''], h);
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ messages: ['Louder', 'Wrap up'] });
-    expect((await (await call('/api/quick-messages', { headers: h })).json()).messages).toEqual(['Louder', 'Wrap up']);
+    expect((await (await call('/api/quick-messages', { headers: h })).json()).messages).toEqual([
+      'Louder',
+      'Wrap up',
+    ]);
     expect(store.load()).toEqual(['Louder', 'Wrap up']);
   });
 
@@ -92,7 +98,9 @@ describe('quick messages', () => {
     expect((await save(['x'.repeat(501)])).status).toBe(400);
     expect((await save(Array.from({ length: 60 }, (_, i) => `m${i}`))).status).toBe(400);
     expect((await call('/api/quick-messages', { method: 'POST', body: '{bad' })).status).toBe(400);
-    expect((await (await call('/api/quick-messages')).json()).messages).toEqual(DEFAULT_QUICK_MESSAGES);
+    expect((await (await call('/api/quick-messages')).json()).messages).toEqual(
+      DEFAULT_QUICK_MESSAGES,
+    );
   });
 });
 

@@ -42,8 +42,12 @@ const bools: Record<BoolKey, HTMLInputElement> = {
 (Object.keys(colors) as ColorKey[]).forEach((k) =>
   colors[k].addEventListener('input', () => dispatchChange({ [k]: colors[k].value })),
 );
-bools.readingLine.addEventListener('change', () => dispatchChange({ readingLine: bools.readingLine.checked }));
-bools.mirror.addEventListener('change', () => window.neoprompter.dispatch({ type: 'toggleMirror' }));
+bools.readingLine.addEventListener('change', () =>
+  dispatchChange({ readingLine: bools.readingLine.checked }),
+);
+bools.mirror.addEventListener('change', () =>
+  window.neoprompter.dispatch({ type: 'toggleMirror' }),
+);
 
 const presetSelect = document.createElement('select');
 const nameInput = document.createElement('input');
@@ -55,14 +59,16 @@ deleteBtn.textContent = 'Delete';
 root.append(presetSelect, nameInput, saveBtn, deleteBtn);
 
 presetSelect.addEventListener('change', () => {
-  if (presetSelect.value) window.neoprompter.dispatch({ type: 'loadPreset', name: presetSelect.value });
+  if (presetSelect.value)
+    window.neoprompter.dispatch({ type: 'loadPreset', name: presetSelect.value });
 });
 saveBtn.addEventListener('click', () => {
   window.neoprompter.dispatch({ type: 'savePreset', name: nameInput.value || presetSelect.value });
   nameInput.value = '';
 });
 deleteBtn.addEventListener('click', () => {
-  if (presetSelect.value) window.neoprompter.dispatch({ type: 'deletePreset', name: presetSelect.value });
+  if (presetSelect.value)
+    window.neoprompter.dispatch({ type: 'deletePreset', name: presetSelect.value });
 });
 
 export function renderAppearance(state: CoreState): void {

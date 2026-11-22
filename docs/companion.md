@@ -42,9 +42,9 @@ Create a **Generic HTTP** module (or the HTTP polling feature of your Companion 
 
 ## All endpoints
 
-| Method | Path          | Purpose                    |
-| ------ | ------------- | -------------------------- |
-| POST   | `/api/notify` | Show a Notification        |
+| Method | Path          | Purpose                      |
+| ------ | ------------- | ---------------------------- |
+| POST   | `/api/notify` | Show a Notification          |
 | GET    | `/api/status` | Script name, state, progress |
 
 Anything else returns `404` (or `405` for the wrong method). Bodies over 4 KB return `413`.
