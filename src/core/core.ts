@@ -16,6 +16,9 @@ import {
 import { createMemoryLibraryStorage, type LibraryStorage } from './library';
 import { createMemoryPresetStore, type PresetStore } from './presets';
 import { defaultAppearance, type Appearance } from './types';
+import { colorLineRange, editLineText, remapPosition } from './editing';
+import { PALETTE_COLORS } from './palette';
+import { lineText } from './richScript';
 import { createMemorySessionStore, type SessionStore } from './session';
 
 export interface CoreOptions {
@@ -107,6 +110,26 @@ export function createCore(options: CoreOptions = {}): Core {
       activePreset,
       notificationDurationMs,
     });
+  }
+
+  /** Replace `removed` lines at `at` with `added`, keeping the reading position on the same text. */
+  function spliceLines(at: number, removed: number, added: Script['lines']): void {
+    const lines = [...script.lines];
+    lines.splice(at, removed, ...added);
+    script = { ...script, lines };
+    position = clampPosition(remapPosition(position, at, removed, added.length));
+    playStart = clampPosition(remapPosition(playStart, at, removed, added.length));
+    const entry = loadedScriptId ? stored.find((s) => s.id === loadedScriptId) : undefined;
+    if (entry) {
+      const { lines: _old, ...rest } = entry;
+      const updated = {
+        ...rest,
+        text: lines.map(lineText).join('\n'),
+        ...(lines.some((l) => typeof l !== 'string') && { lines }),
+      };
+      stored = stored.map((s) => (s.id === entry.id ? updated : s));
+      storage.writeAll(stored);
+    }
   }
 
   const listeners = new Set<(state: CoreState) => void>();
@@ -211,6 +234,28 @@ export function createCore(options: CoreOptions = {}): Core {
           storage.writeAll(stored);
           if (loadedScriptId === command.id) loadedScriptId = null;
           break;
+        case 'editLine': {
+          const old = script.lines[command.line];
+          if (old === undefined) return;
+          spliceLines(command.line, 1, editLineText(old, command.text));
+          break;
+        }
+        case 'cutLines': {
+          const from = Math.max(0, Math.floor(command.from));
+          const count = Math.min(Math.floor(command.count), script.lines.length - from);
+          if (!(count > 0)) return;
+          spliceLines(from, count, []);
+          break;
+        }
+        case 'colorRange': {
+          const old = script.lines[command.line];
+          if (old === undefined) return;
+          if (command.color !== null && !PALETTE_COLORS.includes(command.color)) return;
+          spliceLines(command.line, 1, [
+            colorLineRange(old, command.start, command.end, command.color),
+          ]);
+          break;
+        }
         case 'setAppearance':
           appearance = { ...appearance, ...command.changes };
           break;
