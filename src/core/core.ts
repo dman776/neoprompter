@@ -8,12 +8,15 @@ import {
   type CoreState,
   type Script,
 } from './types';
+import { createMemoryLibraryStorage, type LibraryStorage } from './library';
 
 export interface CoreOptions {
   clock?: Clock;
   script?: Script;
   /** Lines per second. */
   speed?: number;
+  /** Where the Script library is stored. Defaults to in-memory. */
+  libraryStorage?: LibraryStorage;
 }
 
 export interface Core {
@@ -26,7 +29,11 @@ export interface Core {
 
 export function createCore(options: CoreOptions = {}): Core {
   const clock = options.clock ?? systemClock;
-  const script = options.script ?? sampleScript;
+  let script = options.script ?? sampleScript;
+  const storage = options.libraryStorage ?? createMemoryLibraryStorage();
+  let stored = storage.readAll();
+  let loadedScriptId: string | null = null;
+  let nextId = stored.reduce((m, s) => Math.max(m, Number(s.id) || 0), 0) + 1;
   const clampLevel = (l: number) => Math.max(0, Math.min(MAX_SPEED_LEVEL, Math.round(l)));
   let speedLevel = clampLevel((options.speed ?? 3) / LINES_PER_SECOND_PER_LEVEL);
   let viewportLines = 10;
@@ -65,6 +72,8 @@ export function createCore(options: CoreOptions = {}): Core {
       playing,
       viewportLines,
       leadIn: LEAD_IN_LINES,
+      library: stored.map(({ id, name }) => ({ id, name })),
+      loadedScriptId,
     };
   }
 
@@ -94,6 +103,32 @@ export function createCore(options: CoreOptions = {}): Core {
           break;
         case 'returnToPlayStart':
           position = clampPosition(playStart);
+          break;
+        case 'saveScript':
+          stored = [...stored, { id: String(nextId++), name: command.name, text: command.text }];
+          storage.writeAll(stored);
+          break;
+        case 'loadScript': {
+          const found = stored.find((s) => s.id === command.id);
+          if (!found) return;
+          script = { name: found.name, lines: found.text.split(/\r?\n/) };
+          loadedScriptId = found.id;
+          position = minPosition;
+          playStart = minPosition;
+          playing = false;
+          break;
+        }
+        case 'renameScript':
+          if (!stored.some((s) => s.id === command.id)) return;
+          stored = stored.map((s) => (s.id === command.id ? { ...s, name: command.name } : s));
+          storage.writeAll(stored);
+          if (loadedScriptId === command.id) script = { ...script, name: command.name };
+          break;
+        case 'deleteScript':
+          if (!stored.some((s) => s.id === command.id)) return;
+          stored = stored.filter((s) => s.id !== command.id);
+          storage.writeAll(stored);
+          if (loadedScriptId === command.id) loadedScriptId = null;
           break;
       }
       const state = snapshot();

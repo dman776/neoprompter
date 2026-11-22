@@ -14,13 +14,23 @@ export type Command =
   | { type: 'setViewport'; lines: number }
   | { type: 'jumpBack' }
   | { type: 'jumpForward' }
-  | { type: 'returnToPlayStart' };
+  | { type: 'returnToPlayStart' }
+  | { type: 'saveScript'; name: string; text: string }
+  | { type: 'loadScript'; id: string }
+  | { type: 'renameScript'; id: string; name: string }
+  | { type: 'deleteScript'; id: string };
 
 export const MAX_SPEED_LEVEL = 10;
 /** Lines per second for each speed level step. */
 export const LINES_PER_SECOND_PER_LEVEL = 0.5;
 /** Blank lines before the first line of the Script. */
 export const LEAD_IN_LINES = 4;
+
+/** A Script listed in the library. */
+export interface LibraryEntry {
+  id: string;
+  name: string;
+}
 
 /** State comes out. Operator view and Output are thin renderers of this. */
 export interface CoreState {
@@ -38,4 +48,8 @@ export interface CoreState {
   viewportLines: number;
   /** Blank lines before the first line; the starting position is minus this. */
   leadIn: number;
+  /** Saved Scripts, in the order they were saved. */
+  library: LibraryEntry[];
+  /** Id of the library Script currently loaded, or null (sample, or since deleted). */
+  loadedScriptId: string | null;
 }

@@ -2,10 +2,22 @@ import { app, BrowserWindow, ipcMain, screen } from 'electron';
 import fs from 'node:fs';
 import path from 'node:path';
 import { createCore, type Command } from '../core';
+import { createFileLibraryStorage } from '../library';
 import { IPC } from '../shared/ipc';
 import { createOutputWindowManager, type OutputSettings } from '../output-window';
 
-const core = createCore();
+function createLibraryStorage() {
+  const file = path.join(app.getPath('userData'), 'library.json');
+  return createFileLibraryStorage(file, {
+    readFile: (p) => (fs.existsSync(p) ? fs.readFileSync(p, 'utf8') : null),
+    writeFile: (p, d) => {
+      fs.mkdirSync(path.dirname(p), { recursive: true });
+      fs.writeFileSync(p, d);
+    },
+  });
+}
+
+const core = createCore({ libraryStorage: createLibraryStorage() });
 const windows = new Set<BrowserWindow>();
 let operatorWin: BrowserWindow | null = null;
 let outputWin: BrowserWindow | null = null;
