@@ -2,4 +2,5 @@
 if git diff --name-only ORIG_HEAD HEAD 2>/dev/null | grep -qx 'package-lock.json'; then
   echo "package-lock.json changed: running npm ci"
   npm ci
+  node scripts/ensure-electron.mjs
 fi

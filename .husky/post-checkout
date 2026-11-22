@@ -3,4 +3,5 @@
 if [ "$3" = "1" ] && git diff --name-only "$1" "$2" 2>/dev/null | grep -qx 'package-lock.json'; then
   echo "package-lock.json differs on this branch: running npm ci"
   npm ci
+  node scripts/ensure-electron.mjs
 fi
