@@ -69,7 +69,7 @@ export interface InputMapper {
 }
 
 export function createInputMapper(
-  core: Core,
+  core: Pick<Core, 'dispatch' | 'getState'>,
   initialMapping: Partial<ButtonMapping> = {},
 ): InputMapper {
   const actions = new Map<ActionId, () => void>([

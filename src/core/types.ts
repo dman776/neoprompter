@@ -85,6 +85,8 @@ export interface CoreState {
   /** Speed as a level, 0 (stopped) to MAX_SPEED_LEVEL. */
   speedLevel: number;
   playing: boolean;
+  /** Current ring deflection, -1 to 1; 0 when released. */
+  ringDeflection: number;
   /** Visible Output height in lines. A Screen is this minus one. */
   viewportLines: number;
   /** Blank lines before the first line; the starting position is minus this. */

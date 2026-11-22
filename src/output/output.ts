@@ -4,8 +4,11 @@ const textEl = document.getElementById('text')!;
 const lineEl = document.getElementById('reading-line')!;
 const progressEl = document.getElementById('progress')!;
 let renderedScript: string | null = null;
+let reportedViewport = 0;
+let lastState: CoreState | null = null;
 
 function render(state: CoreState): void {
+  lastState = state;
   const a = state.appearance;
   if (renderedScript !== state.script.name) {
     textEl.replaceChildren(
@@ -29,8 +32,17 @@ function render(state: CoreState): void {
     ? (textEl.firstElementChild as HTMLElement).getBoundingClientRect().height
     : 0;
   textEl.style.transform = `translateY(${-state.position * lineHeight}px)`;
+  // Tell the core how many lines fit, so Screen jumps and end-of-Script stop are right.
+  if (lineHeight > 0) {
+    const lines = Math.max(1, Math.floor(window.innerHeight / lineHeight));
+    if (lines !== reportedViewport) {
+      reportedViewport = lines;
+      window.neoprompter.dispatch({ type: 'setViewport', lines });
+    }
+  }
   progressEl.style.transform = `scaleX(${state.progress})`;
 }
 
+window.addEventListener('resize', () => lastState && render(lastState));
 window.neoprompter.onState(render);
 window.neoprompter.getState().then(render);

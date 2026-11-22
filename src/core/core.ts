@@ -79,6 +79,7 @@ export function createCore(options: CoreOptions = {}): Core {
       speed: speedLevel * LINES_PER_SECOND_PER_LEVEL,
       speedLevel,
       playing,
+      ringDeflection: ring,
       viewportLines,
       leadIn: LEAD_IN_LINES,
       library: stored.map(({ id, name }) => ({ id, name })),
