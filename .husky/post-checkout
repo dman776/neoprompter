@@ -1,0 +1,6 @@
+# After switching branches, install what the new branch's lockfile asks for.
+# $1 and $2 are the old and new HEAD; $3 is 1 for a branch checkout (0 for a file checkout).
+if [ "$3" = "1" ] && git diff --name-only "$1" "$2" 2>/dev/null | grep -qx 'package-lock.json'; then
+  echo "package-lock.json differs on this branch: running npm ci"
+  npm ci
+fi

@@ -6,6 +6,7 @@
   "main": "dist/main/main.js",
   "scripts": {
     "build": "node scripts/build.mjs",
+    "prestart": "node scripts/ensure-electron.mjs",
     "start": "npm run build && electron .",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
@@ -14,6 +15,7 @@
     "dist:check": "node scripts/check-installers.mjs",
     "prepare": "husky",
     "check": "npm run conventions && npm run typecheck && npm test",
+    "pretest:e2e": "node scripts/ensure-electron.mjs",
     "test:e2e": "npm run build && vitest run --config e2e/vitest.config.ts",
     "conventions": "node scripts/check-conventions.mjs"
   },
