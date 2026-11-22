@@ -9,6 +9,8 @@ import {
   type Script,
 } from './types';
 import { createMemoryLibraryStorage, type LibraryStorage } from './library';
+import { createMemoryPresetStore, type PresetStore } from './presets';
+import { defaultAppearance, type Appearance } from './types';
 
 export interface CoreOptions {
   clock?: Clock;
@@ -17,6 +19,7 @@ export interface CoreOptions {
   speed?: number;
   /** Where the Script library is stored. Defaults to in-memory. */
   libraryStorage?: LibraryStorage;
+  presetStore?: PresetStore;
 }
 
 export interface Core {
@@ -38,6 +41,10 @@ export function createCore(options: CoreOptions = {}): Core {
   let speedLevel = clampLevel((options.speed ?? 3) / LINES_PER_SECOND_PER_LEVEL);
   let viewportLines = 10;
 
+  const presetStore = options.presetStore ?? createMemoryPresetStore();
+  let presets: Record<string, Appearance> = presetStore.load();
+  let appearance: Appearance = { ...defaultAppearance };
+  let activePreset: string | null = null;
   const minPosition = -LEAD_IN_LINES;
   /** Furthest the Script scrolls: last line at the bottom of the Output. */
   const maxPosition = () => Math.max(minPosition, script.lines.length - viewportLines);
@@ -74,6 +81,9 @@ export function createCore(options: CoreOptions = {}): Core {
       leadIn: LEAD_IN_LINES,
       library: stored.map(({ id, name }) => ({ id, name })),
       loadedScriptId,
+      appearance: { ...appearance },
+      presets: Object.keys(presets),
+      activePreset,
     };
   }
 
@@ -130,6 +140,33 @@ export function createCore(options: CoreOptions = {}): Core {
           storage.writeAll(stored);
           if (loadedScriptId === command.id) loadedScriptId = null;
           break;
+        case 'setAppearance':
+          appearance = { ...appearance, ...command.changes };
+          break;
+        case 'toggleMirror':
+          appearance = { ...appearance, mirror: !appearance.mirror };
+          break;
+        case 'savePreset': {
+          const name = command.name.trim();
+          if (!name) return;
+          presets = { ...presets, [name]: { ...appearance } };
+          activePreset = name;
+          presetStore.save(presets);
+          break;
+        }
+        case 'loadPreset':
+          if (!presets[command.name]) return;
+          appearance = { ...presets[command.name] };
+          activePreset = command.name;
+          break;
+        case 'deletePreset': {
+          if (!presets[command.name]) return;
+          const { [command.name]: _gone, ...rest } = presets;
+          presets = rest;
+          if (activePreset === command.name) activePreset = null;
+          presetStore.save(presets);
+          break;
+        }
       }
       const state = snapshot();
       listeners.forEach((l) => l(state));

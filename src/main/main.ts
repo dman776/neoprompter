@@ -4,6 +4,7 @@ import path from 'node:path';
 import { createCore, type Command } from '../core';
 import { createFileLibraryStorage } from '../library';
 import { IPC } from '../shared/ipc';
+import { createFilePresetStore } from './filePresetStore';
 import { createOutputWindowManager, type OutputSettings } from '../output-window';
 
 function createLibraryStorage() {
@@ -17,7 +18,10 @@ function createLibraryStorage() {
   });
 }
 
-const core = createCore({ libraryStorage: createLibraryStorage() });
+const core = createCore({
+  libraryStorage: createLibraryStorage(),
+  presetStore: createFilePresetStore(path.join(app.getPath('userData'), 'presets.json')),
+});
 const windows = new Set<BrowserWindow>();
 let operatorWin: BrowserWindow | null = null;
 let outputWin: BrowserWindow | null = null;
