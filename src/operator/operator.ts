@@ -15,7 +15,12 @@ function render(state: CoreState): void {
   toggle.textContent = state.playing ? 'Pause' : 'Play';
   statusEl.textContent = `${state.playing ? 'Playing' : 'Paused'} - line ${state.position.toFixed(1)}`;
   renderLibrary(state);
+  document.getElementById('restore-note')!.hidden = !state.outputBlank;
 }
+
+document.getElementById('confirm-output')!.addEventListener('click', () => {
+  window.neoprompter.dispatch({ type: 'confirmOutput' });
+});
 
 const libraryEl = document.getElementById('library')!;
 let libraryKey = '';

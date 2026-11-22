@@ -10,6 +10,7 @@ let lastState: CoreState | null = null;
 function render(state: CoreState): void {
   lastState = state;
   const a = state.appearance;
+  document.body.style.visibility = state.outputBlank ? 'hidden' : 'visible';
   if (renderedScript !== state.script.name) {
     textEl.replaceChildren(
       ...state.script.lines.map((line) => {
