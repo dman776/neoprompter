@@ -13,7 +13,7 @@ describe('core play/pause', () => {
     const { core } = setup();
     const state = core.getState();
     expect(state.playing).toBe(false);
-    expect(state.position).toBe(0);
+    expect(state.position).toBe(-state.leadIn);
     expect(state.script.lines.length).toBeGreaterThan(0);
   });
 
@@ -23,7 +23,7 @@ describe('core play/pause', () => {
     clock.advance(2000);
     const state = core.getState();
     expect(state.playing).toBe(true);
-    expect(state.position).toBeCloseTo(2 * state.speed);
+    expect(state.position).toBeCloseTo(-state.leadIn + 2 * state.speed);
   });
 
   it('stops scrolling on pause', () => {
@@ -45,7 +45,9 @@ describe('core play/pause', () => {
     clock.advance(5000);
     core.dispatch({ type: 'play' });
     clock.advance(1000);
-    expect(core.getState().position).toBeCloseTo(2 * core.getState().speed);
+    expect(core.getState().position).toBeCloseTo(
+      -core.getState().leadIn + 2 * core.getState().speed,
+    );
   });
 
   it('notifies subscribers when a command changes state', () => {
