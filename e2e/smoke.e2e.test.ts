@@ -52,7 +52,12 @@ beforeAll(async () => {
   );
   app = await electron.launch({
     args: [root],
-    env: { ...process.env, NEOPROMPTER_USER_DATA: userData, NEOPROMPTER_NO_UPDATE_CHECK: '1' },
+    env: {
+      ...process.env,
+      NEOPROMPTER_USER_DATA: userData,
+      NEOPROMPTER_NO_UPDATE_CHECK: '1',
+      NEOPROMPTER_NO_AUTO_WINDOWED: '1',
+    },
   });
   operator = await windowTitled('Operator view');
   // The Output starts Off: no Output window until the Operator switches it On.
