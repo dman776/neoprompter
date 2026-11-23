@@ -27,3 +27,7 @@ To check a new behavior, add a test there: dispatch the commands, then assert on
 ## Dependencies stay current by themselves
 
 npm can leave Electron's binary uninstalled. `npm start` and `npm run test:e2e` install it when missing (`scripts/ensure-electron.mjs`). After a merge, pull, or branch switch that changes `package-lock.json`, the git hooks (`.husky/post-merge`, `.husky/post-checkout`) run `npm ci` and then the same Electron check. In a fresh worktree, run `npm ci` and `node scripts/ensure-electron.mjs` yourself, because worktrees start without `node_modules`.
+
+## A full screen Output on one display
+
+The Output only goes full screen on a display other than the Operator view's, so a machine with one display cannot show it. The e2e test sets `NEOPROMPTER_FAKE_SECOND_DISPLAY=1`, which adds a pretend second display on top of the real one, so a genuine full screen Output opens and Esc can be tested for real. Closing a full screen window on macOS is slow and pulls a window created meanwhile into its Space, so the main process takes the old Output out of full screen, closes it, and only then opens the new one (`retireOutput` in `src/main/main.ts`).

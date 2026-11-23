@@ -107,16 +107,46 @@ function openPlaced(
   return win;
 }
 
-function closeOutput(): void {
-  outputWin?.close();
+/**
+ * Resolves when every Output window that was retired has finished closing. On macOS a full screen
+ * window leaves its Space in steps, and a window created in the meantime is pulled into that
+ * Space (it comes up full screen at the display's size), so a new Output waits for this.
+ */
+let outputGone: Promise<void> = Promise.resolve();
+
+/** Counts show/hide requests, so a late finish never opens a window nobody wants any more. */
+let showSequence = 0;
+
+/** Closes the Output window: out of full screen first, and only then closed. */
+function retireOutput(): void {
+  const win = outputWin;
   outputWin = null;
+  if (!win || win.isDestroyed()) return;
+  const closed = new Promise<void>((resolve) => win.once('closed', () => resolve()));
+  outputGone = Promise.all([outputGone, closed]).then(() => undefined);
+  if (win.isFullScreen()) {
+    win.once('leave-full-screen', () => win.close());
+    win.setFullScreen(false);
+    // If the system never says it has left full screen, do not wait for ever.
+    const giveUp = setTimeout(() => !win.isDestroyed() && win.close(), 3000);
+    win.once('closed', () => clearTimeout(giveUp));
+  } else {
+    win.close();
+  }
 }
 
 function createOutputManager() {
   const file = path.join(app.getPath('userData'), 'output-settings.json');
   return createOutputWindowManager({
     displays: {
-      list: () => screen.getAllDisplays().map((d) => ({ id: String(d.id), bounds: d.bounds })),
+      list: () => {
+        const real = screen.getAllDisplays().map((d) => ({ id: String(d.id), bounds: d.bounds }));
+        // Tests (e2e/) pretend a second display exists, on top of the real one, so a genuine full
+        // screen Output can be opened on a machine with a single display.
+        return process.env.NEOPROMPTER_FAKE_SECOND_DISPLAY
+          ? [...real, { id: 'fake-second', bounds: { ...real[0]!.bounds } }]
+          : real;
+      },
       operatorDisplayId: () =>
         String(
           operatorWin && !operatorWin.isDestroyed()
@@ -131,20 +161,27 @@ function createOutputManager() {
       return { load: json.read, save: json.write };
     })(),
     host: {
-      // Only ever one Output window: reuse it, otherwise create it.
+      // Only ever one Output window: the old one goes first, then the new one opens.
       show: (placement) => {
-        closeOutput();
-        if (placement.mode === 'fullscreen') {
-          outputWin = openWindow('output', 'Neoprompter - Output', placement.bounds.x, {
-            ...placement.bounds,
-            frame: false,
-            fullscreen: true,
-          });
-        } else {
-          outputWin = openPlaced('output-windowed', 'output', 'Neoprompter - Output (windowed)');
-        }
+        const mine = ++showSequence;
+        retireOutput();
+        void outputGone.then(() => {
+          if (mine !== showSequence) return; // a newer show, or a hide, took over
+          if (placement.mode === 'fullscreen') {
+            outputWin = openWindow('output', 'Neoprompter - Output', placement.bounds.x, {
+              ...placement.bounds,
+              frame: false,
+              fullscreen: true,
+            });
+          } else {
+            outputWin = openPlaced('output-windowed', 'output', 'Neoprompter - Output (windowed)');
+          }
+        });
       },
-      hide: closeOutput,
+      hide: () => {
+        showSequence++;
+        retireOutput();
+      },
     },
   });
 }
