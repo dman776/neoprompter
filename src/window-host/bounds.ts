@@ -31,7 +31,7 @@ export const WINDOW_SIZES: Record<BoundsKind, SizeSpec> = {
   // Run mode (meter, Live view, transport, status column) and Edit mode (editor and library).
   operator: { width: 1360, height: 860, minWidth: 1100, minHeight: 640 },
   // The longest page (Appearance) shows without scrolling when the screen is tall enough.
-  preferences: { width: 900, height: 980, minWidth: 640, minHeight: 420 },
+  preferences: { width: 900, height: 720, minWidth: 640, minHeight: 420 },
   // The whole device with its readout.
   shuttle: { width: 420, height: 640, minWidth: 380, minHeight: 600 },
   // The Output is a 16:9 picture: a 16:9 window shows it with no bars.

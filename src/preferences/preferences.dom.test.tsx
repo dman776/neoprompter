@@ -108,6 +108,13 @@ async function mount(
 
 const nav = (name: string) =>
   Array.from(host.querySelectorAll('nav button')).find((b) => b.textContent?.trim() === name)!;
+const tab = (name: string) =>
+  Array.from(host.querySelectorAll('[role="tab"]')).find(
+    (t) => t.textContent?.trim() === name,
+  )! as HTMLElement;
+const openTab = (name: string) => act(async () => tab(name).click());
+const tabNames = () =>
+  Array.from(host.querySelectorAll('[role="tab"]'), (t) => t.textContent?.trim());
 const field = (label: string) =>
   host.querySelector<HTMLInputElement & HTMLSelectElement>(`[aria-label="${label}"]`)!;
 const button = (name: string) =>
@@ -142,9 +149,10 @@ describe('Preferences categories', () => {
 });
 
 describe('Appearance', () => {
-  async function openAppearance() {
+  async function openAppearance(tabName = 'Text') {
     const m = await mount();
     await act(async () => (nav('Appearance') as HTMLElement).click());
+    await openTab(tabName);
     return m;
   }
 
@@ -152,8 +160,10 @@ describe('Appearance', () => {
     await openAppearance();
     expect(field('Font size').value).toBe('48');
     expect(field('Text width').value).toBe('80');
+    await openTab('Colors');
     expect(field('Text color').value).toBe('#ffffff');
     expect(field('Background').value).toBe('#000000');
+    await openTab('Reading line');
     expect(field('Reading line').getAttribute('aria-checked')).toBe('true');
   });
 
@@ -180,7 +190,7 @@ describe('Appearance', () => {
   });
 
   it('applies colors at once', async () => {
-    const { core } = await openAppearance();
+    const { core } = await openAppearance('Colors');
     await setValue(field('Background'), '#102030');
     expect(core.getState().appearance.backgroundColor).toBe('#102030');
     await setValue(field('Text color'), '#ffcc00');
@@ -188,7 +198,7 @@ describe('Appearance', () => {
   });
 
   it('chooses the Reading line and Progress bar colors, red to begin with, and the sample shows them', async () => {
-    const { core } = await openAppearance();
+    const { core } = await openAppearance('Colors');
     expect(field('Reading line color').value).toBe('#ff0000');
     expect(field('Progress bar color').value).toBe('#ff0000');
     await setValue(field('Reading line color'), '#00cc66');
@@ -201,28 +211,103 @@ describe('Appearance', () => {
     expect(bar.style.backgroundColor).toBe('rgb(51, 102, 255)');
   });
 
-  it('keeps the title and the sample fixed while only the settings scroll', async () => {
+  it('keeps the title, the sample and the tab strip fixed above the tab panel', async () => {
     await openAppearance();
     const head = host.querySelector('.pf-head')!;
-    const scroll = host.querySelector('.pf-scroll')!;
+    const panel = host.querySelector('[role="tabpanel"]')!;
     expect(head.querySelector('h2')!.textContent).toBe('Appearance');
     expect(head.querySelector('[data-testid="sample"]')).not.toBeNull();
-    expect(scroll.contains(head)).toBe(false);
-    expect(scroll.querySelector('[data-testid="sample"]')).toBeNull();
-    expect(scroll.querySelector('[aria-label="Font size"]')).not.toBeNull();
+    expect(head.querySelector('[role="tablist"]')).not.toBeNull();
+    expect(panel.contains(head)).toBe(false);
+    expect(panel.querySelector('[data-testid="sample"]')).toBeNull();
+    expect(panel.querySelector('[aria-label="Font size"]')).not.toBeNull();
   });
 
-  it('puts every category inside a scrolling area under a fixed title', async () => {
+  it('has the four tabs, each with its own settings', async () => {
+    await openAppearance();
+    expect(tabNames()).toEqual(['Text', 'Colors', 'Reading line', 'Presets']);
+    const has = (names: string[]) =>
+      names.every((n) =>
+        host.querySelector('[role="tabpanel"]')!.querySelector(`[aria-label="${n}"]`),
+      );
+    expect(has(['Font size', 'Line spacing', 'Text width', 'Margin'])).toBe(true);
+    await openTab('Colors');
+    expect(has(['Text color', 'Background', 'Reading line color', 'Progress bar color'])).toBe(
+      true,
+    );
+    await openTab('Reading line');
+    expect(has(['Reading line', 'Reading line position', 'Mirror'])).toBe(true);
+    await openTab('Presets');
+    expect(has(['Preset', 'Preset name'])).toBe(true);
+    expect(button('Save Preset')).toBeDefined();
+    expect(button('Delete Preset')).toBeDefined();
+  });
+
+  it('shows the sample above every tab, and it follows a change made on any of them', async () => {
+    await openAppearance();
+    for (const name of ['Text', 'Colors', 'Reading line', 'Presets']) {
+      await openTab(name);
+      expect(host.querySelector('.pf-head [data-testid="sample"]'), name).not.toBeNull();
+    }
+    await openTab('Reading line');
+    await act(async () => field('Mirror').click());
+    await openTab('Presets');
+    expect(host.querySelector<HTMLElement>('[data-testid="sample"]')!.style.transform).toContain(
+      'scaleX(-1)',
+    );
+  });
+
+  it('switches tabs with the mouse and the arrow keys, Home and End', async () => {
+    await openAppearance();
+    const press = async (key: string) =>
+      act(async () => {
+        host
+          .querySelector('[role="tab"][aria-selected="true"]')!
+          .dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));
+      });
+    const selected = () => host.querySelector('[role="tab"][aria-selected="true"]')!.textContent;
+    expect(selected()).toBe('Text');
+    await press('ArrowRight');
+    expect(selected()).toBe('Colors');
+    expect(document.activeElement).toBe(tab('Colors'));
+    await press('ArrowLeft');
+    await press('ArrowLeft');
+    expect(selected()).toBe('Presets');
+    await press('Home');
+    expect(selected()).toBe('Text');
+    await press('End');
+    expect(selected()).toBe('Presets');
+    await openTab('Colors');
+    expect(selected()).toBe('Colors');
+    expect(host.querySelector('[role="tabpanel"]')!.getAttribute('aria-labelledby')).toBe(
+      tab('Colors').id,
+    );
+  });
+
+  it('remembers the chosen category and tab while the window is open', async () => {
+    await openAppearance('Colors');
+    await act(async () => (nav('General') as HTMLElement).click());
+    expect(host.querySelector('[role="tablist"]')).toBeNull();
+    await act(async () => (nav('Appearance') as HTMLElement).click());
+    expect(tab('Colors').getAttribute('aria-selected')).toBe('true');
+  });
+
+  it('gives every category a title and a panel; only the Quick messages list scrolls', async () => {
     await mount();
     for (const name of ['General', 'Output', 'Controls', 'Notifications', 'Network']) {
       await act(async () => (nav(name) as HTMLElement).click());
       expect(host.querySelector('.pf-head h2')!.textContent).toBe(name);
-      expect(host.querySelector('.pf-scroll')).not.toBeNull();
+      expect(host.querySelector('.pf-panel')).not.toBeNull();
     }
+    expect(host.querySelectorAll('[data-scrolls]')).toHaveLength(0);
+    await openTab('Quick messages');
+    const scrolling = host.querySelectorAll('[data-scrolls]');
+    expect(scrolling).toHaveLength(1);
+    expect(scrolling[0]!.querySelector('[aria-label="Quick message 1"]')).not.toBeNull();
   });
 
   it('sets the Reading line position with a slider, and the sample shows it', async () => {
-    const m = await openAppearance();
+    const m = await openAppearance('Reading line');
     expect(field('Reading line position').value).toBe('25');
     await setValue(field('Reading line position'), '60');
     expect(m.core.getState().appearance.readingLineY).toBeCloseTo(0.6, 5);
@@ -231,7 +316,7 @@ describe('Appearance', () => {
   });
 
   it('switches the Reading line and the mirror through the core', async () => {
-    const { core, dispatched } = await openAppearance();
+    const { core, dispatched } = await openAppearance('Reading line');
     await act(async () => field('Reading line').click());
     expect(core.getState().appearance.readingLine).toBe(false);
     await act(async () => field('Mirror').click());
@@ -266,10 +351,15 @@ describe('Presets', () => {
     await act(async () => (nav('Appearance') as HTMLElement).click());
     return m;
   }
+  const setFontSize = async (value: string) => {
+    await openTab('Text');
+    await setValue(field('Font size'), value);
+    await openTab('Presets');
+  };
 
   it('saves the current Appearance under a name and selects it', async () => {
     const { core } = await openAppearance();
-    await setValue(field('Font size'), '90');
+    await setFontSize('90');
     await setValue(field('Preset name'), 'Large text');
     await act(async () => button('Save Preset').click());
     expect(core.getState().presets).toEqual(['Large text']);
@@ -279,9 +369,9 @@ describe('Presets', () => {
 
   it('loads a Preset chosen from the list', async () => {
     const { core } = await openAppearance();
-    await setValue(field('Font size'), '90');
+    await setFontSize('90');
     await act(async () => core.dispatch({ type: 'savePreset', name: 'Big' }));
-    await setValue(field('Font size'), '30');
+    await setFontSize('30');
     await setValue(field('Preset'), 'Big');
     expect(core.getState().appearance.fontSize).toBe(90);
     expect(core.getState().activePreset).toBe('Big');
@@ -289,6 +379,7 @@ describe('Presets', () => {
 
   it('deletes the selected Preset', async () => {
     const { core } = await openAppearance();
+    await openTab('Presets');
     await act(async () => core.dispatch({ type: 'savePreset', name: 'Big' }));
     await act(async () => button('Delete Preset').click());
     expect(core.getState().presets).toEqual([]);
@@ -296,6 +387,7 @@ describe('Presets', () => {
 
   it('cannot delete when no Preset is selected', async () => {
     await openAppearance();
+    await openTab('Presets');
     expect((button('Delete Preset') as HTMLButtonElement).disabled).toBe(true);
   });
 });
@@ -439,6 +531,20 @@ describe('Network', () => {
     await act(async () => (nav('Network') as HTMLElement).click());
     return m;
   }
+  async function openQuickMessages() {
+    const m = await openNetwork();
+    await openTab('Quick messages');
+    return m;
+  }
+
+  it('has a Connection tab and a Quick messages tab', async () => {
+    await openNetwork();
+    expect(tabNames()).toEqual(['Connection', 'Quick messages']);
+    expect(tab('Connection').getAttribute('aria-selected')).toBe('true');
+    expect(field('Quick message 1')).toBeNull();
+    await openTab('Quick messages');
+    expect(field('Port')).toBeNull();
+  });
 
   it('shows the port, the token and the Producer page address', async () => {
     await openNetwork();
@@ -476,13 +582,13 @@ describe('Network', () => {
   });
 
   it('lists the Quick messages', async () => {
-    await openNetwork();
+    await openQuickMessages();
     expect(field('Quick message 1').value).toBe('Slow down');
     expect(field('Quick message 2').value).toBe('Wrap up');
   });
 
   it('adds a Quick message', async () => {
-    const { quickSaved } = await openNetwork();
+    const { quickSaved } = await openQuickMessages();
     await setValue(field('New Quick message'), 'Look at camera');
     await act(async () => button('Add').click());
     expect(quickSaved.at(-1)).toEqual(['Slow down', 'Wrap up', 'Look at camera']);
@@ -491,20 +597,20 @@ describe('Network', () => {
   });
 
   it('edits a Quick message when the field is left', async () => {
-    const { quickSaved } = await openNetwork();
+    const { quickSaved } = await openQuickMessages();
     await typeAndLeave(field('Quick message 2'), 'Wrap up now');
     expect(quickSaved.at(-1)).toEqual(['Slow down', 'Wrap up now']);
   });
 
   it('removes a Quick message', async () => {
-    const { quickSaved } = await openNetwork();
+    const { quickSaved } = await openQuickMessages();
     await act(async () => field('Remove Quick message 1').click());
     expect(quickSaved.at(-1)).toEqual(['Wrap up']);
     expect(field('Quick message 1').value).toBe('Wrap up');
   });
 
   it('does not add an empty Quick message', async () => {
-    await openNetwork();
+    await openQuickMessages();
     expect((button('Add') as HTMLButtonElement).disabled).toBe(true);
   });
 });

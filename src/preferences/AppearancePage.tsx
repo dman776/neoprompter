@@ -52,54 +52,15 @@ export function AppearanceSample({ state }: { state: CoreState }) {
   );
 }
 
-export function AppearancePage({ state, dispatch }: PageProps) {
-  const a = state.appearance;
-  const [name, setName] = useState('');
-  const change = (changes: Partial<typeof a>) => dispatch({ type: 'setAppearance', changes });
-  const save = () => {
-    const presetName = name.trim() || state.activePreset;
-    if (!presetName) return;
-    dispatch({ type: 'savePreset', name: presetName });
-    setName('');
-  };
+const changer = (dispatch: PageProps['dispatch']) => (changes: Partial<CoreState['appearance']>) =>
+  dispatch({ type: 'setAppearance', changes });
 
+/** Font size, line spacing, text width and margin. */
+export function TextTab({ state, dispatch }: PageProps) {
+  const a = state.appearance;
+  const change = changer(dispatch);
   return (
     <>
-      <Row title="Preset" help="A saved set of these settings, such as one for each Talent.">
-        <select
-          aria-label="Preset"
-          value={state.activePreset ?? ''}
-          onChange={(e) => e.target.value && dispatch({ type: 'loadPreset', name: e.target.value })}
-        >
-          <option value="">(no Preset)</option>
-          {state.presets.map((p) => (
-            <option key={p} value={p}>
-              {p}
-            </option>
-          ))}
-        </select>
-        <div className="pf-inline">
-          <input
-            type="text"
-            aria-label="Preset name"
-            placeholder="Preset name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && save()}
-          />
-        </div>
-        <div className="pf-inline">
-          <Button onClick={save}>Save Preset</Button>
-          <Button
-            disabled={!state.activePreset}
-            onClick={() =>
-              state.activePreset && dispatch({ type: 'deletePreset', name: state.activePreset })
-            }
-          >
-            Delete Preset
-          </Button>
-        </div>
-      </Row>
       <Row title="Font size">
         <Slider
           label="Font size"
@@ -149,6 +110,16 @@ export function AppearancePage({ state, dispatch }: PageProps) {
           onChange={(margin) => change({ margin })}
         />
       </Row>
+    </>
+  );
+}
+
+/** Text, background, Reading line and Progress bar colors. */
+export function ColorsTab({ state, dispatch }: PageProps) {
+  const a = state.appearance;
+  const change = changer(dispatch);
+  return (
+    <>
       <Row title="Text color" help="Hard-to-read colors are replaced automatically.">
         <ColorField
           label="Text color"
@@ -163,6 +134,30 @@ export function AppearancePage({ state, dispatch }: PageProps) {
           onChange={(backgroundColor) => change({ backgroundColor })}
         />
       </Row>
+      <Row title="Reading line color" help="Red unless you choose another.">
+        <ColorField
+          label="Reading line color"
+          value={a.readingLineColor}
+          onChange={(readingLineColor) => change({ readingLineColor })}
+        />
+      </Row>
+      <Row title="Progress bar color" help="The thin bar along the bottom of the Output.">
+        <ColorField
+          label="Progress bar color"
+          value={a.progressColor}
+          onChange={(progressColor) => change({ progressColor })}
+        />
+      </Row>
+    </>
+  );
+}
+
+/** The Reading line switch and position, and Mirror. */
+export function ReadingLineTab({ state, dispatch }: PageProps) {
+  const a = state.appearance;
+  const change = changer(dispatch);
+  return (
+    <>
       <Row title="Reading line" help="The triangle that marks the line being read.">
         <Switch
           compact
@@ -185,20 +180,6 @@ export function AppearancePage({ state, dispatch }: PageProps) {
           onChange={(percent) => change({ readingLineY: percent / 100 })}
         />
       </Row>
-      <Row title="Reading line color" help="Red unless you choose another.">
-        <ColorField
-          label="Reading line color"
-          value={a.readingLineColor}
-          onChange={(readingLineColor) => change({ readingLineColor })}
-        />
-      </Row>
-      <Row title="Progress bar color" help="The thin bar along the bottom of the Output.">
-        <ColorField
-          label="Progress bar color"
-          value={a.progressColor}
-          onChange={(progressColor) => change({ progressColor })}
-        />
-      </Row>
       <Row title="Mirror" help="Flips the Output for beam-splitter glass.">
         <Switch
           compact
@@ -208,5 +189,54 @@ export function AppearancePage({ state, dispatch }: PageProps) {
         />
       </Row>
     </>
+  );
+}
+
+/** Choose, save and delete a Preset. */
+export function PresetsTab({ state, dispatch }: PageProps) {
+  const [name, setName] = useState('');
+  const save = () => {
+    const presetName = name.trim() || state.activePreset;
+    if (!presetName) return;
+    dispatch({ type: 'savePreset', name: presetName });
+    setName('');
+  };
+
+  return (
+    <Row title="Preset" help="A saved set of these settings, such as one for each Talent.">
+      <select
+        aria-label="Preset"
+        value={state.activePreset ?? ''}
+        onChange={(e) => e.target.value && dispatch({ type: 'loadPreset', name: e.target.value })}
+      >
+        <option value="">(no Preset)</option>
+        {state.presets.map((p) => (
+          <option key={p} value={p}>
+            {p}
+          </option>
+        ))}
+      </select>
+      <div className="pf-inline">
+        <input
+          type="text"
+          aria-label="Preset name"
+          placeholder="Preset name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && save()}
+        />
+      </div>
+      <div className="pf-inline">
+        <Button onClick={save}>Save Preset</Button>
+        <Button
+          disabled={!state.activePreset}
+          onClick={() =>
+            state.activePreset && dispatch({ type: 'deletePreset', name: state.activePreset })
+          }
+        >
+          Delete Preset
+        </Button>
+      </div>
+    </Row>
   );
 }

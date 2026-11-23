@@ -135,7 +135,6 @@ describe('the running app', () => {
       ),
     ).toHaveLength(1);
     await prefs.getByRole('button', { name: 'Appearance' }).click();
-    await prefs.screenshot({ path: join(artifacts, 'preferences-appearance.png') });
     const before = (await state()).appearance.fontSize;
     await prefs.getByLabel('Font size').fill(String(before + 20));
     await expect.poll(async () => (await state()).appearance.fontSize).toBe(before + 20);
@@ -178,13 +177,14 @@ describe('the running app', () => {
     // Network: a Quick message added here is on the Producer page's list.
     await prefs.getByRole('button', { name: 'Network' }).click();
     await expect.poll(() => prefs.locator('.pf-address code').count()).toBeGreaterThan(0);
+    await prefs.screenshot({ path: join(artifacts, 'preferences-network-connection.png') });
+    await prefs.getByRole('tab', { name: 'Quick messages' }).click();
     await prefs.getByLabel('New Quick message').fill('Eyes up');
     await prefs.getByRole('button', { name: 'Add', exact: true }).click();
     const quick = async () =>
       (await operator.evaluate(() => (window as any).neoprompter.getQuickMessages())) as string[];
     await expect.poll(quick).toContain('Eyes up');
-    await prefs.locator('main').evaluate((el) => (el.scrollTop = 0));
-    await prefs.screenshot({ path: join(artifacts, 'preferences-network.png') });
+    await prefs.screenshot({ path: join(artifacts, 'preferences-network-quick-messages.png') });
     await prefs.getByLabel('Remove Quick message 6').click();
     await expect.poll(quick).not.toContain('Eyes up');
     await prefs.close();
@@ -748,8 +748,8 @@ describe('the running app', () => {
       expect(o.h).toBeLessThanOrEqual(0);
     }
     expect(await operator.evaluate(() => window.innerHeight)).toBeLessThanOrEqual(area.height);
-    // Preferences: the title (and Appearance's sample) stay fixed, the settings scroll beneath, and
-    // the last setting can always be reached, even in a short window.
+    // Preferences: tabs replace scrolling. At 900x640 no tab of any category has a scrolling
+    // region (but the Quick messages list), and every control in the tab is inside the window.
     await app.evaluate(({ Menu }) => {
       Menu.getApplicationMenu()!
         .items.find((i) => i.label === 'File')!
@@ -757,58 +757,62 @@ describe('the running app', () => {
         .click();
     });
     const prefs = await windowTitled('Preferences');
-    const shortWindow = (height: number) =>
-      app.evaluate(({ BrowserWindow }, height) => {
-        const win = BrowserWindow.getAllWindows().find((w) =>
-          w.getTitle().includes('Preferences'),
-        )!;
-        win.setMinimumSize(0, 0);
-        win.setSize(900, height);
-      }, height);
-    await shortWindow(500);
-    for (const category of [
-      'General',
-      'Appearance',
-      'Output',
-      'Controls',
-      'Notifications',
-      'Network',
-    ]) {
-      await prefs.getByRole('button', { name: category }).click();
-      await prefs.waitForTimeout(200);
-      const before = await prefs.evaluate(() => {
-        const head = document.querySelector('.pf-head')!.getBoundingClientRect();
-        const scroll = document.querySelector('.pf-scroll') as HTMLElement;
-        return { headTop: head.top, scrolls: scroll.scrollHeight > scroll.clientHeight + 2 };
-      });
-      expect(before.headTop, `${category} title`).toBe(0);
-      // No sideways overflow, and the page itself never scrolls (only the settings do).
-      const page = await prefs.evaluate(() => ({
-        h: document.documentElement.scrollWidth - window.innerWidth,
-        v: document.documentElement.scrollHeight - window.innerHeight,
-      }));
-      expect(page.h, `${category} sideways`).toBeLessThanOrEqual(0);
-      expect(page.v, `${category} page`).toBeLessThanOrEqual(0);
-      await prefs.mouse.move(600, 400);
-      await prefs.mouse.wheel(0, 5000);
-      await prefs.waitForTimeout(200);
-      const after = await prefs.evaluate(() => {
-        const head = document.querySelector('.pf-head')!.getBoundingClientRect();
-        const scroll = document.querySelector('.pf-scroll') as HTMLElement;
-        const last = scroll.lastElementChild!.getBoundingClientRect();
-        const box = scroll.getBoundingClientRect();
-        return {
-          headTop: head.top,
-          moved: scroll.scrollTop > 0,
-          lastVisible: last.bottom <= box.bottom + 1,
-        };
-      });
-      expect(after.headTop, `${category} title stays`).toBe(0);
-      expect(after.lastVisible, `${category} last setting reachable`).toBe(true);
-      if (before.scrolls) expect(after.moved, `${category} scrolled`).toBe(true);
-      if (category === 'Appearance') {
-        expect(before.scrolls).toBe(true);
-        await prefs.screenshot({ path: join(artifacts, 'preferences-short-scrolled.png') });
+    await app.evaluate(({ BrowserWindow }) => {
+      const win = BrowserWindow.getAllWindows().find((w) => w.getTitle().includes('Preferences'))!;
+      win.setContentSize(900, 640);
+    });
+    await prefs.waitForTimeout(300);
+    const tabsOf: Array<[string, string[]]> = [
+      ['General', []],
+      ['Appearance', ['Text', 'Colors', 'Reading line', 'Presets']],
+      ['Output', []],
+      ['Controls', []],
+      ['Notifications', []],
+      ['Network', ['Connection', 'Quick messages']],
+    ];
+    const fits = (label: string) =>
+      prefs.evaluate((label) => {
+        const problems: string[] = [];
+        const view = { w: window.innerWidth, h: window.innerHeight };
+        if (document.documentElement.scrollHeight > view.h) problems.push('page scrolls');
+        if (document.documentElement.scrollWidth > view.w) problems.push('page scrolls sideways');
+        for (const el of Array.from(document.querySelectorAll<HTMLElement>('main, main *'))) {
+          const style = getComputedStyle(el);
+          const scrollable =
+            /auto|scroll/.test(style.overflowY) || /auto|scroll/.test(style.overflowX);
+          const overflows =
+            el.scrollHeight > el.clientHeight + 1 || el.scrollWidth > el.clientWidth + 1;
+          if (scrollable && overflows && !el.classList.contains('pf-messages-list')) {
+            problems.push(`${el.className || el.tagName} scrolls`);
+          }
+        }
+        for (const el of Array.from(
+          document.querySelectorAll<HTMLElement>(
+            '.pf-panel input, .pf-panel select, .pf-panel button',
+          ),
+        )) {
+          const r = el.getBoundingClientRect();
+          if (r.width === 0 || r.height === 0) continue;
+          if (r.left < 0 || r.top < 0 || r.right > view.w || r.bottom > view.h) {
+            problems.push(
+              `${el.getAttribute('aria-label') ?? el.textContent} is outside the window`,
+            );
+          }
+        }
+        return problems.map((p) => `${label}: ${p}`);
+      }, label);
+    for (const [category, tabs] of tabsOf) {
+      await prefs.getByRole('button', { name: category, exact: true }).click();
+      await prefs.waitForTimeout(250);
+      for (const tabName of tabs.length ? tabs : [null]) {
+        if (tabName) await prefs.getByRole('tab', { name: tabName }).click();
+        await prefs.waitForTimeout(150);
+        const label = tabName ? `${category} / ${tabName}` : category;
+        expect(await fits(label)).toEqual([]);
+        const shot = `preferences-fit-${category}${tabName ? `-${tabName}` : ''}`
+          .toLowerCase()
+          .replace(/\s+/g, '-');
+        await prefs.screenshot({ path: join(artifacts, `${shot}.png`) });
       }
     }
     await prefs.close();
