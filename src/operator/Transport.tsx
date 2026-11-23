@@ -3,7 +3,15 @@ import { formatTimeLeft, type Command, type CoreState } from '../core';
 import { keyToAction } from '../input';
 import { isTyping } from './Speed';
 import { Key } from './ui/Key';
-import { BackScreenIcon, ForwardScreenIcon, PauseIcon, PlayIcon, PlayStartIcon } from './ui/icons';
+import {
+  BackScreenIcon,
+  EndIcon,
+  ForwardScreenIcon,
+  PauseIcon,
+  PlayIcon,
+  PlayStartIcon,
+  TopIcon,
+} from './ui/icons';
 
 /**
  * Space plays forward and Shift+Space plays back (the same key again pauses; the other turns the
@@ -82,8 +90,8 @@ export function DirectionIndicator({ state }: { state: CoreState }) {
 }
 
 /**
- * The transport, one short row: the direction, Play and Pause with Play start and the two Screen
- * jumps, time left and position, and the text size.
+ * The transport, one short row: the direction, Play and Pause with Top, Play start, the two Screen
+ * jumps and End, time left and position, and the text size.
  */
 export function Transport({
   state,
@@ -99,6 +107,12 @@ export function Transport({
     <div className="np-panel run-transport" data-testid="transport">
       <DirectionIndicator state={state} />
       <div className="run-keys">
+        <Key
+          icon={<TopIcon />}
+          caption="Top"
+          title="Jump to the top of the Script"
+          onClick={() => dispatch({ type: 'setProgress', progress: 0 })}
+        />
         <Key
           icon={<PlayStartIcon />}
           caption="Play start"
@@ -119,6 +133,12 @@ export function Transport({
           icon={<ForwardScreenIcon />}
           caption="Forward a Screen"
           onClick={() => dispatch({ type: 'jumpForward' })}
+        />
+        <Key
+          icon={<EndIcon />}
+          caption="End"
+          title="Jump to the end of the Script"
+          onClick={() => dispatch({ type: 'setProgress', progress: 1 })}
         />
       </div>
       <div className="run-read">

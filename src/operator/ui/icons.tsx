@@ -48,6 +48,18 @@ export const PlayStartIcon = () => (
   </svg>
 );
 
+export const TopIcon = () => (
+  <svg {...base}>
+    <path d="M6 5h12M7 15l5-5 5 5" />
+  </svg>
+);
+
+export const EndIcon = () => (
+  <svg {...base}>
+    <path d="M6 19h12M7 9l5 5 5-5" />
+  </svg>
+);
+
 export const UndoIcon = () => (
   <svg {...base}>
     <path d="M9 7L4 12l5 5" />

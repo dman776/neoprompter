@@ -146,6 +146,8 @@
 }
 .run-keys {
   flex: 1;
+  /* Six keys: at the narrowest window they shrink (below) instead of pushing the side column. */
+  min-width: 0;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -154,6 +156,8 @@
 /* A short bar: the keys are low, so the Live view keeps the room. */
 .run-transport .np-key {
   width: 70px;
+  flex: 0 1 70px;
+  min-width: 48px;
   height: 46px;
   gap: 1px;
   font-size: 8.5px;
@@ -164,6 +168,8 @@
 }
 .run-transport .np-key[data-big='true'] {
   width: 104px;
+  flex: 0 1 104px;
+  min-width: 64px;
   height: 52px;
 }
 .run-read {
@@ -288,6 +294,29 @@
  * right-hand column goes (its Script lock moves beside the transport) and the transport tightens
  * and wraps, so nothing overlaps.
  */
+/* The narrowest Run mode window (about 1100 px) leaves the transport less room than six full keys. */
+@media (max-width: 1240px) {
+  /* The time and text size drop to a second row; the keys keep their size. */
+  .run-transport {
+    flex-wrap: wrap;
+    gap: 6px 14px;
+    padding: 7px 12px;
+  }
+  .run-keys {
+    flex: 1 0 auto;
+    gap: 6px;
+  }
+  .run-transport .np-key {
+    flex: none;
+    width: 66px;
+  }
+  .run-transport .np-key[data-big='true'] {
+    width: 90px;
+  }
+  .run-read {
+    margin-left: auto;
+  }
+}
 @media (max-width: 960px) {
   .run,
   .run:has(> .run-slot-meter:not(:empty)),

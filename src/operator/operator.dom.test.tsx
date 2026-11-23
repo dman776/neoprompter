@@ -413,6 +413,16 @@ describe('Run mode: transport', () => {
     ]);
   });
 
+  it('jumps to the top and to the end of the Script', async () => {
+    const { core, dispatched } = await runMode();
+    await act(async () => key('End').click());
+    expect(dispatched).toEqual([{ type: 'setProgress', progress: 1 }]);
+    expect(core.getState().progress).toBe(1);
+    await act(async () => key('Top').click());
+    expect(dispatched.at(-1)).toEqual({ type: 'setProgress', progress: 0 });
+    expect(core.getState().progress).toBe(0);
+  });
+
   it('shows time left and position, and they update while playing', async () => {
     const { core, clock } = await runMode();
     const read = (id: string) => host.querySelector(`[data-testid="${id}"]`)!.textContent;

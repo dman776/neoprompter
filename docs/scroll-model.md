@@ -12,6 +12,10 @@ The Operator can reposition the Script by dragging the text in the Live view (th
 
 The Run mode Live view has a scrollbar down its right edge (`src/operator/ScriptScrollbar.tsx`; the mini Live view in Edit mode and the Output never show one). The thumb sits at `progress` and is one Screen out of the whole Script (never under 8% of the track). Dragging it, or pressing the track, sends `setProgress { progress }`, which puts the reading position that fraction of the way from the start to the end-of-Script stop. A playing Script is paused while the thumb is held and carries on when it is released, like dragging the text. The scrollbar stops the pointer from reaching the Live view behind it, so it never also drags the text.
 
+### Top and End in Run mode
+
+The Run mode transport has TOP and END keys (`src/operator/Transport.tsx`). They send `setProgress { progress: 0 }` and `{ progress: 1 }`: the reading position goes to the start of the Script and to the end-of-Script stop. A playing Script keeps playing (it stops at once at the end, as it always does there). Play start is separate: it returns to the Play start position, not the top.
+
 ### The wheel in Run mode
 
 Over the Run mode Live view the wheel changes the speed, not the position: rolling down is faster, up is slower, and one notch (100 px, or 3 lines for a line-mode wheel) is one nudge step (`SPEED_NUDGE_STEP`, 0.1 level). A trackpad's small deltas add up in proportion. It sends `adjustSpeed { levels }`, which clamps like every other speed change. The wheel inside the Virtual shuttle is a different control and still scrolls.
