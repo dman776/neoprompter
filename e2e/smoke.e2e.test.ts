@@ -893,6 +893,32 @@ describe('the running app', () => {
     await dispatch({ type: 'setAppearance', changes: { fontSize: fontBefore } });
   });
 
+  it('runs the text to the edges of the Output and the Live view when the Margin is 0%', async () => {
+    await dispatch({ type: 'setMode', mode: 'run' });
+    await dispatch({ type: 'setAppearance', changes: { margin: 0 } });
+    const gap = (page: Page, text: string, stage: string) =>
+      page.evaluate(
+        ({ text, stage }) => {
+          const t = document.querySelector(text)!.getBoundingClientRect();
+          const s = document.querySelector(stage)!.getBoundingClientRect();
+          return {
+            left: (t.left - s.left) / (s.width / 1920),
+            right: (s.right - t.right) / (s.width / 1920),
+          };
+        },
+        { text, stage },
+      );
+    await expect.poll(async () => (await gap(output, '#text', '#stage')).left).toBeLessThan(1);
+    expect((await gap(output, '#text', '#stage')).right).toBeLessThan(1);
+    const live = await gap(operator, '[data-live="text"]', '[data-live="surface"]');
+    expect(live.left).toBeLessThan(1);
+    expect(live.right).toBeLessThan(1);
+    await dispatch({ type: 'setAppearance', changes: { margin: 10 } });
+    await expect
+      .poll(async () => Math.round((await gap(output, '#text', '#stage')).left))
+      .toBe(192);
+  });
+
   describe('the Producer page with a token set', () => {
     const port = 47811;
     const TOKEN = 'e2e-token';

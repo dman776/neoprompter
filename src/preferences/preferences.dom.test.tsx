@@ -168,6 +168,17 @@ describe('Appearance', () => {
     expect(button('Save')).toBeUndefined();
   });
 
+  it('moves Text width with Margin: Margin 0% widens the text to the edges', async () => {
+    const { core } = await openAppearance();
+    await setValue(field('Margin'), '0');
+    expect(core.getState().appearance.margin).toBe(0);
+    expect(core.getState().appearance.textWidth).toBe(100);
+    expect(field('Text width').value).toBe('100');
+    await setValue(field('Text width'), '60');
+    expect(core.getState().appearance.margin).toBe(20);
+    expect(field('Margin').value).toBe('20');
+  });
+
   it('applies colors at once', async () => {
     const { core } = await openAppearance();
     await setValue(field('Background'), '#102030');

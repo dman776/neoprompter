@@ -8,6 +8,8 @@ import {
   READING_LINE_HEIGHT,
   READING_LINE_MAX_Y,
   READING_LINE_MIN_Y,
+  MAX_MARGIN,
+  MIN_TEXT_WIDTH,
 } from './types';
 
 function setup(store: PresetStore = createMemoryPresetStore()) {
@@ -212,5 +214,60 @@ describe('the Reading line and Progress bar colors', () => {
     older.dispatch({ type: 'loadPreset', name: 'Old' });
     expect(older.getState().appearance.readingLineColor).toBe('#ff0000');
     expect(older.getState().appearance.progressColor).toBe('#ff0000');
+  });
+});
+
+describe('Margin and Text width are one setting seen two ways', () => {
+  const side = (a: { margin: number; textWidth: number }) =>
+    Math.max(a.margin, (100 - a.textWidth) / 2);
+
+  it('widens the text to the edge when the Margin is set to 0', () => {
+    const { core } = setup();
+    core.dispatch({ type: 'setAppearance', changes: { margin: 0 } });
+    const a = core.getState().appearance;
+    expect(a.margin).toBe(0);
+    expect(a.textWidth).toBe(100);
+    expect(side(a)).toBe(0);
+  });
+
+  it('moves the Margin when the Text width changes', () => {
+    const { core } = setup();
+    core.dispatch({ type: 'setAppearance', changes: { textWidth: 60 } });
+    const a = core.getState().appearance;
+    expect(a.textWidth).toBe(60);
+    expect(a.margin).toBe(20);
+    core.dispatch({ type: 'setAppearance', changes: { textWidth: 100 } });
+    expect(core.getState().appearance.margin).toBe(0);
+  });
+
+  it('moves the Text width when the Margin changes', () => {
+    const { core } = setup();
+    core.dispatch({ type: 'setAppearance', changes: { margin: 15 } });
+    expect(core.getState().appearance.textWidth).toBe(70);
+  });
+
+  it('keeps both when both are given together, as a Preset or a saved session does', () => {
+    const { core } = setup();
+    core.dispatch({ type: 'setAppearance', changes: { margin: 5, textWidth: 70 } });
+    const a = core.getState().appearance;
+    expect([a.margin, a.textWidth]).toEqual([5, 70]);
+  });
+
+  it('keeps the text column at least as wide as the smallest allowed', () => {
+    const { core } = setup();
+    core.dispatch({ type: 'setAppearance', changes: { margin: 80 } });
+    const a = core.getState().appearance;
+    expect(a.margin).toBe(MAX_MARGIN);
+    expect(a.textWidth).toBe(MIN_TEXT_WIDTH);
+    core.dispatch({ type: 'setAppearance', changes: { textWidth: 5 } });
+    expect(core.getState().appearance.textWidth).toBe(MIN_TEXT_WIDTH);
+    expect(core.getState().appearance.margin).toBe(MAX_MARGIN);
+  });
+
+  it('leaves other settings alone, and a font change does not touch the column', () => {
+    const { core } = setup();
+    core.dispatch({ type: 'setAppearance', changes: { fontSize: 60 } });
+    const a = core.getState().appearance;
+    expect([a.margin, a.textWidth]).toEqual([10, 80]);
   });
 });

@@ -11,6 +11,9 @@ import {
   SPEED_NUDGE_BIG_STEP,
   SPEED_NUDGE_STEP,
   FONT_SIZE_STEP,
+  MAX_MARGIN,
+  MAX_TEXT_WIDTH,
+  MIN_TEXT_WIDTH,
   MAX_FONT_SIZE,
   MIN_FONT_SIZE,
   RING_MAX_LINES_PER_SECOND,
@@ -54,6 +57,26 @@ export interface Core {
   getState(): CoreState;
   /** Called after every command that changes state. Returns an unsubscribe function. */
   subscribe(listener: (state: CoreState) => void): () => void;
+}
+
+const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
+
+/**
+ * Text width and Margin describe the same column from two sides (each side's space is
+ * `(100 - width) / 2`), so changing one carries the other with it: "Margin 0%" means no gap at the
+ * sides. When a change gives both (a Preset, a restored session) both are kept as given.
+ */
+function linkedColumn(changes: Partial<Appearance>): Partial<Appearance> {
+  const { margin, textWidth } = changes;
+  if (margin !== undefined && textWidth === undefined) {
+    const side = clamp(Number(margin), 0, MAX_MARGIN);
+    return { ...changes, margin: side, textWidth: 100 - 2 * side };
+  }
+  if (textWidth !== undefined && margin === undefined) {
+    const width = clamp(Number(textWidth), MIN_TEXT_WIDTH, MAX_TEXT_WIDTH);
+    return { ...changes, textWidth: width, margin: (100 - width) / 2 };
+  }
+  return changes;
 }
 
 /** An appearance whose text is unreadable on its background gets black or white text instead. */
@@ -456,7 +479,7 @@ export function createCore(options: CoreOptions = {}): Core {
           recentColors = moveColorToFront(recentColors, command.color);
           break;
         case 'setAppearance':
-          appearance = readable({ ...appearance, ...command.changes });
+          appearance = readable({ ...appearance, ...linkedColumn(command.changes) });
           break;
         case 'nudgeFontSize':
           appearance = readable({

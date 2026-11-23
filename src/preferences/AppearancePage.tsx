@@ -1,5 +1,12 @@
 import { useState } from 'react';
-import { MAX_FONT_SIZE, MIN_FONT_SIZE, type CoreState } from '../core';
+import {
+  MAX_FONT_SIZE,
+  MAX_MARGIN,
+  MAX_TEXT_WIDTH,
+  MIN_FONT_SIZE,
+  MIN_TEXT_WIDTH,
+  type CoreState,
+} from '../core';
 import { Button } from '../operator/ui/Button';
 import { Switch } from '../operator/ui/Switch';
 import { ColorField, Row, Slider } from './controls';
@@ -114,23 +121,29 @@ export function AppearancePage({ state, dispatch }: PageProps) {
           onChange={(lineSpacing) => change({ lineSpacing })}
         />
       </Row>
-      <Row title="Text width" help="How much of the Output's width the text uses.">
+      <Row
+        title="Text width"
+        help="How much of the Output's width the text uses. Linked to Margin: widening one narrows the other."
+      >
         <Slider
           label="Text width"
-          value={a.textWidth}
-          min={30}
-          max={100}
+          value={Math.round(a.textWidth)}
+          min={MIN_TEXT_WIDTH}
+          max={MAX_TEXT_WIDTH}
           step={1}
           unit="%"
           onChange={(textWidth) => change({ textWidth })}
         />
       </Row>
-      <Row title="Margin" help="The space at each side of the Output.">
+      <Row
+        title="Margin"
+        help="The space at each side of the Output. 0% runs the text to the edges."
+      >
         <Slider
           label="Margin"
-          value={a.margin}
+          value={Math.round(a.margin)}
           min={0}
-          max={40}
+          max={MAX_MARGIN}
           step={1}
           unit="%"
           onChange={(margin) => change({ margin })}

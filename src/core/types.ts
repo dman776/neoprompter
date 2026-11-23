@@ -125,6 +125,14 @@ export interface Notification {
 
 export const MAX_SPEED_LEVEL = 10;
 /** Speed level change for one nudge (an arrow key), and for a nudge with Shift. */
+/**
+ * The text column's limits. Text width and Margin are one setting seen two ways: each side's
+ * margin is (100 - width) / 2, so changing one moves the other (see `setAppearance`).
+ */
+export const MIN_TEXT_WIDTH = 30;
+export const MAX_TEXT_WIDTH = 100;
+export const MAX_MARGIN = (MAX_TEXT_WIDTH - MIN_TEXT_WIDTH) / 2;
+
 /** Output font size limits and the step of a nudge (px). */
 export const MIN_FONT_SIZE = 16;
 export const MAX_FONT_SIZE = 160;
