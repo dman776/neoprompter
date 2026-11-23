@@ -1,0 +1,151 @@
+/* The Preferences window: category navigation at the left, the category's settings at the right. */
+.pf-shell {
+  display: grid;
+  grid-template-columns: 190px 1fr;
+  height: 100%;
+}
+.pf-shell nav {
+  padding: 18px 10px;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+}
+.pf-shell nav button {
+  display: block;
+  width: 100%;
+  padding: 9px 12px;
+  margin-bottom: 2px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  border-radius: var(--radius);
+  text-align: left;
+}
+.pf-shell nav button:hover {
+  color: var(--text);
+}
+.pf-shell nav button[data-selected='true'] {
+  background: var(--raised);
+  color: var(--text);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+.pf-shell nav button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.pf-shell main {
+  overflow: auto;
+  padding: 24px 30px;
+}
+.pf-shell h2 {
+  margin: 0 0 2px;
+  font-size: 20px;
+  letter-spacing: -0.01em;
+}
+.pf-sub {
+  margin: 0 0 18px;
+  color: var(--muted);
+}
+.pf-placeholder {
+  color: var(--muted);
+}
+
+.pf-row {
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  gap: 20px;
+  align-items: center;
+  padding: 13px 0;
+  border-bottom: 1px solid var(--border);
+}
+.pf-row b {
+  display: block;
+  font-weight: 600;
+}
+.pf-row small {
+  color: var(--muted);
+}
+.pf-control {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: stretch;
+}
+.pf-control select,
+.pf-control input[type='text'] {
+  width: 100%;
+  height: 32px;
+  padding: 0 10px;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font: inherit;
+}
+.pf-control select:focus-visible,
+.pf-control input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.pf-control .np-switch {
+  align-self: flex-end;
+}
+.pf-inline {
+  display: flex;
+  gap: 6px;
+}
+.pf-inline .np-button {
+  flex: 1;
+}
+.pf-inline .np-button {
+  height: 32px;
+  padding: 0 10px;
+  white-space: nowrap;
+}
+.pf-slider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.pf-slider input {
+  flex: 1;
+  accent-color: var(--accent);
+}
+.pf-value {
+  min-width: 56px;
+  text-align: right;
+  font-family: var(--mono);
+  font-weight: 600;
+}
+.pf-color {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+}
+.pf-color input {
+  width: 48px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: transparent;
+}
+
+.pf-sample {
+  position: sticky;
+  top: -24px;
+  z-index: 1;
+  margin: 0 0 6px;
+  padding-block: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  min-height: 90px;
+}
+.pf-reading-line {
+  position: absolute;
+  left: 0;
+  top: 0.7em;
+  border-left: 0.7em solid var(--accent);
+  border-block: 0.4em solid transparent;
+}
