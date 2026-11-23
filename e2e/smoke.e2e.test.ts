@@ -190,6 +190,37 @@ describe('the running app', () => {
     await operator.getByRole('radio', { name: 'Edit' }).click();
   });
 
+  it('blocks typing in Run mode, and unlocks for a one-paragraph live fix', async () => {
+    await operator.getByRole('radio', { name: 'Run' }).click();
+    await expect.poll(() => operator.locator('main').getAttribute('data-mode')).toBe('run');
+    const before = (await state()).script.lines;
+    // No surface can edit while locked: not a command from here, nor the editor (it is not shown).
+    await dispatch({ type: 'editLine', line: 0, text: 'typed while locked' });
+    await dispatch({ type: 'setScriptLines', lines: ['typed while locked'] });
+    expect((await state()).script.lines).toEqual(before);
+    expect(await operator.locator('.ProseMirror').count()).toBe(0);
+    await operator.screenshot({ path: join(artifacts, 'operator-run-locked.png') });
+
+    const lock = operator.locator('[data-slot="script-lock"]').getByRole('switch');
+    await lock.click();
+    await expect.poll(async () => (await state()).unlocked).toBe(true);
+    const position = (await state()).position;
+    const first = operator.locator('[data-testid="live-view"] [data-live="text"] > div').first();
+    await first.dblclick();
+    const box = operator.getByRole('textbox', { name: 'Fix this paragraph' });
+    await box.fill('Fixed live');
+    await operator.screenshot({ path: join(artifacts, 'operator-run-live-fix.png') });
+    await box.press('Enter');
+    await expect.poll(async () => (await outputLines())[0]).toBe('Fixed live');
+    await expect.poll(() => first.textContent()).toBe('Fixed live');
+    expect((await state()).position).toBe(position);
+
+    await operator.getByRole('radio', { name: 'Edit' }).click();
+    await expect.poll(async () => (await state()).unlocked).toBe(false);
+    await dispatch({ type: 'editLine', line: 0, text: before[0] as string });
+    await expect.poll(async () => (await outputLines())[0]).toBe(before[0]);
+  });
+
   it('switches the Output Off and On from the lamp, keeping the reading position', async () => {
     const before = (await state()).position;
     const lamp = operator.getByRole('switch', { name: 'Output' });

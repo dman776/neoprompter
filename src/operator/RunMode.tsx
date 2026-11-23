@@ -1,5 +1,6 @@
 import type { Command, CoreState } from '../core';
 import { LiveView } from './LiveView';
+import { ScriptLock } from './ScriptLock';
 import { StatusPanel } from './StatusPanel';
 import { Transport } from './Transport';
 import { useApiView, useOutputView, type CoreBridge } from './useCoreState';
@@ -35,7 +36,12 @@ export function RunMode({
         <Transport state={state} dispatch={dispatch} />
       </div>
       <aside className="run-side">
-        <div className="run-slot" data-slot="script-lock" />
+        <div className="run-slot" data-slot="script-lock">
+          <ScriptLock
+            unlocked={state.unlocked}
+            onChange={(unlocked) => bridge.dispatch({ type: 'setUnlocked', unlocked })}
+          />
+        </div>
         <StatusPanel state={state} outputView={outputView} apiView={apiView} />
       </aside>
     </div>

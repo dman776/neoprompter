@@ -179,7 +179,8 @@ describe('Run mode: the Live view', () => {
 
   it('stays in step with the Output after a Script edit and a Preset change', async () => {
     const { core } = await runMode();
-    await act(async () => core.dispatch({ type: 'editLine', line: 1, text: 'BETA' }));
+    await act(async () => core.dispatch({ type: 'setUnlocked', unlocked: true }));
+    await act(async () => core.dispatch({ type: 'liveFix', line: 1, text: 'BETA' }));
     expect(paragraphs()).toEqual(['alpha', 'BETA', 'gamma']);
     await act(async () => core.dispatch({ type: 'setAppearance', changes: { mirror: true } }));
     expect((live().querySelector('[data-live="surface"]') as HTMLElement).style.transform).toBe(

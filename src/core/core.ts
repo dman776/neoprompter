@@ -109,6 +109,10 @@ export function createCore(options: CoreOptions = {}): Core {
   const SAVE_INTERVAL_MS = 1000;
 
   let mode: Mode = 'edit';
+  /** Never persisted: every launch and every mode change starts locked. */
+  let unlocked = false;
+  /** The Script is locked against editing in Run mode (ADR 0003); a live fix has its own rule. */
+  const locked = () => mode === 'run';
   let notificationDurationMs = DEFAULT_NOTIFICATION_MS;
   const clampDuration = (ms: number) =>
     Math.max(MIN_NOTIFICATION_MS, Math.min(MAX_NOTIFICATION_MS, Math.round(ms)));
@@ -163,7 +167,12 @@ export function createCore(options: CoreOptions = {}): Core {
   }
 
   /** Replace `removed` lines at `at` with `added`, keeping the reading position on the same text. */
-  function spliceLines(at: number, removed: number, added: Script['lines']): void {
+  function spliceLines(
+    at: number,
+    removed: number,
+    added: Script['lines'],
+    keepExtents = false,
+  ): void {
     const lines = [...script.lines];
     lines.splice(at, removed, ...added);
     const remap = (p: number) => remapPosition(toLineIndex(p), at, removed, added.length);
@@ -171,7 +180,7 @@ export function createCore(options: CoreOptions = {}): Core {
     const nextPlayStart = remap(playStart);
     // New lines count as one visual line until the Output measures them.
     const nextExtents = [...extents];
-    nextExtents.splice(at, removed, ...added.map(() => 1));
+    if (!keepExtents) nextExtents.splice(at, removed, ...added.map(() => 1));
     script = { ...script, lines };
     extents = nextExtents;
     scriptRevision++;
@@ -226,6 +235,7 @@ export function createCore(options: CoreOptions = {}): Core {
       activePreset,
       outputOn,
       mode,
+      unlocked,
       notifications: notifications.map(({ id, text }) => ({ id, text })).reverse(),
       notificationDurationMs,
       recentColors: [...recentColors],
@@ -314,17 +324,20 @@ export function createCore(options: CoreOptions = {}): Core {
           if (loadedScriptId === command.id) loadedScriptId = null;
           break;
         case 'editLine': {
+          if (locked()) return;
           const old = script.lines[command.line];
           if (old === undefined) return;
           spliceLines(command.line, 1, editLineText(old, command.text));
           break;
         }
         case 'setScriptLines': {
+          if (locked()) return;
           const span = changedSpan(script.lines, sanitizeLines(command.lines));
           if (span) spliceLines(span.at, span.removed, span.added);
           break;
         }
         case 'cutLines': {
+          if (locked()) return;
           const from = Math.max(0, Math.floor(command.from));
           const count = Math.min(Math.floor(command.count), script.lines.length - from);
           if (!(count > 0)) return;
@@ -332,6 +345,7 @@ export function createCore(options: CoreOptions = {}): Core {
           break;
         }
         case 'colorRange': {
+          if (locked()) return;
           const old = script.lines[command.line];
           if (old === undefined) return;
           if (command.color !== null && !isHexColor(command.color)) return;
@@ -369,7 +383,23 @@ export function createCore(options: CoreOptions = {}): Core {
         case 'setMode':
           if (command.mode !== 'edit' && command.mode !== 'run') return;
           mode = command.mode;
+          unlocked = false;
           break;
+        case 'setUnlocked':
+          if (typeof command.unlocked !== 'boolean') return;
+          unlocked = mode === 'run' && command.unlocked;
+          break;
+        case 'liveFix': {
+          if (!(mode === 'run' && unlocked)) return;
+          const old = script.lines[command.line];
+          if (old === undefined || typeof command.text !== 'string') return;
+          const [fixed] = editLineText(old, command.text.replace(/\r?\n/g, ' '));
+          if (fixed === undefined || lineText(fixed) === lineText(old)) return;
+          // One paragraph in, one out, and its measured wrapping kept until the Output
+          // measures again, so the reading position stays on the same spot.
+          spliceLines(command.line, 1, [fixed], true);
+          break;
+        }
         case 'notify': {
           const text = command.text.trim();
           if (!text) return;

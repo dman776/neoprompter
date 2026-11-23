@@ -121,9 +121,10 @@ describe('the Script editor in Edit mode', () => {
     expect(host.querySelector('.ProseMirror')!.textContent).toBe('Replaced by the API.');
   });
 
-  it('sends what was typed before the editor locks on leaving Edit mode', async () => {
+  it('sends what was typed after the save delay, before Run mode locks the Script', async () => {
     const { core } = await mount();
     await act(async () => void tiptap().commands.insertContentAt(1, 'Late '));
+    await act(async () => new Promise((r) => setTimeout(r, SAVE_DELAY_MS + 50)));
     await act(async () => core.dispatch({ type: 'setMode', mode: 'run' }));
     expect(core.getState().script.lines.map(lineText)[0]).toBe('Late Hello there.');
   });
