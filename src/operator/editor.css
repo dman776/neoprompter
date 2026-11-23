@@ -74,3 +74,46 @@
 .script-doc h6 {
   font-size: 17px;
 }
+
+/* Find and replace: a compact bar above the document, and highlights inside it. */
+.find-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+.find-input {
+  width: 120px;
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--well);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+}
+.find-input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+}
+.find-input:disabled {
+  opacity: 0.5;
+}
+.find-count {
+  min-width: 64px;
+  color: var(--muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.script-doc .find-match {
+  background: color-mix(in srgb, var(--accent) 28%, transparent);
+  border-radius: 2px;
+}
+.script-doc .find-current {
+  background: color-mix(in srgb, var(--accent) 60%, transparent);
+  outline: 1px solid var(--accent);
+}

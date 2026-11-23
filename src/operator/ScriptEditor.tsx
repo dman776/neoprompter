@@ -8,12 +8,14 @@ import Bold from '@tiptap/extension-bold';
 import Italic from '@tiptap/extension-italic';
 import { UndoRedo } from '@tiptap/extensions';
 import type { CoreState, ScriptLine } from '../core';
-import { docToLines, formatReadTime, linesToDoc, scriptStats } from '../editor';
+import { cleanPastedHtml, docToLines, formatReadTime, linesToDoc, scriptStats } from '../editor';
 import type { CoreBridge } from './useCoreState';
 import { ColorMark } from './colorMark';
+import { FindBar } from './FindBar';
+import { Search } from './search';
 import { Panel } from './ui/Panel';
 import { Button } from './ui/Button';
-import { BoldIcon, HeadingIcon, ItalicIcon, RedoIcon, UndoIcon } from './ui/icons';
+import { BoldIcon, HeadingIcon, ItalicIcon, RedoIcon, SearchIcon, UndoIcon } from './ui/icons';
 
 /** How long after the last keystroke the editor sends its content to the core. */
 export const SAVE_DELAY_MS = 300;
@@ -28,6 +30,7 @@ const extensions = [
   Italic,
   ColorMark,
   UndoRedo,
+  Search,
 ];
 
 const sameLines = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
@@ -42,6 +45,7 @@ interface ScriptEditorProps {
 /** The full Script editor: formatting bar, word count, Saved state, and the document itself. */
 export function ScriptEditor({ bridge, script, editable }: ScriptEditorProps) {
   const [saving, setSaving] = useState(false);
+  const [finding, setFinding] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   /** What the Operator typed that has not been sent to the core yet. */
   const pending = useRef<ScriptLine[] | null>(null);
@@ -62,7 +66,11 @@ export function ScriptEditor({ bridge, script, editable }: ScriptEditorProps) {
     extensions,
     content: initial,
     editable,
-    editorProps: { attributes: { class: 'script-doc', 'aria-label': 'Script' } },
+    editorProps: {
+      attributes: { class: 'script-doc', 'aria-label': 'Script' },
+      // Clean paste (ADR 0003): structure, emphasis and color stay; fonts, sizes and spacing go.
+      transformPastedHTML: cleanPastedHtml,
+    },
     onUpdate: ({ editor: e }) => {
       pending.current = docToLines(e.getJSON());
       setSaving(true);
@@ -102,6 +110,10 @@ export function ScriptEditor({ bridge, script, editable }: ScriptEditorProps) {
   });
 
   const stats = scriptStats(script.lines);
+  const closeFind = () => {
+    setFinding(false);
+    editor?.commands.focus();
+  };
   const chain = () => editor?.chain().focus();
 
   return (
@@ -159,11 +171,30 @@ export function ScriptEditor({ bridge, script, editable }: ScriptEditorProps) {
         >
           <ItalicIcon />
         </Button>
+        <Button
+          square
+          variant="ghost"
+          aria-label="Find"
+          aria-pressed={finding}
+          lit={finding}
+          onClick={() => setFinding(!finding)}
+        >
+          <SearchIcon />
+        </Button>
         <span className="word-count" aria-live="polite">
           <b>{stats.words}</b> words · <b>{formatReadTime(stats.readSeconds)}</b>
         </span>
       </div>
-      <div className="script-scroll">
+      {finding && editor && <FindBar editor={editor} editable={editable} onClose={closeFind} />}
+      <div
+        className="script-scroll"
+        onKeyDown={(e) => {
+          if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'f') {
+            e.preventDefault();
+            setFinding(true);
+          }
+        }}
+      >
         <EditorContent editor={editor} />
       </div>
     </Panel>

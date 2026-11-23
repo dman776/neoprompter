@@ -53,3 +53,28 @@ export const ItalicIcon = () => (
     <path d="M10 5h8M6 19h8M14 5l-4 14" />
   </svg>
 );
+
+export const SearchIcon = () => (
+  <svg {...base}>
+    <circle cx="11" cy="11" r="6" />
+    <path d="M20 20l-4.5-4.5" />
+  </svg>
+);
+
+export const ChevronUpIcon = () => (
+  <svg {...base}>
+    <path d="M6 15l6-6 6 6" />
+  </svg>
+);
+
+export const ChevronDownIcon = () => (
+  <svg {...base}>
+    <path d="M6 9l6 6 6-6" />
+  </svg>
+);
+
+export const CloseIcon = () => (
+  <svg {...base}>
+    <path d="M6 6l12 12M18 6L6 18" />
+  </svg>
+);

@@ -131,3 +131,96 @@ describe('the Script editor in Edit mode', () => {
     expect(tiptap().isEditable).toBe(true);
   });
 });
+
+describe('find and replace', () => {
+  const type = async (label: string, value: string) => {
+    const input = host.querySelector(`input[aria-label="${label}"]`) as HTMLInputElement;
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, value);
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+  };
+  const counter = () => host.querySelector('.find-count')!.textContent;
+  const lines = (core: Awaited<ReturnType<typeof mount>>['core']) =>
+    core.getState().script.lines.map(lineText);
+
+  it('opens from the Find button, counts matches, and steps next and previous with wrapping', async () => {
+    await mount(['Ann met Ann.', 'Then Ann left.']);
+    expect(host.querySelector('.find-bar')).toBeNull();
+    await act(async () => button('Find').click());
+    await type('Find', 'ann');
+    expect(counter()).toBe('1 of 3');
+    await act(async () => button('Next match').click());
+    expect(counter()).toBe('2 of 3');
+    await act(async () => button('Next match').click());
+    await act(async () => button('Next match').click());
+    expect(counter()).toBe('1 of 3');
+    await act(async () => button('Previous match').click());
+    expect(counter()).toBe('3 of 3');
+    expect(host.querySelectorAll('.find-match').length).toBe(3);
+    await type('Find', 'zzz');
+    expect(counter()).toBe('No matches');
+  });
+
+  it('replaces the current match, then all of them, and saves the result', async () => {
+    const { core } = await mount(['Ann met Ann.', 'Then Ann left.']);
+    await act(async () => button('Find').click());
+    await type('Find', 'Ann');
+    await type('Replace with', 'Bea');
+    await act(async () => button('Replace').click());
+    expect(tiptap().getText()).toContain('Bea met Ann.');
+    await act(async () => button('Replace all').click());
+    await wait(SAVE_DELAY_MS + 100);
+    expect(lines(core)).toEqual(['Bea met Bea.', 'Then Bea left.']);
+    expect(counter()).toBe('No matches');
+  });
+
+  it('keeps the formatting of the text it replaces', async () => {
+    const { core } = await mount([
+      { runs: [{ text: 'Say ' }, { text: 'Ann', bold: true }] },
+    ] as never);
+    await act(async () => button('Find').click());
+    await type('Find', 'Ann');
+    await type('Replace with', 'Bea');
+    await act(async () => button('Replace all').click());
+    await wait(SAVE_DELAY_MS + 100);
+    expect(core.getState().script.lines[0]).toEqual({
+      runs: [{ text: 'Say ' }, { text: 'Bea', bold: true }],
+    });
+  });
+
+  it('closes the find bar when the editor goes away on leaving Edit mode', async () => {
+    // The editor is not shown in Run mode, so the bar goes with it.
+    const { core } = await mount();
+    await act(async () => button('Find').click());
+    await act(async () => core.dispatch({ type: 'setMode', mode: 'run' }));
+    expect(host.querySelector('.find-bar')).toBeNull();
+  });
+});
+
+describe('pasting from Word', () => {
+  const paste = async (html: string) => {
+    const view = tiptap().view;
+    const data = { getData: (t: string) => (t === 'text/html' ? html : '') };
+    const event = Object.assign(new Event('paste', { bubbles: true, cancelable: true }), {
+      clipboardData: data,
+    });
+    await act(async () => void view.dom.dispatchEvent(event));
+  };
+
+  it('keeps structure, emphasis and color and carries no fonts or sizes', async () => {
+    const { core } = await mount(['']);
+    tiptap().commands.focus();
+    await paste(
+      '<h2 style="font-family:Arial;font-size:20pt">Title</h2><p class="MsoNormal" style="font-size:14pt"><b>Bold</b> <span style="color:#ff0000;font-family:Calibri">red</span></p>',
+    );
+    await wait(SAVE_DELAY_MS + 100);
+    expect(core.getState().script.lines).toEqual([
+      { heading: 2, runs: [{ text: 'Title' }] },
+      {
+        runs: [{ text: 'Bold', bold: true }, { text: ' ' }, { text: 'red', color: '#ff0000' }],
+      },
+    ]);
+    expect(tiptap().getHTML()).not.toMatch(/font|size|class=/i);
+  });
+});
