@@ -13,6 +13,13 @@
 .run:has(> .run-slot-meter:not(:empty)) {
   grid-template-columns: auto minmax(0, 1fr) 250px;
 }
+/* The right-hand column is collapsed: the centre takes the full width. */
+.run[data-collapsed='true'] {
+  grid-template-columns: minmax(0, 1fr);
+}
+.run[data-collapsed='true']:has(> .run-slot-meter:not(:empty)) {
+  grid-template-columns: auto minmax(0, 1fr);
+}
 .run-center {
   display: grid;
   grid-template-rows: minmax(0, 1fr) auto;

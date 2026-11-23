@@ -12,6 +12,7 @@ import {
   type Command,
   type CoreState,
   type Mode,
+  type Theme,
   type Script,
 } from './types';
 import { createMemoryLibraryStorage, type LibraryStorage } from './library';
@@ -109,6 +110,8 @@ export function createCore(options: CoreOptions = {}): Core {
   const SAVE_INTERVAL_MS = 1000;
 
   let mode: Mode = 'edit';
+  let theme: Theme = 'dark';
+  let rightColumnCollapsed = false;
   let notificationDurationMs = DEFAULT_NOTIFICATION_MS;
   const clampDuration = (ms: number) =>
     Math.max(MIN_NOTIFICATION_MS, Math.min(MAX_NOTIFICATION_MS, Math.round(ms)));
@@ -136,6 +139,8 @@ export function createCore(options: CoreOptions = {}): Core {
       restored.activePreset && presets[restored.activePreset] ? restored.activePreset : null;
   }
   if (restored?.mode === 'edit' || restored?.mode === 'run') mode = restored.mode;
+  if (restored?.theme === 'dark' || restored?.theme === 'light') theme = restored.theme;
+  if (restored?.rightColumnCollapsed === true) rightColumnCollapsed = true;
   if (restored?.notificationDurationMs !== undefined) {
     notificationDurationMs = clampDuration(restored.notificationDurationMs);
   }
@@ -157,6 +162,8 @@ export function createCore(options: CoreOptions = {}): Core {
       appearance,
       activePreset,
       mode,
+      theme,
+      rightColumnCollapsed,
       notificationDurationMs,
       recentColors,
     });
@@ -226,6 +233,8 @@ export function createCore(options: CoreOptions = {}): Core {
       activePreset,
       outputOn,
       mode,
+      theme,
+      rightColumnCollapsed,
       notifications: notifications.map(({ id, text }) => ({ id, text })).reverse(),
       notificationDurationMs,
       recentColors: [...recentColors],
@@ -369,6 +378,14 @@ export function createCore(options: CoreOptions = {}): Core {
         case 'setMode':
           if (command.mode !== 'edit' && command.mode !== 'run') return;
           mode = command.mode;
+          break;
+        case 'setTheme':
+          if (command.theme !== 'dark' && command.theme !== 'light') return;
+          theme = command.theme;
+          break;
+        case 'setRightColumnCollapsed':
+          if (typeof command.collapsed !== 'boolean') return;
+          rightColumnCollapsed = command.collapsed;
           break;
         case 'notify': {
           const text = command.text.trim();

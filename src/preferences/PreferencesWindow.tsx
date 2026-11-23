@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { useCoreState, type CoreBridge } from '../operator/useCoreState';
+import { useTheme } from '../operator/ui/useTheme';
 import { CATEGORIES } from './categories';
 
 /** The Preferences window: category navigation and the chosen category's settings. */
 export function Preferences({ bridge }: { bridge: CoreBridge }) {
   const state = useCoreState(bridge);
+  useTheme(state?.theme);
   const [selected, setSelected] = useState(CATEGORIES[0]!.id);
   const category = CATEGORIES.find((c) => c.id === selected)!;
   const Page = category.Page;

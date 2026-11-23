@@ -54,6 +54,30 @@
   gap: 10px;
 }
 
+/* Square header buttons (theme, right column); lit in the accent when "on". */
+.header-sq {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: linear-gradient(var(--raised), var(--surface));
+  color: var(--muted);
+}
+.header-sq:hover {
+  color: var(--text);
+}
+.header-sq[data-lit='true'] {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 60%, transparent);
+}
+.header-sq:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 .shell-body {
   min-height: 0;
   padding: 14px 16px;

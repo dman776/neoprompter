@@ -13,16 +13,19 @@ export function RunMode({
   state,
   bridge,
   outputBlocked,
+  columnCollapsed,
 }: {
   state: CoreState;
   bridge: CoreBridge;
   outputBlocked: boolean;
+  /** The right-hand column is hidden, so the Live view takes the full width. */
+  columnCollapsed: boolean;
 }) {
   const outputView = useOutputView(bridge);
   const apiView = useApiView(bridge);
   const dispatch = (command: Command) => bridge.dispatch(command);
   return (
-    <div className="run">
+    <div className="run" data-collapsed={columnCollapsed ? 'true' : undefined}>
       <div className="run-slot run-slot-meter" data-slot="speed-meter" />
       <div className="run-center">
         <div className="run-bezel">
@@ -34,10 +37,12 @@ export function RunMode({
         </div>
         <Transport state={state} dispatch={dispatch} />
       </div>
-      <aside className="run-side">
-        <div className="run-slot" data-slot="script-lock" />
-        <StatusPanel state={state} outputView={outputView} apiView={apiView} />
-      </aside>
+      {!columnCollapsed && (
+        <aside className="run-side">
+          <div className="run-slot" data-slot="script-lock" />
+          <StatusPanel state={state} outputView={outputView} apiView={apiView} />
+        </aside>
+      )}
     </div>
   );
 }

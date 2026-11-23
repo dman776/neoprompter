@@ -191,3 +191,12 @@ describe('Presets', () => {
     expect((button('Delete Preset') as HTMLButtonElement).disabled).toBe(true);
   });
 });
+
+describe('the shared theme', () => {
+  it('shows the theme the Operator chose, and follows a change', async () => {
+    const { core } = await mount();
+    expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
+    await act(async () => core.dispatch({ type: 'setTheme', theme: 'light' }));
+    expect(document.documentElement.getAttribute('data-theme')).toBe('light');
+  });
+});
