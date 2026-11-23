@@ -316,3 +316,97 @@ describe('Run mode: status panel', () => {
     expect(item('producer')).toContain('Port 4780 is in use');
   });
 });
+
+describe('Run mode: speed meter, dial and arrow keys', () => {
+  const runMode = async () => {
+    const m = await mount(
+      shownView,
+      apiView,
+      Array.from({ length: 100 }, (_, i) => `l${i}`),
+    );
+    await act(async () => m.core.dispatch({ type: 'setMode', mode: 'run' }));
+    await act(async () => m.core.dispatch({ type: 'setSpeed', level: 3.4 }));
+    return m;
+  };
+  const readout = () => host.querySelector('[data-testid="speed-readout"]')!.textContent;
+  const fills = () =>
+    Array.from(host.querySelectorAll('[data-slot="speed-meter"] [data-fill]'), (s) =>
+      Number(s.getAttribute('data-fill')),
+    );
+  const dial = () => host.querySelector('[role="slider"]')!;
+  const pointer = (el: Element, type: string, clientY: number) =>
+    act(async () => {
+      el.dispatchEvent(new MouseEvent(type, { bubbles: true, clientY, button: 0 }));
+    });
+  const press = (key: string, init: KeyboardEventInit = {}, target: Element = document.body) =>
+    act(async () => {
+      target.dispatchEvent(
+        new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, ...init }),
+      );
+    });
+
+  it('shows lines per second to two decimals, matching the core', async () => {
+    const { core } = await runMode();
+    expect(core.getState().speed).toBeCloseTo(1.7);
+    expect(readout()).toBe('1.70');
+    await act(async () => core.dispatch({ type: 'setSpeed', level: 0.7 }));
+    expect(readout()).toBe('0.35');
+  });
+
+  it('lights whole segments and shows the partial level in the last lit one', async () => {
+    await runMode();
+    const f = fills();
+    expect(f).toHaveLength(10);
+    expect(f.slice(0, 3)).toEqual([1, 1, 1]);
+    expect(f[3]).toBeCloseTo(0.4);
+    expect(f.slice(4)).toEqual([0, 0, 0, 0, 0, 0]);
+  });
+
+  it('the dial reports the level as a slider value', async () => {
+    await runMode();
+    expect(dial().getAttribute('aria-valuenow')).toBe('3.4');
+    expect(dial().getAttribute('aria-valuemax')).toBe('10');
+  });
+
+  it('dragging the dial up raises the speed continuously, and down lowers it', async () => {
+    const { core } = await runMode();
+    await pointer(dial(), 'pointerdown', 200);
+    await pointer(dial(), 'pointermove', 158);
+    expect(core.getState().speedLevel).toBeCloseTo(6.4);
+    await pointer(dial(), 'pointermove', 242);
+    expect(core.getState().speedLevel).toBeCloseTo(0.4);
+    await pointer(dial(), 'pointerup', 242);
+    await pointer(dial(), 'pointermove', 100);
+    expect(core.getState().speedLevel).toBeCloseTo(0.4);
+  });
+
+  it('arrow keys nudge the speed, Shift nudges more, while playing', async () => {
+    const { core } = await runMode();
+    await act(async () => core.dispatch({ type: 'play' }));
+    await press('ArrowUp');
+    expect(core.getState().speedLevel).toBe(3.5);
+    await press('ArrowDown', { shiftKey: true });
+    expect(core.getState().speedLevel).toBe(3);
+    expect(core.getState().playing).toBe(true);
+  });
+
+  it('arrow keys do nothing while typing in a text field', async () => {
+    const { core } = await runMode();
+    const input = document.createElement('input');
+    host.append(input);
+    await press('ArrowUp', {}, input);
+    expect(core.getState().speedLevel).toBe(3.4);
+    const ce = document.createElement('div');
+    Object.defineProperty(ce, 'isContentEditable', { value: true });
+    host.append(ce);
+    await press('ArrowUp', {}, ce);
+    expect(core.getState().speedLevel).toBe(3.4);
+  });
+
+  it('arrow keys do not change the speed in Edit mode', async () => {
+    const { core } = await runMode();
+    await act(async () => core.dispatch({ type: 'setMode', mode: 'edit' }));
+    await press('ArrowUp');
+    expect(core.getState().speedLevel).toBe(3.4);
+  });
+});

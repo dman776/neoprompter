@@ -1,0 +1,79 @@
+/* The speed meter (lit segments) and the speed dial in Run mode. */
+.speed-meter {
+  align-items: center;
+  gap: 10px;
+  height: 100%;
+  padding: 12px 8px;
+}
+.speed-meter small {
+  font-size: 9.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.speed-meter-leds {
+  flex: 1;
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 5px;
+  width: 26px;
+  min-height: 0;
+}
+.speed-meter-leds i {
+  flex: 1;
+  border-radius: 2px;
+  background: #1f262f;
+}
+:root[data-theme='light'] .speed-meter-leds i {
+  background: #cdd3dc;
+}
+/* A lit segment is full accent; a partly lit one is dimmer in proportion to its fill. */
+.speed-meter-leds i:not([data-fill='0']) {
+  background: var(--accent);
+  opacity: calc(0.35 + 0.65 * var(--fill));
+  box-shadow: 0 0 9px color-mix(in srgb, var(--accent) 70%, transparent);
+}
+.speed-meter-leds i[data-hot='true']:not([data-fill='0']) {
+  background: #ff6a4d;
+  box-shadow: 0 0 9px #ff6a4d;
+}
+
+.speed-dial {
+  position: relative;
+  width: 132px;
+  height: 132px;
+  justify-self: center;
+  touch-action: none;
+  cursor: ns-resize;
+  user-select: none;
+}
+.speed-dial:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 50%;
+}
+.speed-dial svg {
+  width: 100%;
+  height: 100%;
+}
+.speed-dial-cap {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  pointer-events: none;
+}
+.speed-dial-cap b {
+  display: block;
+  font-size: 26px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.speed-dial-cap small {
+  color: var(--muted);
+  font-size: 9.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}

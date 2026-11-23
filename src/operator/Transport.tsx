@@ -1,4 +1,5 @@
 import type { Command, CoreState } from '../core';
+import { SpeedDial } from './Speed';
 import { Key } from './ui/Key';
 import { BackScreenIcon, ForwardScreenIcon, PauseIcon, PlayIcon, PlayStartIcon } from './ui/icons';
 
@@ -11,7 +12,7 @@ export function formatTimeLeft(remainingLines: number, linesPerSecond: number): 
 
 /**
  * The transport: Play and Pause, Back a Screen, Forward a Screen and Play start, with time left
- * and position beside them. The speed dial goes in the `speed-dial` slot.
+ * and position beside them, and the speed dial in the `speed-dial` slot.
  */
 export function Transport({
   state,
@@ -22,7 +23,9 @@ export function Transport({
 }) {
   return (
     <div className="np-panel run-transport" data-testid="transport">
-      <div className="run-slot run-slot-dial" data-slot="speed-dial" />
+      <div className="run-slot run-slot-dial" data-slot="speed-dial">
+        <SpeedDial state={state} dispatch={dispatch} />
+      </div>
       <div className="run-keys">
         <Key
           icon={<PlayStartIcon />}

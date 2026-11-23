@@ -1,13 +1,14 @@
 import type { Command, CoreState } from '../core';
 import { LiveView } from './LiveView';
+import { SpeedMeter, useSpeedKeys } from './Speed';
 import { StatusPanel } from './StatusPanel';
 import { Transport } from './Transport';
 import { useApiView, useOutputView, type CoreBridge } from './useCoreState';
 
 /**
  * Run mode: the large Live view with the transport under it, and the right-hand column.
- * Empty `data-slot` boxes are where the speed meter (left), the dial (in the transport) and the
- * Script lock (right-hand column) go.
+ * The speed meter sits on the left and the dial in the transport; the empty `data-slot` box in the
+ * right-hand column is where the Script lock goes.
  */
 export function RunMode({
   state,
@@ -20,10 +21,13 @@ export function RunMode({
 }) {
   const outputView = useOutputView(bridge);
   const apiView = useApiView(bridge);
+  useSpeedKeys(bridge.dispatch);
   const dispatch = (command: Command) => bridge.dispatch(command);
   return (
     <div className="run">
-      <div className="run-slot run-slot-meter" data-slot="speed-meter" />
+      <div className="run-slot run-slot-meter" data-slot="speed-meter">
+        <SpeedMeter level={state.speedLevel} />
+      </div>
       <div className="run-center">
         <div className="run-bezel">
           <LiveView
