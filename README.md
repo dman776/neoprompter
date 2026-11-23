@@ -68,7 +68,8 @@ npm run dist:win   # release/NeoPrompter Setup <version>.exe
 npm run dist:check # confirms the artifacts exist
 ```
 
-Installers are unsigned and there is no auto-update. On macOS, right-click > Open the first time; on
+Pushing a version tag such as `v0.2.0` builds all of these on GitHub and drafts a release (see
+[docs/installers.md](docs/installers.md#releasing)). Installers are unsigned and there is no auto-update. On macOS, right-click > Open the first time; on
 Windows, choose "More info > Run anyway" in SmartScreen. See [docs/installers.md](docs/installers.md).
 
 ## Development

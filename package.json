@@ -11,7 +11,7 @@
     "start": "npm run build && electron .",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "dist:mac": "npm run build && electron-builder --mac --publish never",
+    "dist:mac": "npm run build && electron-builder --mac --x64 --arm64 --publish never",
     "dist:win": "npm run build && electron-builder --win --x64 --publish never",
     "dist:check": "node scripts/check-installers.mjs",
     "prepare": "husky",

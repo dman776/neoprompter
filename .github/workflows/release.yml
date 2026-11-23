@@ -1,0 +1,95 @@
+# Builds the installers and drafts a GitHub release when a version tag (v0.2.0, v0.3.0-beta.1) is
+# pushed, whether from `git push --tags` or from "Draft a new release" on GitHub. The release is a
+# draft: review it, then press Publish. See docs/installers.md.
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref_name }}
+  cancel-in-progress: false
+
+env:
+  HUSKY: '0' # no git hooks in CI
+
+jobs:
+  check:
+    name: Check
+    runs-on: ubuntu-latest
+    outputs:
+      prerelease: ${{ steps.tag.outputs.prerelease }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: The tag matches package.json
+        id: tag
+        run: node scripts/check-release-tag.mjs "$GITHUB_REF_NAME"
+      - run: npm ci
+      - run: npm run check
+
+  installers:
+    name: Installers (${{ matrix.name }})
+    needs: check
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - name: macOS
+            os: macos-latest
+            command: npm run dist:mac
+            check: node scripts/check-installers.mjs mac
+            files: release/*.dmg
+          - name: Windows
+            os: windows-latest
+            command: npm run dist:win
+            check: node scripts/check-installers.mjs win
+            files: release/*.exe
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: ${{ matrix.command }}
+      - run: ${{ matrix.check }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: installers-${{ matrix.name }}
+          path: ${{ matrix.files }}
+          if-no-files-found: error
+
+  release:
+    name: Draft release
+    needs: [check, installers]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: installers-*
+          path: installers
+          merge-multiple: true
+      - name: Create the draft release, or add the installers to the one that exists
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+          PRERELEASE: ${{ needs.check.outputs.prerelease }}
+        run: |
+          ls -l installers
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" installers/* --clobber
+          else
+            flags=(--draft --generate-notes --notes-file .github/release-notes.md --title "NeoPrompter ${TAG#v}")
+            if [ "$PRERELEASE" = "true" ]; then flags+=(--prerelease); fi
+            gh release create "$TAG" installers/* "${flags[@]}"
+          fi

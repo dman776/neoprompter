@@ -9,6 +9,7 @@ files:
 mac:
   target: dmg
   icon: build/icon.icns
+  artifactName: ${productName}-${version}-mac-${arch}.${ext}
   identity: null # no code signing
 dmg:
   sign: false
@@ -17,6 +18,7 @@ win:
   icon: build/icon.ico
   signAndEditExecutable: false # no signing; also avoids needing wine when cross-building
 nsis:
+  artifactName: ${productName}-Setup-${version}-win-${arch}.${ext}
   oneClick: false
   allowToChangeInstallationDirectory: true
 publish: null # no auto-update
