@@ -2,18 +2,20 @@ import { strFromU8, unzipSync } from 'fflate';
 import { XMLParser } from 'fast-xml-parser';
 import type { RichLine, Run, Script } from '../core';
 import { importDoc } from './doc';
+import { importPdf } from './pdf';
 import { importText } from './text';
 
 export { importDoc };
 
-/** Imports a Word or text file, choosing the reader by extension (`.docx` or legacy `.doc`). */
-export function importDocument(bytes: Uint8Array, fileName: string): ImportResult {
+/** Imports a Word, text or PDF file, choosing the reader by extension. */
+export async function importDocument(bytes: Uint8Array, fileName: string): Promise<ImportResult> {
   if (/\.docx$/i.test(fileName)) return importDocx(bytes, fileName);
   if (/\.doc$/i.test(fileName)) return importDoc(bytes, fileName);
   if (/\.txt$/i.test(fileName)) return importText(bytes, fileName);
+  if (/\.pdf$/i.test(fileName)) return importPdf(bytes, fileName);
   return {
     ok: false,
-    message: `"${fileName}" is not a file Neoprompter can import; choose a .doc, .docx or .txt file.`,
+    message: `"${fileName}" is not a file Neoprompter can import; choose a .doc, .docx, .txt or .pdf file.`,
   };
 }
 

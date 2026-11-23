@@ -98,7 +98,7 @@ export interface WatchedFolderResult {
 /** The name of the subfolder that Imported files move into. */
 export const IMPORTED_FOLDER = 'imported';
 
-const IMPORTABLE_FILE = /\.(docx?|txt)$/i;
+const IMPORTABLE_FILE = /\.(docx?|txt|pdf)$/i;
 
 /** Word's own lock files (`~$name.docx`) and hidden files are never Scripts. */
 function isCandidate(name: string): boolean {
@@ -129,7 +129,7 @@ function freeFileName(file: string, exists: (name: string) => boolean): string {
 export interface WatchedFolderDeps {
   fs: WatchedFolderFs;
   core: Pick<Core, 'dispatch' | 'getState'>;
-  importDocument: (bytes: Uint8Array, fileName: string) => ImportResult;
+  importDocument: (bytes: Uint8Array, fileName: string) => ImportResult | Promise<ImportResult>;
   /** Says whether a file is finished arriving; a file that is not is skipped and reported as waiting. Omitted, every file is ready. */
   isReady?: (file: string) => boolean;
   /** Files to leave out of this pass altogether (ones that already failed and have not changed). */
@@ -137,12 +137,15 @@ export interface WatchedFolderDeps {
 }
 
 /**
- * One pass over the Watched folder: each Word file in it is Imported as a Script and moved into
+ * One pass over the Watched folder: each Word, text or PDF file in it is Imported as a Script and moved into
  * its `imported` subfolder. A file that cannot be Imported, or whose Script the core does not
  * keep, stays where it is. Nothing happens outside Edit mode, where the core would refuse the
  * save anyway.
  */
-export function importWatchedFolder(folder: string, deps: WatchedFolderDeps): WatchedFolderResult {
+export async function importWatchedFolder(
+  folder: string,
+  deps: WatchedFolderDeps,
+): Promise<WatchedFolderResult> {
   const { fs, core } = deps;
   const result: WatchedFolderResult = { imported: [], failed: [], waiting: [] };
   if (core.getState().mode !== 'edit') return result;
@@ -158,7 +161,7 @@ export function importWatchedFolder(folder: string, deps: WatchedFolderDeps): Wa
     }
     let imported: ImportResult;
     try {
-      imported = deps.importDocument(fs.readFile(from), file);
+      imported = await deps.importDocument(fs.readFile(from), file);
     } catch {
       result.failed.push({ file, message: `"${file}" could not be read.` });
       continue;
@@ -223,7 +226,7 @@ export interface FolderWatcherDeps extends Omit<WatchedFolderDeps, 'isReady' | '
 
 export interface FolderWatcher {
   /** Watches this folder (stopping any earlier one) and Imports what is already in it; null stops. */
-  setFolder(folder: string | null): void;
+  setFolder(folder: string | null): Promise<void>;
 }
 
 /**
@@ -244,8 +247,17 @@ export function createFolderWatcher(deps: FolderWatcherDeps): FolderWatcher {
   };
   let mode = deps.core.getState().mode;
 
-  const pass = (folder: string, settled: boolean) => {
-    const result = importWatchedFolder(folder, {
+  // Reading a PDF takes a moment, so a pass can still be running when the next change arrives.
+  // Passes run one after another: two at once would Import the same file twice.
+  let queue: Promise<unknown> = Promise.resolve();
+  const pass = (folder: string, settled: boolean): Promise<WatchedFolderResult> => {
+    const next = queue.then(() => runPass(folder, settled));
+    queue = next.catch(() => undefined);
+    return next;
+  };
+
+  const runPass = async (folder: string, settled: boolean) => {
+    const result = await importWatchedFolder(folder, {
       ...deps,
       skip: (file) => {
         const path = deps.fs.join(folder, file);
@@ -275,8 +287,9 @@ export function createFolderWatcher(deps: FolderWatcherDeps): FolderWatcher {
     if (cancelCheck) return;
     cancelCheck = deps.scheduler.after(SETTLE_MS, () => {
       cancelCheck = null;
-      const result = pass(folder, true);
-      if (result.waiting.length > 0) schedule(folder);
+      void pass(folder, true).then((result) => {
+        if (result.waiting.length > 0) schedule(folder);
+      });
     });
   };
 
@@ -289,7 +302,7 @@ export function createFolderWatcher(deps: FolderWatcherDeps): FolderWatcher {
   });
 
   return {
-    setFolder(folder) {
+    async setFolder(folder) {
       current = folder;
       stopWatching?.();
       stopWatching = null;
@@ -299,7 +312,7 @@ export function createFolderWatcher(deps: FolderWatcherDeps): FolderWatcher {
       failed = new Map();
       if (!folder) return;
       stopWatching = deps.changes.watch(folder, () => schedule(folder));
-      pass(folder, false);
+      await pass(folder, false);
     },
   };
 }

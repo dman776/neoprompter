@@ -239,7 +239,7 @@ app.whenReady().then(() => {
     const picked = await dialog.showOpenDialog({
       title: 'Import Script',
       properties: ['openFile'],
-      filters: [{ name: 'Word and text files', extensions: ['docx', 'doc', 'txt'] }],
+      filters: [{ name: 'Word, text and PDF files', extensions: ['docx', 'doc', 'txt', 'pdf'] }],
     });
     if (picked.canceled || picked.filePaths.length === 0) return null;
     const file = picked.filePaths[0];
@@ -250,7 +250,7 @@ app.whenReady().then(() => {
     } catch {
       return { ok: false, message: `"${name}" could not be read.` };
     }
-    const result = importDocument(bytes, name);
+    const result = await importDocument(bytes, name);
     if (!result.ok) return result;
     const { script } = result;
     core.dispatch({
