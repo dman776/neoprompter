@@ -75,10 +75,11 @@ function setup(initial: Record<string, string> = {}) {
     core,
     changes,
     scheduler,
-    importDocument: (bytes, name): ImportResult => ({
-      ok: true,
-      script: { name: name.replace(/\.docx?$/i, ''), lines: [new TextDecoder().decode(bytes)] },
-    }),
+    importDocument: (bytes, name): ImportResult => {
+      const text = new TextDecoder().decode(bytes);
+      if (text === 'BAD') return { ok: false, message: `"${name}" is not readable.` };
+      return { ok: true, script: { name: name.replace(/\.docx?$/i, ''), lines: [text] } };
+    },
     onResult: (r) => results.push(r),
   });
   const names = () => core.getState().library.map((s) => s.name);
@@ -167,5 +168,92 @@ describe('createFolderWatcher', () => {
     t.watcher.setFolder('/Other');
     expect(t.stopped).toEqual(['/Drop']);
     expect(t.watching).toEqual(['/Drop', '/Other']);
+  });
+
+  describe('Run mode', () => {
+    it('leaves dropped files alone in Run mode, and Imports them on return to Edit mode', () => {
+      const t = setup();
+      t.watcher.setFolder('/Drop');
+      t.core.dispatch({ type: 'setMode', mode: 'run' });
+      t.drop('Sunday.docx', 'a');
+      t.drop('Prayer.docx', 'b');
+      t.advance(SETTLE_MS * 5);
+      expect(t.names()).toEqual([]);
+      expect(t.disk.has('/Drop/Sunday.docx')).toBe(true);
+      expect(t.results).toEqual([]);
+
+      t.core.dispatch({ type: 'setMode', mode: 'edit' });
+      t.advance(SETTLE_MS * 2);
+      expect(t.names().sort()).toEqual(['Prayer', 'Sunday']);
+      expect(t.disk.has('/Drop/imported/Sunday.docx')).toBe(true);
+    });
+
+    it('holds the files already in the folder when the app starts in Run mode', () => {
+      const t = setup({ '/Drop/Sunday.docx': 'a' });
+      t.core.dispatch({ type: 'setMode', mode: 'run' });
+      t.watcher.setFolder('/Drop');
+      expect(t.names()).toEqual([]);
+      t.core.dispatch({ type: 'setMode', mode: 'edit' });
+      t.advance(SETTLE_MS * 2);
+      expect(t.names()).toEqual(['Sunday']);
+    });
+
+    it('never tries to save in Run mode', () => {
+      const t = setup();
+      t.watcher.setFolder('/Drop');
+      t.core.dispatch({ type: 'setMode', mode: 'run' });
+      const dispatched: string[] = [];
+      const real = t.core.dispatch;
+      t.core.dispatch = (c) => {
+        dispatched.push(c.type);
+        real(c);
+      };
+      t.drop('Sunday.docx', 'a');
+      t.advance(SETTLE_MS * 5);
+      expect(dispatched).not.toContain('saveScript');
+    });
+
+    it('Imports each file once however many times the mode changes', () => {
+      const t = setup();
+      t.watcher.setFolder('/Drop');
+      t.core.dispatch({ type: 'setMode', mode: 'run' });
+      t.drop('Sunday.docx', 'a');
+      t.core.dispatch({ type: 'setMode', mode: 'edit' });
+      t.core.dispatch({ type: 'setMode', mode: 'run' });
+      t.core.dispatch({ type: 'setMode', mode: 'edit' });
+      t.advance(SETTLE_MS * 4);
+      expect(t.names()).toEqual(['Sunday']);
+    });
+  });
+
+  describe('a file that failed', () => {
+    it('is reported once, not again at every later change', () => {
+      const t = setup();
+      t.watcher.setFolder('/Drop');
+      t.drop('Broken.doc', 'BAD');
+      t.advance(SETTLE_MS * 2);
+      expect(t.results.flatMap((r) => r.failed.map((f) => f.file))).toEqual(['Broken.doc']);
+      t.drop('Next.docx', 'ok');
+      t.advance(SETTLE_MS * 2);
+      expect(t.names()).toEqual(['Next']);
+      expect(t.results.flatMap((r) => r.failed)).toHaveLength(1);
+    });
+
+    it('is tried again once the file has changed', () => {
+      const t = setup();
+      t.watcher.setFolder('/Drop');
+      t.drop('Fixed.doc', 'BAD');
+      t.advance(SETTLE_MS * 2);
+      t.drop('Fixed.doc', 'now good');
+      t.advance(SETTLE_MS * 2);
+      expect(t.names()).toEqual(['Fixed']);
+    });
+
+    it('is reported again when the folder is chosen again', () => {
+      const t = setup({ '/Drop/Broken.doc': 'BAD' });
+      t.watcher.setFolder('/Drop');
+      t.watcher.setFolder('/Drop');
+      expect(t.results.flatMap((r) => r.failed)).toHaveLength(2);
+    });
   });
 });

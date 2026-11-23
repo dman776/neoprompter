@@ -4,6 +4,7 @@ import type { EditorHandle } from './ScriptEditor';
 import {
   useCoreState,
   useMenuActions,
+  useWatchedFolderNotices,
   useOutputBlocked,
   type CoreBridge,
   type ImportOutcome,
@@ -49,6 +50,7 @@ export function App({ bridge }: { bridge: CoreBridge }) {
     if (latest.current?.mode !== 'edit') return;
     void bridge.importScript?.().then((outcome) => setNotice(outcome));
   };
+  useWatchedFolderNotices(bridge, setNotice);
   useMenuActions(bridge, (action) => {
     if (action === 'toggle-theme') toggleTheme();
     else if (action === 'toggle-right-column') toggleColumn();

@@ -4,3 +4,4 @@ release/
 .scratch/
 .claude/worktrees/
 e2e/artifacts/
+watched_folder/

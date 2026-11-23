@@ -47,7 +47,11 @@ const ACTIONS = ['none', 'playPause', 'jumpBack', 'jumpForward', 'returnToPlaySt
 
 async function mount(
   initialView: Partial<OutputWindowView> = {},
-  options: { api?: Partial<ApiView>; applyError?: string } = {},
+  options: {
+    api?: Partial<ApiView>;
+    applyError?: string;
+    watched?: { path: string; missing?: boolean; lastResult?: string };
+  } = {},
 ) {
   let api: ApiView = { ...baseApi, ...options.api };
   let mapping: ButtonMappingView = { mapping: { ...defaultButtonMapping }, actions: ACTIONS };
@@ -56,7 +60,11 @@ async function mount(
   let quick = ['Slow down', 'Wrap up'];
   const quickSaved: string[][] = [];
   let view: OutputWindowView = { ...baseView, ...initialView };
-  let watched: string | null = null;
+  let watched: string | null = options.watched?.path ?? null;
+  let watchedExtra = {
+    missing: options.watched?.missing ?? false,
+    lastResult: options.watched?.lastResult ?? (null as string | null),
+  };
   const chosen: string[] = [];
   const windowedCalls: boolean[] = [];
   const core = createCore({ clock: createFakeClock(), presetStore: createMemoryPresetStore() });
@@ -87,14 +95,14 @@ async function mount(
         : { ...api, ...settings, running: true, error: null };
       return api;
     },
-    getWatchedFolder: async () => ({ path: watched }),
+    getWatchedFolder: async () => ({ path: watched, ...watchedExtra }),
     chooseWatchedFolder: async () => {
       watched = '/Scripts/Drop';
-      return { path: watched };
+      return { path: watched, ...watchedExtra };
     },
     clearWatchedFolder: async () => {
       watched = null;
-      return { path: null };
+      return { path: null, ...watchedExtra };
     },
     getQuickMessages: async () => quick,
     setQuickMessages: async (messages) => {
@@ -445,6 +453,32 @@ describe('General', () => {
     expect(field('Watched folder').textContent).toBe('/Scripts/Drop');
     await act(async () => button('Clear').click());
     expect(field('Watched folder').textContent).toBe('Off');
+  });
+
+  it('shows what the last automatic Import said under the folder', async () => {
+    await mount(
+      {},
+      {
+        watched: {
+          path: '/Scripts/Drop',
+          lastResult: 'Imported "Sunday" from the Watched folder.',
+        },
+      },
+    );
+    expect(host.querySelector('[data-testid="watched-folder-result"]')!.textContent).toBe(
+      'Imported "Sunday" from the Watched folder.',
+    );
+  });
+
+  it('says in plain words when the folder is gone', async () => {
+    await mount({}, { watched: { path: '/Scripts/Drop', missing: true } });
+    expect(host.textContent).toContain('This folder is not there any more');
+  });
+
+  it('shows no status line before anything has happened', async () => {
+    await mount({}, { watched: { path: '/Scripts/Drop' } });
+    expect(host.querySelector('[data-testid="watched-folder-result"]')).toBeNull();
+    expect(host.textContent).not.toContain('not there any more');
   });
 });
 

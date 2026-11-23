@@ -30,6 +30,11 @@ const api = {
   chooseWatchedFolder: (): Promise<WatchedFolderView> =>
     ipcRenderer.invoke(IPC.watchedFolderChoose),
   clearWatchedFolder: (): Promise<WatchedFolderView> => ipcRenderer.invoke(IPC.watchedFolderClear),
+  onWatchedFolderNotice: (listener: (outcome: { ok: boolean; message: string }) => void): void => {
+    ipcRenderer.on(IPC.watchedFolderNotice, (_e, outcome) => listener(outcome));
+  },
+  takeWatchedFolderNotice: (): Promise<{ ok: boolean; message: string } | null> =>
+    ipcRenderer.invoke(IPC.watchedFolderTakeNotice),
   /** The same events the real device sends; the main process maps them to core commands. */
   sendDeviceEvent: (event: DeviceEvent): void => ipcRenderer.send(IPC.deviceEvent, event),
   getButtonMapping: (): Promise<ButtonMappingView> => ipcRenderer.invoke(IPC.inputGetMapping),

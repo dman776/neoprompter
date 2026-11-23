@@ -25,6 +25,10 @@ export interface CoreBridge {
   setWindowedOutput(windowed: boolean): Promise<OutputWindowView>;
   /** Opens a file picker and imports the chosen Word file; null when the Operator cancelled. */
   importScript?(): Promise<ImportOutcome | null>;
+  /** An automatic Import of the Watched folder reports here. */
+  onWatchedFolderNotice?(listener: (outcome: ImportOutcome) => void): void;
+  /** Says the view is ready; resolves to a report that came before it was (once), or null. */
+  takeWatchedFolderNotice?(): Promise<ImportOutcome | null>;
 }
 
 /** What the Preferences window uses beyond the Operator view's slice: Controls and Network. */
@@ -100,6 +104,19 @@ export function useOutputBlocked(bridge: CoreBridge, outputOn: boolean): OutputB
 }
 
 /** Calls `handle` for each native menu item that is the Operator view's to handle. */
+/** Shows what an automatic Import of the Watched folder did, including one from before the view opened. */
+export function useWatchedFolderNotices(
+  bridge: CoreBridge,
+  show: (outcome: ImportOutcome) => void,
+): void {
+  const latest = useRef(show);
+  latest.current = show;
+  useEffect(() => {
+    bridge.onWatchedFolderNotice?.((outcome) => latest.current(outcome));
+    void bridge.takeWatchedFolderNotice?.().then((outcome) => outcome && latest.current(outcome));
+  }, [bridge]);
+}
+
 export function useMenuActions(bridge: CoreBridge, handle: (action: UiAction) => void): void {
   const latest = useRef(handle);
   latest.current = handle;

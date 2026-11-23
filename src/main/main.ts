@@ -11,7 +11,7 @@ import { createJsonFile, libraryFileIo } from './jsonFile';
 import { createApiController } from './apiController';
 import { createFileQuickMessageStore } from './fileQuickMessageStore';
 import { createFileWatchedFolderStore } from './fileWatchedFolderStore';
-import { createWatchedFolderSettings } from '../watched-folder';
+import { createWatchedFolderSettings, describeResult } from '../watched-folder';
 import { createFolderWatcher } from '../watched-folder';
 import { folderChanges, realScheduler, watchedFolderFs } from './watchedFolderFs';
 import { createFileApiSettingsStore } from './fileApiSettingsStore';
@@ -255,6 +255,7 @@ app.whenReady().then(() => {
   // The Watched folder setting (Preferences). Nothing watches the folder yet.
   const watchedFolder = createWatchedFolderSettings({
     store: createFileWatchedFolderStore(path.join(app.getPath('userData'), 'watched-folder.json')),
+    folderExists: (dir) => fs.existsSync(dir),
     pickFolder: async () => {
       const picked = await dialog.showOpenDialog({
         title: 'Choose the Watched folder',
@@ -266,12 +267,28 @@ app.whenReady().then(() => {
   ipcMain.handle(IPC.watchedFolderGet, () => watchedFolder.getView());
   // Imports what is in the folder now (including files that arrived while the app was closed)
   // and whatever is dropped in while the app runs. Messages come later.
+  // What the Operator is told: shown at once if the Operator view is ready, else held for it.
+  let pendingNotice: { ok: boolean; message: string } | null = null;
+  let operatorReady = false;
+  ipcMain.handle(IPC.watchedFolderTakeNotice, () => {
+    operatorReady = true;
+    const held = pendingNotice;
+    pendingNotice = null;
+    return held;
+  });
   const folderWatcher = createFolderWatcher({
     fs: watchedFolderFs,
     core,
     importDocument,
     changes: folderChanges,
     scheduler: realScheduler,
+    onResult: (result) => {
+      const outcome = describeResult(result);
+      watchedFolder.report(outcome.message);
+      if (operatorReady && operatorWin && !operatorWin.isDestroyed()) {
+        operatorWin.webContents.send(IPC.watchedFolderNotice, outcome);
+      } else pendingNotice = outcome;
+    },
   });
   ipcMain.handle(IPC.watchedFolderChoose, async () => {
     const view = await watchedFolder.choose();

@@ -16,13 +16,20 @@ const OPEN_IN: { value: OpenInMode; label: string }[] = [
   { value: 'run', label: 'Run mode' },
 ];
 
+/** How often to look at the Watched folder setting again (an Import may have happened). */
+const POLL_MS = 1500;
+
 function WatchedFolderRow({ bridge }: Pick<PageProps, 'bridge'>) {
   const [view, setView] = useState<WatchedFolderView | null>(null);
   useEffect(() => {
     let live = true;
-    void bridge.getWatchedFolder().then((v) => live && setView(v));
+    // Look again now and then: an Import can happen while this window is open.
+    const look = () => void bridge.getWatchedFolder().then((v) => live && setView(v));
+    look();
+    const timer = setInterval(look, POLL_MS);
     return () => {
       live = false;
+      clearInterval(timer);
     };
   }, [bridge]);
   if (!view) return null;
@@ -40,6 +47,12 @@ function WatchedFolderRow({ bridge }: Pick<PageProps, 'bridge'>) {
           <Button onClick={() => void bridge.clearWatchedFolder().then(setView)}>Clear</Button>
         )}
       </div>
+      {view.missing && (
+        <small role="status">
+          This folder is not there any more, so nothing is imported. Choose another one.
+        </small>
+      )}
+      {view.lastResult && <small data-testid="watched-folder-result">{view.lastResult}</small>}
     </Row>
   );
 }

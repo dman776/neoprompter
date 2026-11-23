@@ -30,6 +30,10 @@ export const IPC = {
   watchedFolderChoose: 'watched-folder:choose',
   /** renderer -> main (invoke): turn the Watched folder off, returns the new view */
   watchedFolderClear: 'watched-folder:clear',
+  /** main -> Operator view: what an automatic Import of the Watched folder did */
+  watchedFolderNotice: 'watched-folder:notice',
+  /** Operator view -> main (invoke): the Operator view is ready; returns a notice that arrived earlier, once */
+  watchedFolderTakeNotice: 'watched-folder:take-notice',
   /** renderer -> main: a device event (Virtual shuttle now, the real ShuttleXPress later) */
   deviceEvent: 'input:event',
   /** renderer -> main (invoke): the button mapping and the actions that can be chosen */

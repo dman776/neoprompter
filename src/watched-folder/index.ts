@@ -4,6 +4,10 @@ import type { ImportResult } from '../import';
 /** What Preferences shows: the Watched folder's path, or null while it is off. */
 export interface WatchedFolderView {
   path: string | null;
+  /** The folder is chosen but is no longer there, so nothing is Imported. */
+  missing: boolean;
+  /** What the last automatic Import said, in plain words; null before anything happened. */
+  lastResult: string | null;
 }
 
 /** Where the chosen folder is kept between runs. */
@@ -18,6 +22,8 @@ export interface WatchedFolderSettings {
   choose(): Promise<WatchedFolderView>;
   /** Turns the Watched folder off. */
   clear(): WatchedFolderView;
+  /** Remembers what the last automatic Import said, for Preferences to show. */
+  report(message: string): void;
 }
 
 /**
@@ -28,9 +34,16 @@ export interface WatchedFolderSettings {
 export function createWatchedFolderSettings(deps: {
   store: WatchedFolderStore;
   pickFolder: () => Promise<string | null>;
+  /** Whether the chosen folder is still there. Omitted, it always is. */
+  folderExists?: (path: string) => boolean;
 }): WatchedFolderSettings {
   let current = deps.store.load();
-  const view = (): WatchedFolderView => ({ path: current });
+  let lastResult: string | null = null;
+  const view = (): WatchedFolderView => ({
+    path: current,
+    missing: current !== null && deps.folderExists?.(current) === false,
+    lastResult: current === null ? null : lastResult,
+  });
   return {
     getView: view,
     async choose() {
@@ -38,8 +51,12 @@ export function createWatchedFolderSettings(deps: {
       if (picked) {
         current = picked;
         deps.store.save(current);
+        lastResult = null;
       }
       return view();
+    },
+    report(message) {
+      lastResult = message;
     },
     clear() {
       current = null;
@@ -115,6 +132,8 @@ export interface WatchedFolderDeps {
   importDocument: (bytes: Uint8Array, fileName: string) => ImportResult;
   /** Says whether a file is finished arriving; a file that is not is skipped and reported as waiting. Omitted, every file is ready. */
   isReady?: (file: string) => boolean;
+  /** Files to leave out of this pass altogether (ones that already failed and have not changed). */
+  skip?: (file: string) => boolean;
 }
 
 /**
@@ -132,6 +151,7 @@ export function importWatchedFolder(folder: string, deps: WatchedFolderDeps): Wa
 
   for (const file of files.filter(isCandidate).sort()) {
     const from = fs.join(folder, file);
+    if (deps.skip?.(file)) continue;
     if (deps.isReady && !deps.isReady(file)) {
       result.waiting.push(file);
       continue;
@@ -192,7 +212,9 @@ export interface Scheduler {
 /** How long a file's size and modified time must stay the same before it counts as arrived. */
 export const SETTLE_MS = 1000;
 
-export interface FolderWatcherDeps extends Omit<WatchedFolderDeps, 'isReady'> {
+export interface FolderWatcherDeps extends Omit<WatchedFolderDeps, 'isReady' | 'core'> {
+  /** Also subscribed to, to notice the Operator coming back to Edit mode. */
+  core: Pick<Core, 'dispatch' | 'getState' | 'subscribe'>;
   changes: FolderChangeSource;
   scheduler: Scheduler;
   /** Called after each pass that did something. */
@@ -213,10 +235,23 @@ export function createFolderWatcher(deps: FolderWatcherDeps): FolderWatcher {
   let stopWatching: (() => void) | null = null;
   let cancelCheck: (() => void) | null = null;
   let looked = new Map<string, string>();
+  let current: string | null = null;
+  // Files that failed, by what they looked like then: they are not tried (or reported) again until they change.
+  let failed = new Map<string, string>();
+  const keyOf = (path: string) => {
+    const s = deps.fs.stat(path);
+    return s ? `${s.size}:${s.modifiedMs}` : '';
+  };
+  let mode = deps.core.getState().mode;
 
   const pass = (folder: string, settled: boolean) => {
     const result = importWatchedFolder(folder, {
       ...deps,
+      skip: (file) => {
+        const path = deps.fs.join(folder, file);
+        const was = failed.get(path);
+        return was !== undefined && was === keyOf(path);
+      },
       isReady: settled
         ? (file) => {
             const path = deps.fs.join(folder, file);
@@ -228,6 +263,10 @@ export function createFolderWatcher(deps: FolderWatcherDeps): FolderWatcher {
           }
         : undefined,
     });
+    for (const f of result.failed) {
+      const path = deps.fs.join(folder, f.file);
+      failed.set(path, keyOf(path));
+    }
     if (result.imported.length || result.failed.length) deps.onResult?.(result);
     return result;
   };
@@ -241,16 +280,40 @@ export function createFolderWatcher(deps: FolderWatcherDeps): FolderWatcher {
     });
   };
 
+  // Run mode locks the library, so files dropped meanwhile wait in the folder. Back in Edit mode,
+  // look again.
+  deps.core.subscribe((state) => {
+    const was = mode;
+    mode = state.mode;
+    if (was !== 'edit' && mode === 'edit' && current) schedule(current);
+  });
+
   return {
     setFolder(folder) {
+      current = folder;
       stopWatching?.();
       stopWatching = null;
       cancelCheck?.();
       cancelCheck = null;
       looked = new Map();
+      failed = new Map();
       if (!folder) return;
       stopWatching = deps.changes.watch(folder, () => schedule(folder));
       pass(folder, false);
     },
   };
+}
+
+/** What the Operator is told about one automatic pass: `ok` is false when any file failed. */
+export function describeResult(result: WatchedFolderResult): { ok: boolean; message: string } {
+  const parts: string[] = [];
+  const n = result.imported.length;
+  if (n === 1) parts.push(`Imported "${result.imported[0]}" from the Watched folder.`);
+  else if (n > 1) {
+    parts.push(
+      `Imported ${n} Scripts from the Watched folder: ${result.imported.map((s) => `"${s}"`).join(', ')}.`,
+    );
+  }
+  for (const f of result.failed) parts.push(f.message);
+  return { ok: result.failed.length === 0, message: parts.join(' ') };
 }

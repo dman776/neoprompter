@@ -4,6 +4,7 @@ import type { Command, Core, CoreState } from '../core';
 import { defaultButtonMapping } from '../input';
 import type { OutputWindowView } from '../output-window';
 import type { UiAction } from '../window-host';
+import type { WatchedFolderView } from '../watched-folder';
 import type { PreferencesBridge } from './useCoreState';
 
 /** A monitor view with nothing chosen and the Output not blocked. */
@@ -14,6 +15,13 @@ export const quietOutputView: OutputWindowView = {
   chosenMonitorId: null,
   missingMonitorId: null,
   monitors: [],
+};
+
+/** The Watched folder setting while it is off. */
+export const quietWatchedFolder: WatchedFolderView = {
+  path: null,
+  missing: false,
+  lastResult: null,
 };
 
 export interface FakeBridge {
@@ -69,9 +77,9 @@ export function createFakeBridge(
     }),
     getQuickMessages: async () => [],
     setQuickMessages: async (m) => m,
-    getWatchedFolder: async () => ({ path: null }),
-    chooseWatchedFolder: async () => ({ path: null }),
-    clearWatchedFolder: async () => ({ path: null }),
+    getWatchedFolder: async () => quietWatchedFolder,
+    chooseWatchedFolder: async () => quietWatchedFolder,
+    clearWatchedFolder: async () => quietWatchedFolder,
     ...overrides,
   };
   return {
