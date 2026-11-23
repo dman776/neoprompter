@@ -1,0 +1,55 @@
+/* Run mode's Script lock and the live-fix box over the Live view. */
+.lock-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+}
+.lock-row p {
+  margin: 0;
+  flex: 1;
+  display: grid;
+  gap: 2px;
+  font-size: 12px;
+}
+.lock-row small {
+  color: var(--muted);
+  font-size: 11px;
+}
+.lock-row[data-unlocked='true'] b {
+  color: var(--accent);
+}
+.live-view[data-unlocked='true'] {
+  outline: 2px solid color-mix(in srgb, var(--accent) 70%, transparent);
+  outline-offset: -2px;
+}
+.live-fix {
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  z-index: 2;
+  display: grid;
+  gap: 4px;
+  padding: 8px;
+  background: var(--surface);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+.live-fix textarea {
+  width: 100%;
+  min-height: 64px;
+  resize: vertical;
+  box-sizing: border-box;
+  padding: 6px 8px;
+  background: var(--well);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  font: inherit;
+  font-size: 14px;
+}
+.live-fix small {
+  color: var(--muted);
+  font-size: 11px;
+}

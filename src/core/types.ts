@@ -78,8 +78,15 @@ export type Command =
   | { type: 'deletePreset'; name: string }
   /** Switch the one Output on or off. Off keeps the reading position. Never persisted. */
   | { type: 'setOutput'; on: boolean }
-  /** Switch the Operator view between Edit mode and Run mode (persisted). */
+  /** Switch the Operator view between Edit mode and Run mode (persisted). Re-locks the Script. */
   | { type: 'setMode'; mode: Mode }
+  /** Unlock (or re-lock) the Script in Run mode, to allow a live fix. Ignored in Edit mode. */
+  | { type: 'setUnlocked'; unlocked: boolean }
+  /**
+   * A live fix: replace the text of one paragraph while Run mode is unlocked. It reaches the
+   * Output at once and never moves the reading position. Newlines become spaces.
+   */
+  | { type: 'liveFix'; line: number; text: string }
   /** Choose the theme (persisted). */
   | { type: 'setTheme'; theme: Theme }
   /** Collapse or restore the right-hand column, in both modes (persisted). */
@@ -185,6 +192,8 @@ export interface CoreState {
   outputOn: boolean;
   /** Which mode the Operator view is in. */
   mode: Mode;
+  /** Run mode only: whether the Script is unlocked for a live fix. Resets on every mode change. */
+  unlocked: boolean;
   theme: Theme;
   /** Whether the right-hand column is collapsed. Shared by Edit mode and Run mode. */
   rightColumnCollapsed: boolean;

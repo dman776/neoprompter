@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { outputState, type Command, type CoreState } from '../core';
+import type { MouseEvent as ReactMouseEvent } from 'react';
+import { lineText, outputState, type Command, type CoreState } from '../core';
 import { createOutputRenderer } from '../output/renderer';
 
 /** The size the Live view draws the Output at before scaling it down to fit. */
@@ -30,6 +31,31 @@ export function LiveView({ state, dispatch, outputShowing }: LiveViewProps) {
   const latest = useRef(state);
   latest.current = state;
   const [scale, setScale] = useState(0.3);
+  const view = useRef<HTMLDivElement>(null);
+  const [fixing, setFixing] = useState<{ line: number; top: number } | null>(null);
+  const [fixText, setFixText] = useState('');
+
+  // Locking again (a mode change) closes any open fix.
+  useEffect(() => {
+    if (!state.unlocked) setFixing(null);
+  }, [state.unlocked]);
+
+  // Unlocked live fix: double-click a paragraph to correct just that paragraph.
+  const startFix = (event: ReactMouseEvent) => {
+    if (!state.unlocked || !text.current || !view.current) return;
+    const paragraph = (event.target as HTMLElement).closest('.live-text > div');
+    if (!paragraph) return;
+    const line = Array.from(text.current.children).indexOf(paragraph);
+    const source = state.script.lines[line];
+    if (source === undefined) return;
+    const top = paragraph.getBoundingClientRect().top - view.current.getBoundingClientRect().top;
+    setFixText(lineText(source));
+    setFixing({ line, top: Math.max(8, Math.min(top - 8, view.current.clientHeight - 130)) });
+  };
+  const applyFix = () => {
+    if (fixing) dispatch({ type: 'liveFix', line: fixing.line, text: fixText });
+    setFixing(null);
+  };
 
   // A new renderer (and so a fresh measurement) whenever the job of measuring changes hands.
   useLayoutEffect(() => {
@@ -69,6 +95,9 @@ export function LiveView({ state, dispatch, outputShowing }: LiveViewProps) {
         className="live-view"
         data-testid="live-view"
         data-output={state.outputOn ? 'on' : 'off'}
+        data-unlocked={state.unlocked ? 'true' : undefined}
+        ref={view}
+        onDoubleClick={startFix}
         style={{ width: STAGE_WIDTH * scale, height: STAGE_HEIGHT * scale }}
       >
         <div
@@ -81,6 +110,26 @@ export function LiveView({ state, dispatch, outputShowing }: LiveViewProps) {
             <div className="live-progress" data-live="progress" ref={progress} />
           </div>
         </div>
+        {fixing && (
+          <div className="live-fix" style={{ top: fixing.top }} data-testid="live-fix">
+            <textarea
+              autoFocus
+              aria-label="Fix this paragraph"
+              value={fixText}
+              onChange={(e) => setFixText(e.target.value)}
+              onBlur={() => setFixing(null)}
+              onKeyDown={(e) => {
+                e.stopPropagation();
+                if (e.key === 'Escape') setFixing(null);
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  applyFix();
+                }
+              }}
+            />
+            <small>Enter updates the Output now. Esc cancels.</small>
+          </div>
+        )}
         <span className="live-badge" data-testid="live-badge">
           {state.outputOn ? 'Output on' : 'Output off'}
         </span>
