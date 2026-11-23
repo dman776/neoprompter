@@ -56,6 +56,7 @@ async function mount(
   let quick = ['Slow down', 'Wrap up'];
   const quickSaved: string[][] = [];
   let view: OutputWindowView = { ...baseView, ...initialView };
+  let watched: string | null = null;
   const chosen: string[] = [];
   const windowedCalls: boolean[] = [];
   const core = createCore({ clock: createFakeClock(), presetStore: createMemoryPresetStore() });
@@ -85,6 +86,15 @@ async function mount(
         ? { ...api, running: false, error: options.applyError }
         : { ...api, ...settings, running: true, error: null };
       return api;
+    },
+    getWatchedFolder: async () => ({ path: watched }),
+    chooseWatchedFolder: async () => {
+      watched = '/Scripts/Drop';
+      return { path: watched };
+    },
+    clearWatchedFolder: async () => {
+      watched = null;
+      return { path: null };
     },
     getQuickMessages: async () => quick,
     setQuickMessages: async (messages) => {
@@ -425,6 +435,16 @@ describe('General', () => {
     expect(field('Open in').value).toBe('last');
     await setValue(field('Open in'), 'run');
     expect(core.getState().openInMode).toBe('run');
+  });
+
+  it('shows the Watched folder as Off, then chooses one and clears it', async () => {
+    await mount();
+    expect(field('Watched folder').textContent).toBe('Off');
+    expect(button('Clear')).toBeUndefined();
+    await act(async () => button('Choose…').click());
+    expect(field('Watched folder').textContent).toBe('/Scripts/Drop');
+    await act(async () => button('Clear').click());
+    expect(field('Watched folder').textContent).toBe('Off');
   });
 });
 

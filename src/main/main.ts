@@ -10,6 +10,8 @@ import { createFileSessionStore } from './fileSessionStore';
 import { createJsonFile, libraryFileIo } from './jsonFile';
 import { createApiController } from './apiController';
 import { createFileQuickMessageStore } from './fileQuickMessageStore';
+import { createFileWatchedFolderStore } from './fileWatchedFolderStore';
+import { createWatchedFolderSettings } from '../watched-folder';
 import { createFileApiSettingsStore } from './fileApiSettingsStore';
 import { createFileButtonMappingStore } from './fileButtonMappingStore';
 import { createInputService, type ActionId, type ButtonId, type DeviceEvent } from '../input';
@@ -247,6 +249,21 @@ app.whenReady().then(() => {
     });
     return { ok: true, message: `Imported "${script.name}" into the library.` };
   });
+
+  // The Watched folder setting (Preferences). Nothing watches the folder yet.
+  const watchedFolder = createWatchedFolderSettings({
+    store: createFileWatchedFolderStore(path.join(app.getPath('userData'), 'watched-folder.json')),
+    pickFolder: async () => {
+      const picked = await dialog.showOpenDialog({
+        title: 'Choose the Watched folder',
+        properties: ['openDirectory', 'createDirectory'],
+      });
+      return picked.canceled || picked.filePaths.length === 0 ? null : picked.filePaths[0];
+    },
+  });
+  ipcMain.handle(IPC.watchedFolderGet, () => watchedFolder.getView());
+  ipcMain.handle(IPC.watchedFolderChoose, () => watchedFolder.choose());
+  ipcMain.handle(IPC.watchedFolderClear, () => watchedFolder.clear());
 
   // Input: every device (the Virtual shuttle now, the real ShuttleXPress later) sends DeviceEvents
   // here; one mapper and one saved button mapping serve them all.

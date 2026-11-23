@@ -24,6 +24,12 @@ export const IPC = {
   quickMessagesGet: 'api:quick-messages-get',
   /** renderer -> main (invoke): save the Quick messages, returns the list as saved */
   quickMessagesSet: 'api:quick-messages-set',
+  /** renderer -> main (invoke): the Watched folder setting */
+  watchedFolderGet: 'watched-folder:get',
+  /** renderer -> main (invoke): pick the Watched folder, returns the new view */
+  watchedFolderChoose: 'watched-folder:choose',
+  /** renderer -> main (invoke): turn the Watched folder off, returns the new view */
+  watchedFolderClear: 'watched-folder:clear',
   /** renderer -> main: a device event (Virtual shuttle now, the real ShuttleXPress later) */
   deviceEvent: 'input:event',
   /** renderer -> main (invoke): the button mapping and the actions that can be chosen */

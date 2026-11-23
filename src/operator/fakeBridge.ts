@@ -69,6 +69,9 @@ export function createFakeBridge(
     }),
     getQuickMessages: async () => [],
     setQuickMessages: async (m) => m,
+    getWatchedFolder: async () => ({ path: null }),
+    chooseWatchedFolder: async () => ({ path: null }),
+    clearWatchedFolder: async () => ({ path: null }),
     ...overrides,
   };
   return {

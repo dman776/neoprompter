@@ -4,6 +4,7 @@ import type { Command, CoreState } from '../core';
 import type { OutputWindowView } from '../output-window';
 import type { UiAction } from '../window-host';
 import type { ApiSettings, ApiView } from '../api';
+import type { WatchedFolderView } from '../watched-folder';
 import type { ActionId, ButtonId, ButtonMappingView, DeviceEvent } from '../input';
 
 const api = {
@@ -25,6 +26,10 @@ const api = {
   getQuickMessages: (): Promise<string[]> => ipcRenderer.invoke(IPC.quickMessagesGet),
   setQuickMessages: (messages: string[]): Promise<string[]> =>
     ipcRenderer.invoke(IPC.quickMessagesSet, messages),
+  getWatchedFolder: (): Promise<WatchedFolderView> => ipcRenderer.invoke(IPC.watchedFolderGet),
+  chooseWatchedFolder: (): Promise<WatchedFolderView> =>
+    ipcRenderer.invoke(IPC.watchedFolderChoose),
+  clearWatchedFolder: (): Promise<WatchedFolderView> => ipcRenderer.invoke(IPC.watchedFolderClear),
   /** The same events the real device sends; the main process maps them to core commands. */
   sendDeviceEvent: (event: DeviceEvent): void => ipcRenderer.send(IPC.deviceEvent, event),
   getButtonMapping: (): Promise<ButtonMappingView> => ipcRenderer.invoke(IPC.inputGetMapping),

@@ -4,6 +4,7 @@ import type { OutputBlocked, OutputWindowView } from '../output-window';
 import type { ApiSettings, ApiView } from '../api';
 import type { ActionId, ButtonId, ButtonMappingView } from '../input';
 import type { UiAction } from '../window-host';
+import type { WatchedFolderView } from '../watched-folder';
 
 /** What an Import tells the Operator; `ok: false` says plainly why the file could not be imported. */
 export interface ImportOutcome {
@@ -34,6 +35,9 @@ export interface PreferencesBridge extends CoreBridge {
   setApiSettings(settings: ApiSettings): Promise<ApiView>;
   getQuickMessages(): Promise<string[]>;
   setQuickMessages(messages: string[]): Promise<string[]>;
+  getWatchedFolder(): Promise<WatchedFolderView>;
+  chooseWatchedFolder(): Promise<WatchedFolderView>;
+  clearWatchedFolder(): Promise<WatchedFolderView>;
 }
 
 /** The latest core state (null until the first one arrives). Components render it and dispatch. */
