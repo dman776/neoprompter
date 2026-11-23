@@ -29,7 +29,7 @@ The Operator view for preparing Scripts: the Script library and a full Script ed
 _Avoid_: Authoring mode, design mode
 
 **Run mode**:
-The Operator view for a live production: transport controls, the reading position, and Notifications. The Script is locked against typing until the Operator deliberately unlocks it for a live fix.
+The Operator view for a live production: transport controls, quick text size buttons, the reading position, and Notifications. The Script is locked against typing until the Operator deliberately unlocks it for a live fix.
 _Avoid_: Live mode, show mode, presenter mode
 
 **Live view**:

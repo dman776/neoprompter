@@ -145,6 +145,18 @@ export function buildMenuTemplate(platform: Platform): MenuItemSpec[] {
         },
         SEPARATOR,
         { label: 'Toggle theme', accelerator: key('Shift+L'), action: ui('toggle-theme') },
+        SEPARATOR,
+        {
+          label: 'Larger text',
+          accelerator: key('Plus'),
+          action: { type: 'dispatch', command: { type: 'nudgeFontSize', direction: 1 } },
+        },
+        {
+          label: 'Smaller text',
+          accelerator: key('-'),
+          action: { type: 'dispatch', command: { type: 'nudgeFontSize', direction: -1 } },
+        },
+        SEPARATOR,
         {
           label: 'Collapse right column',
           accelerator: key('\\'),

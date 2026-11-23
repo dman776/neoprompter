@@ -639,6 +639,78 @@ describe('the running app', () => {
     await setOutputSize(1920, 1080);
   });
 
+  it('changes the Output text size from Run mode, and the Output follows', async () => {
+    await dispatch({ type: 'setMode', mode: 'run' });
+    const before = (await state()).appearance.fontSize;
+    await operator.getByRole('button', { name: 'Larger text' }).click();
+    await vi.waitFor(async () => expect((await state()).appearance.fontSize).toBe(before + 4));
+    await expect
+      .poll(() =>
+        output.evaluate(() => getComputedStyle(document.getElementById('text')!).fontSize),
+      )
+      .toBe(`${before + 4}px`);
+    await operator.getByRole('button', { name: 'Smaller text' }).click();
+    await vi.waitFor(async () => expect((await state()).appearance.fontSize).toBe(before));
+  });
+
+  it('opens every window big enough that no option needs a resize to reach', async () => {
+    const overflow = (page: Page) =>
+      page.evaluate(() => ({
+        v: document.documentElement.scrollHeight - window.innerHeight,
+        h: document.documentElement.scrollWidth - window.innerWidth,
+      }));
+    const area = await app.evaluate(({ screen }) => screen.getPrimaryDisplay().workAreaSize);
+    // The Operator view fits the screen and shows both modes whole.
+    for (const mode of ['edit', 'run']) {
+      await dispatch({ type: 'setMode', mode });
+      await operator.waitForTimeout(300);
+      const o = await overflow(operator);
+      expect(o.v).toBeLessThanOrEqual(0);
+      expect(o.h).toBeLessThanOrEqual(0);
+    }
+    expect(await operator.evaluate(() => window.innerHeight)).toBeLessThanOrEqual(area.height);
+    // Preferences: no category needs scrolling when the screen is tall enough for its window.
+    await app.evaluate(({ Menu }) => {
+      Menu.getApplicationMenu()!
+        .items.find((i) => i.label === 'File')!
+        .submenu!.items.find((i) => i.label.startsWith('Preferences'))!
+        .click();
+    });
+    const prefs = await windowTitled('Preferences');
+    const prefsHeight = await prefs.evaluate(() => window.innerHeight);
+    for (const category of [
+      'General',
+      'Appearance',
+      'Output',
+      'Controls',
+      'Notifications',
+      'Network',
+    ]) {
+      await prefs.getByRole('button', { name: category }).click();
+      await prefs.waitForTimeout(150);
+      const scrolls = await prefs.evaluate(() =>
+        [...document.querySelectorAll('*')].some(
+          (e) => e.scrollHeight > e.clientHeight + 2 && getComputedStyle(e).overflowY !== 'visible',
+        ),
+      );
+      // A short screen may legitimately scroll the tallest pages; a tall one never should.
+      if (prefsHeight >= 940) expect(scrolls, `${category} scrolls`).toBe(false);
+    }
+    await prefs.close();
+    // The Virtual shuttle shows the whole device.
+    await app.evaluate(({ Menu }) => {
+      Menu.getApplicationMenu()!
+        .items.find((i) => i.label === 'Window')!
+        .submenu!.items.find((i) => i.label === 'Virtual shuttle')!
+        .click();
+    });
+    const shuttle = await windowTitled('Virtual shuttle');
+    const s = await overflow(shuttle);
+    expect(s.v).toBeLessThanOrEqual(0);
+    expect(s.h).toBeLessThanOrEqual(0);
+    await shuttle.close();
+  });
+
   describe('the Producer page with a token set', () => {
     const port = 47811;
     const TOKEN = 'e2e-token';

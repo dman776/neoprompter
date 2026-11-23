@@ -10,6 +10,9 @@ import {
   MAX_SPEED_LEVEL,
   SPEED_NUDGE_BIG_STEP,
   SPEED_NUDGE_STEP,
+  FONT_SIZE_STEP,
+  MAX_FONT_SIZE,
+  MIN_FONT_SIZE,
   RING_MAX_LINES_PER_SECOND,
   type Command,
   type CoreState,
@@ -435,6 +438,15 @@ export function createCore(options: CoreOptions = {}): Core {
           break;
         case 'setAppearance':
           appearance = readable({ ...appearance, ...command.changes });
+          break;
+        case 'nudgeFontSize':
+          appearance = readable({
+            ...appearance,
+            fontSize: Math.min(
+              MAX_FONT_SIZE,
+              Math.max(MIN_FONT_SIZE, appearance.fontSize + command.direction * FONT_SIZE_STEP),
+            ),
+          });
           break;
         case 'toggleMirror':
           appearance = { ...appearance, mirror: !appearance.mirror };

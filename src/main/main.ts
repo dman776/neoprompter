@@ -20,6 +20,8 @@ import {
   type MenuItemSpec,
 } from '../window-host';
 import { createOutputWindowManager, type OutputSettings } from '../output-window';
+import { chooseWorkArea, windowBounds, type BoundsKind } from '../window-host/bounds';
+import { createFileWindowStateStore } from './fileWindowStateStore';
 
 // Tests (e2e/) point the app at a throwaway data directory so they never touch the real library.
 if (process.env.NEOPROMPTER_USER_DATA) {
@@ -66,6 +68,45 @@ function openWindow(
   return win;
 }
 
+// Windows open sized for their content and the screen, and come back where the Operator left them.
+const windowState = createFileWindowStateStore(
+  path.join(app.getPath('userData'), 'window-state.json'),
+);
+
+function openPlaced(
+  kind: BoundsKind,
+  page: 'operator' | 'output' | 'preferences' | 'shuttle',
+  title: string,
+): BrowserWindow {
+  const saved = windowState.load()[kind] ?? null;
+  const displays = [screen.getPrimaryDisplay(), ...screen.getAllDisplays()].filter(
+    (d, i, all) => all.findIndex((o) => o.id === d.id) === i,
+  );
+  const { bounds, minWidth, minHeight } = windowBounds(
+    kind,
+    chooseWorkArea(
+      displays.map((d) => d.workArea),
+      saved,
+    ),
+    saved,
+  );
+  const win = openWindow(page, title, bounds.x, { ...bounds, minWidth, minHeight });
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const remember = () => {
+    clearTimeout(timer);
+    if (win.isDestroyed() || win.isFullScreen() || win.isMinimized()) return;
+    windowState.save({ ...windowState.load(), [kind]: win.getNormalBounds() });
+  };
+  const later = () => {
+    clearTimeout(timer);
+    timer = setTimeout(remember, 500);
+  };
+  win.on('resize', later);
+  win.on('move', later);
+  win.on('close', remember);
+  return win;
+}
+
 function closeOutput(): void {
   outputWin?.close();
   outputWin = null;
@@ -100,7 +141,7 @@ function createOutputManager() {
             fullscreen: true,
           });
         } else {
-          outputWin = openWindow('output', 'Neoprompter - Output (windowed)', 720);
+          outputWin = openPlaced('output-windowed', 'output', 'Neoprompter - Output (windowed)');
         }
       },
       hide: closeOutput,
@@ -186,24 +227,16 @@ app.whenReady().then(() => {
   void api.startup();
   app.on('will-quit', () => void api.stop());
 
-  // Run mode (meter, Live view, transport, status column) needs room: it does not fit 640 wide.
-  operatorWin = openWindow('operator', 'Neoprompter - Operator view', 40, {
-    width: 1200,
-    height: 780,
-    minWidth: 1100,
-    minHeight: 640,
-  });
+  // Run mode (meter, Live view, transport, status column) needs room: see WINDOW_SIZES.
+  operatorWin = openPlaced('operator', 'operator', 'Neoprompter - Operator view');
 
   // Preferences and the Virtual shuttle: one window each, and none open at launch.
   const windowHost = createWindowHost({
     create: (kind) => {
       const win =
         kind === 'preferences'
-          ? openWindow('preferences', 'Neoprompter - Preferences', 120, { width: 720, height: 520 })
-          : openWindow('shuttle', 'Neoprompter - Virtual shuttle', 200, {
-              width: 400,
-              height: 600,
-            });
+          ? openPlaced('preferences', 'preferences', 'Neoprompter - Preferences')
+          : openPlaced('shuttle', 'shuttle', 'Neoprompter - Virtual shuttle');
       return { focus: () => win.focus(), onClosed: (l) => win.on('closed', l) };
     },
   });

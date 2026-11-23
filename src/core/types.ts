@@ -77,6 +77,8 @@ export type Command =
   /** The Operator used a color (finished choosing it): it moves to the front of the recent colors. */
   | { type: 'pickColor'; color: string }
   | { type: 'setAppearance'; changes: Partial<Appearance> }
+  /** One step bigger (1) or smaller (-1) Output text, within the font size limits. */
+  | { type: 'nudgeFontSize'; direction: 1 | -1 }
   /** Deliberately a separate command so shuttle button mapping can exclude it. */
   | { type: 'toggleMirror' }
   | { type: 'savePreset'; name: string }
@@ -123,6 +125,10 @@ export interface Notification {
 
 export const MAX_SPEED_LEVEL = 10;
 /** Speed level change for one nudge (an arrow key), and for a nudge with Shift. */
+/** Output font size limits and the step of a nudge (px). */
+export const MIN_FONT_SIZE = 16;
+export const MAX_FONT_SIZE = 160;
+export const FONT_SIZE_STEP = 4;
 export const SPEED_NUDGE_STEP = 0.1;
 export const SPEED_NUDGE_BIG_STEP = 0.5;
 /** Lines per second at full ring deflection. */
