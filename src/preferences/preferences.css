@@ -193,6 +193,7 @@
 }
 .pf-inline .np-button {
   flex: 1;
+  min-width: 0;
 }
 .pf-inline .np-button {
   height: 32px;

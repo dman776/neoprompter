@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, Menu, screen } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, Menu, screen, shell } from 'electron';
 import { importDocument } from '../import';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -14,6 +14,9 @@ import { createFileWatchedFolderStore } from './fileWatchedFolderStore';
 import { createWatchedFolderSettings, describeResult } from '../watched-folder';
 import { createFolderWatcher } from '../watched-folder';
 import { folderChanges, realScheduler, watchedFolderFs } from './watchedFolderFs';
+import { createFileUpdateStore } from './fileUpdateStore';
+import { fetchLatestRelease } from './githubReleases';
+import { createUpdateService } from '../updates';
 import { createFileApiSettingsStore } from './fileApiSettingsStore';
 import { createFileButtonMappingStore } from './fileButtonMappingStore';
 import { createInputService, type ActionId, type ButtonId, type DeviceEvent } from '../input';
@@ -307,6 +310,46 @@ app.whenReady().then(() => {
   });
   folderWatcher.setFolder(watchedFolder.getView().path);
 
+  // The Update check: it only notifies; the Operator installs by hand (ADR 0004). Tests and
+  // offline venues can set NEOPROMPTER_NO_UPDATE_CHECK, and NEOPROMPTER_UPDATE_STUB_URL points
+  // the lookup at a local stub.
+  const updates = createUpdateService({
+    currentVersion: app.getVersion(),
+    store: createFileUpdateStore(path.join(app.getPath('userData'), 'update-settings.json')),
+    fetchLatest: () => fetchLatestRelease(app.getVersion()),
+    now: () => Date.now(),
+  });
+  updates.subscribe((view) => windows.forEach((w) => w.webContents.send(IPC.updateView, view)));
+  ipcMain.handle(IPC.updateGet, () => updates.getView());
+  ipcMain.handle(IPC.updateCheck, () => updates.checkNow());
+  ipcMain.handle(IPC.updateSetAuto, (_e, on: boolean) => updates.setAutoCheck(on === true));
+  ipcMain.handle(IPC.updateSkip, () => updates.skipAvailable());
+  ipcMain.on(IPC.updateOpen, () => {
+    const url = updates.getView().available?.url;
+    if (url && /^https:\/\/github\.com\//.test(url)) void shell.openExternal(url);
+  });
+  // The menu item answers in a dialog, since it is the Operator's own request.
+  const checkForUpdatesFromMenu = async () => {
+    const view = await updates.checkNow();
+    const found = view.available;
+    const detail =
+      view.lastCheck === 'failed'
+        ? 'Could not check for a newer version. Try again later.'
+        : found
+          ? `Version ${found.version} is available. You have ${view.current}.`
+          : `You have the latest version (${view.current}).`;
+    const result = await dialog.showMessageBox({
+      type: 'info',
+      title: 'Check for Updates',
+      message: 'NeoPrompter',
+      detail,
+      buttons: found ? ['View release', 'Close'] : ['OK'],
+      defaultId: 0,
+    });
+    if (found && result.response === 0) void shell.openExternal(found.url);
+  };
+  if (!process.env.NEOPROMPTER_NO_UPDATE_CHECK) void updates.checkAtLaunch();
+
   // Input: every device (the Virtual shuttle now, the real ShuttleXPress later) sends DeviceEvents
   // here; one mapper and one saved button mapping serve them all.
   const input = createInputService(
@@ -375,6 +418,8 @@ app.whenReady().then(() => {
         detail: `Version ${app.getVersion()}`,
         buttons: ['OK'],
       });
+    } else if (action.type === 'check-updates') {
+      void checkForUpdatesFromMenu();
     } else if (action.type === 'toggle-output') {
       core.dispatch({ type: 'setOutput', on: !core.getState().outputOn });
     } else if (

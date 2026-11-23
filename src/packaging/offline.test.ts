@@ -17,4 +17,10 @@ describe('offline operation', () => {
     const offenders = sourceFiles('src').filter((f) => remote.test(readFileSync(f, 'utf8')));
     expect(offenders).toEqual([]);
   });
+
+  it('the only remote host named is the update check, in one file (ADR 0004)', () => {
+    const files = sourceFiles('src');
+    const hosts = files.filter((f) => /https?:\/\/api\.github\.com/.test(readFileSync(f, 'utf8')));
+    expect(hosts.map((f) => path.basename(f))).toEqual(['githubReleases.ts']);
+  });
 });

@@ -110,11 +110,19 @@ describe('native menu', () => {
     expect(find(top('win32'), 'About NeoPrompter').action).toEqual({ type: 'about' });
   });
 
+  it('has a Check for Updates item on every platform', () => {
+    for (const platform of ['darwin', 'win32'] as const) {
+      expect(find(top(platform), 'Check for Updates…').action).toEqual({ type: 'check-updates' });
+    }
+  });
+
   it('every action item has a shortcut and no two share one', () => {
     for (const platform of ['darwin', 'win32'] as const) {
       const all = flatten(top(platform));
       expect(
-        all.filter((i) => i.action && i.action.type !== 'about').every((i) => i.accelerator),
+        all
+          .filter((i) => i.action && i.action.type !== 'about' && i.action.type !== 'check-updates')
+          .every((i) => i.accelerator),
       ).toBe(true);
       const accels = all.map((i) => i.accelerator).filter(Boolean);
       expect(new Set(accels).size).toBe(accels.length);

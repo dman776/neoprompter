@@ -203,3 +203,8 @@
   font: inherit;
   font-size: 12px;
 }
+.update-note {
+  top: auto;
+  bottom: 44px;
+  border-color: var(--border);
+}

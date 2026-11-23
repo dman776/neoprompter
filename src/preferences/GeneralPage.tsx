@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { OpenInMode, Theme } from '../core';
 import type { WatchedFolderView } from '../watched-folder';
+import type { UpdateView } from '../updates';
 import { Button } from '../operator/ui/Button';
 import { Row } from './controls';
 import type { PageProps } from './categories';
@@ -57,6 +58,50 @@ function WatchedFolderRow({ bridge }: Pick<PageProps, 'bridge'>) {
   );
 }
 
+function UpdateRow({ bridge }: Pick<PageProps, 'bridge'>) {
+  const [view, setView] = useState<UpdateView | null>(null);
+  useEffect(() => {
+    let live = true;
+    bridge.onUpdateView?.((v) => live && setView(v));
+    void bridge.getUpdateView?.().then((v) => live && setView((current) => current ?? v));
+    return () => {
+      live = false;
+    };
+  }, [bridge]);
+  if (!view) return null;
+  const status = view.checking
+    ? 'Checking…'
+    : view.lastCheck === 'failed'
+      ? 'Could not check for a newer version.'
+      : view.available
+        ? `Version ${view.available.version} is available.`
+        : view.lastCheck === 'ok'
+          ? 'You have the latest version.'
+          : null;
+  return (
+    <Row
+      title="Updates"
+      help="Checks GitHub for a newer version. It only tells you; you install it yourself. Turn it off to keep the app fully offline."
+    >
+      <label className="pf-inline">
+        <input
+          type="checkbox"
+          checked={view.autoCheck}
+          onChange={(e) => void bridge.setAutoUpdateCheck(e.target.checked).then(setView)}
+        />
+        Check for updates at launch
+      </label>
+      <div className="pf-inline">
+        <Button disabled={view.checking} onClick={() => void bridge.checkForUpdate().then(setView)}>
+          Check now
+        </Button>
+        {view.available && <Button onClick={() => bridge.openUpdatePage?.()}>View release</Button>}
+      </div>
+      {status && <small data-testid="update-status">{status}</small>}
+    </Row>
+  );
+}
+
 function VersionLine({ bridge }: Pick<PageProps, 'bridge'>) {
   const [version, setVersion] = useState<string | null>(null);
   useEffect(() => {
@@ -106,6 +151,7 @@ export function GeneralPage({ state, bridge, dispatch }: PageProps) {
         </select>
       </Row>
       <WatchedFolderRow bridge={bridge} />
+      <UpdateRow bridge={bridge} />
       <VersionLine bridge={bridge} />
     </>
   );

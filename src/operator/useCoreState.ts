@@ -6,6 +6,7 @@ import type { QuickMessage } from '../api/producer';
 import type { ActionId, ButtonId, ButtonMappingView } from '../input';
 import type { UiAction } from '../window-host';
 import type { WatchedFolderView } from '../watched-folder';
+import type { UpdateView } from '../updates';
 
 /** What an Import tells the Operator; `ok: false` says plainly why the file could not be imported. */
 export interface ImportOutcome {
@@ -28,6 +29,11 @@ export interface CoreBridge {
   importScript?(): Promise<ImportOutcome | null>;
   /** An automatic Import of the Watched folder reports here. */
   onWatchedFolderNotice?(listener: (outcome: ImportOutcome) => void): void;
+  /** The Update check's view, and its changes. Absent in a bridge that has no network. */
+  getUpdateView?(): Promise<UpdateView>;
+  onUpdateView?(listener: (view: UpdateView) => void): void;
+  skipUpdate?(): Promise<UpdateView>;
+  openUpdatePage?(): void;
   /** Says the view is ready; resolves to a report that came before it was (once), or null. */
   takeWatchedFolderNotice?(): Promise<ImportOutcome | null>;
 }
@@ -44,6 +50,8 @@ export interface PreferencesBridge extends CoreBridge {
   getWatchedFolder(): Promise<WatchedFolderView>;
   chooseWatchedFolder(): Promise<WatchedFolderView>;
   clearWatchedFolder(): Promise<WatchedFolderView>;
+  checkForUpdate(): Promise<UpdateView>;
+  setAutoUpdateCheck(on: boolean): Promise<UpdateView>;
 }
 
 /** The latest core state (null until the first one arrives). Components render it and dispatch. */
@@ -125,4 +133,18 @@ export function useMenuActions(bridge: CoreBridge, handle: (action: UiAction) =>
   useEffect(() => {
     bridge.onMenuAction?.((action) => latest.current(action));
   }, [bridge]);
+}
+
+/** The Update check's view, kept fresh as it changes; null until it is known. */
+export function useUpdateView(bridge: CoreBridge): UpdateView | null {
+  const [view, setView] = useState<UpdateView | null>(null);
+  useEffect(() => {
+    let live = true;
+    bridge.onUpdateView?.((v) => live && setView(v));
+    void bridge.getUpdateView?.().then((v) => live && setView((current) => current ?? v));
+    return () => {
+      live = false;
+    };
+  }, [bridge]);
+  return view;
 }

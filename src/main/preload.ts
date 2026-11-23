@@ -6,6 +6,7 @@ import type { UiAction } from '../window-host';
 import type { ApiSettings, ApiView } from '../api';
 import type { QuickMessage } from '../api/producer';
 import type { WatchedFolderView } from '../watched-folder';
+import type { UpdateView } from '../updates';
 import type { ActionId, ButtonId, ButtonMappingView, DeviceEvent } from '../input';
 
 const api = {
@@ -37,6 +38,15 @@ const api = {
   },
   takeWatchedFolderNotice: (): Promise<{ ok: boolean; message: string } | null> =>
     ipcRenderer.invoke(IPC.watchedFolderTakeNotice),
+  getUpdateView: (): Promise<UpdateView> => ipcRenderer.invoke(IPC.updateGet),
+  checkForUpdate: (): Promise<UpdateView> => ipcRenderer.invoke(IPC.updateCheck),
+  setAutoUpdateCheck: (on: boolean): Promise<UpdateView> =>
+    ipcRenderer.invoke(IPC.updateSetAuto, on),
+  skipUpdate: (): Promise<UpdateView> => ipcRenderer.invoke(IPC.updateSkip),
+  openUpdatePage: (): void => ipcRenderer.send(IPC.updateOpen),
+  onUpdateView: (listener: (view: UpdateView) => void): void => {
+    ipcRenderer.on(IPC.updateView, (_e, view: UpdateView) => listener(view));
+  },
   /** The same events the real device sends; the main process maps them to core commands. */
   sendDeviceEvent: (event: DeviceEvent): void => ipcRenderer.send(IPC.deviceEvent, event),
   getButtonMapping: (): Promise<ButtonMappingView> => ipcRenderer.invoke(IPC.inputGetMapping),

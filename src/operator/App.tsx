@@ -6,6 +6,7 @@ import {
   useMenuActions,
   useWatchedFolderNotices,
   useOutputBlocked,
+  useUpdateView,
   type CoreBridge,
   type ImportOutcome,
 } from './useCoreState';
@@ -37,6 +38,7 @@ export function App({ bridge }: { bridge: CoreBridge }) {
       bridge.dispatch({ type: 'setRightColumnCollapsed', collapsed: !s.rightColumnCollapsed });
     }
   };
+  const update = useUpdateView(bridge);
   const [notice, setNotice] = useState<ImportOutcome | null>(null);
   const editorHandle = useRef<EditorHandle | null>(null);
   const saveRejected = (message: string) => setNotice({ ok: false, message });
@@ -91,6 +93,19 @@ export function App({ bridge }: { bridge: CoreBridge }) {
           <span>{notice.message}</span>
           <button type="button" onClick={() => setNotice(null)}>
             Dismiss
+          </button>
+        </div>
+      )}
+      {state.mode === 'edit' && update?.available && (
+        <div className="import-note update-note" data-testid="update-notice" role="status">
+          <span>
+            NeoPrompter {update.available.version} is available (you have {update.current}).
+          </span>
+          <button type="button" onClick={() => bridge.openUpdatePage?.()}>
+            View release
+          </button>
+          <button type="button" onClick={() => void bridge.skipUpdate?.()}>
+            Skip this version
           </button>
         </div>
       )}

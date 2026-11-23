@@ -5,6 +5,7 @@ import { defaultButtonMapping } from '../input';
 import type { OutputWindowView } from '../output-window';
 import type { UiAction } from '../window-host';
 import type { WatchedFolderView } from '../watched-folder';
+import type { UpdateView } from '../updates';
 import type { PreferencesBridge } from './useCoreState';
 
 /** A monitor view with nothing chosen and the Output not blocked. */
@@ -22,6 +23,15 @@ export const quietWatchedFolder: WatchedFolderView = {
   path: null,
   missing: false,
   lastResult: null,
+};
+
+/** The Update check with nothing to offer. */
+export const quietUpdateView: UpdateView = {
+  current: '0.0.0-test',
+  autoCheck: true,
+  available: null,
+  lastCheck: null,
+  checking: false,
 };
 
 export interface FakeBridge {
@@ -81,6 +91,9 @@ export function createFakeBridge(
     getWatchedFolder: async () => quietWatchedFolder,
     chooseWatchedFolder: async () => quietWatchedFolder,
     clearWatchedFolder: async () => quietWatchedFolder,
+    getUpdateView: async () => quietUpdateView,
+    checkForUpdate: async () => quietUpdateView,
+    setAutoUpdateCheck: async (on) => ({ ...quietUpdateView, autoCheck: on }),
     ...overrides,
   };
   return {

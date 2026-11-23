@@ -40,7 +40,7 @@ beforeAll(async () => {
   writeFileSync(join(drop, 'notes.txt'), 'not a Word file');
   app = await electron.launch({
     args: [root],
-    env: { ...process.env, NEOPROMPTER_USER_DATA: userData },
+    env: { ...process.env, NEOPROMPTER_USER_DATA: userData, NEOPROMPTER_NO_UPDATE_CHECK: '1' },
   });
   operator = await windowTitled('Operator view');
 });

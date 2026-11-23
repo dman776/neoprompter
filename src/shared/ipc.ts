@@ -43,6 +43,18 @@ export const IPC = {
   inputSetButton: 'input:set-button',
   /** main -> renderers: the button mapping changed */
   inputMapping: 'input:mapping',
+  /** renderer -> main (invoke): the Update check's view */
+  updateGet: 'update:get',
+  /** renderer -> main (invoke): check now, returns the new view */
+  updateCheck: 'update:check',
+  /** renderer -> main (invoke): turn the check at launch on or off, returns the new view */
+  updateSetAuto: 'update:set-auto',
+  /** renderer -> main (invoke): skip the version on offer, returns the new view */
+  updateSkip: 'update:skip',
+  /** renderer -> main: open the release page of the version on offer in the system browser */
+  updateOpen: 'update:open',
+  /** main -> renderers: the Update check's view changed */
+  updateView: 'update:view',
   /** main -> Operator view: a native menu item that only the Operator view can handle */
   menuAction: 'menu:action',
 } as const;

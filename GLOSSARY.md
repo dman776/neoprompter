@@ -99,3 +99,7 @@ _Avoid_: Open, upload, convert
 **Watched folder**:
 One folder the Operator picks in Preferences, off until chosen. A Word file (`.doc` or `.docx`) dropped into it is Imported as a Script, at startup for files that arrived while the app was closed and while the app is running. A file that Imports is moved into an `imported` subfolder; one that fails stays where it is and the Operator is told why. A Script with a name already in the library is added alongside it under a numbered name, never over it. In Run mode, dropped files wait and are Imported when the Operator returns to Edit mode.
 _Avoid_: Hot folder, inbox, drop folder
+
+**Update notice**:
+A quiet, non-modal note in Edit mode and Preferences that a newer published version exists. It links to the release page; the Operator installs by hand. It never appears in Run mode or on the Output, and the Operator can skip a version to silence it until a newer one appears.
+_Avoid_: Auto-update, update prompt, upgrade dialog

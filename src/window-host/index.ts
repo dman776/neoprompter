@@ -59,7 +59,9 @@ export type MenuAction =
   /** Flip the Output switch; the app reads the current state and sends `setOutput`. */
   | { type: 'toggle-output' }
   /** Show the About panel (name and version). */
-  | { type: 'about' };
+  | { type: 'about' }
+  /** Look for a newer version now and say what was found. */
+  | { type: 'check-updates' };
 
 export type Platform = 'darwin' | 'win32' | 'linux';
 
@@ -90,6 +92,7 @@ export function buildMenuTemplate(platform: Platform): MenuItemSpec[] {
             label: 'NeoPrompter',
             submenu: [
               { label: 'About NeoPrompter', action: { type: 'about' } },
+              { label: 'Check for Updates…', action: { type: 'check-updates' } },
               SEPARATOR,
               { role: 'hide' },
               { role: 'hideOthers' },
@@ -195,7 +198,10 @@ export function buildMenuTemplate(platform: Platform): MenuItemSpec[] {
       : [
           {
             label: 'Help',
-            submenu: [{ label: 'About NeoPrompter', action: { type: 'about' } as MenuAction }],
+            submenu: [
+              { label: 'About NeoPrompter', action: { type: 'about' } as MenuAction },
+              { label: 'Check for Updates…', action: { type: 'check-updates' } as MenuAction },
+            ],
           },
         ]),
   ];

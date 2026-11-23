@@ -1,0 +1,3 @@
+# The update check is the only network call, and it only notifies
+
+The app made no network calls, which suits a locked-down production network. We allow one exception: a check of this repo's published GitHub releases that shows an Update notice. The Operator installs by hand, because the builds are unsigned and macOS cannot self-update unsigned apps. The automatic check can be switched off in Preferences, so a venue can keep the app fully offline; the offline guard test permits only that endpoint. Downloading and installing in-app was rejected for now: it needs signing, and an update must never land mid-service.
