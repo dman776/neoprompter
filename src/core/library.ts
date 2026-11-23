@@ -8,6 +8,8 @@ export interface StoredScript {
   text: string;
   /** Styled form, when the Script has one (e.g. imported). Wins over `text`. */
   lines?: ScriptLine[];
+  /** When it was last edited (clock milliseconds). Absent for Scripts stored before this. */
+  editedAt?: number;
 }
 
 /** Where the library lives. The app injects a file-backed one; tests use memory. */

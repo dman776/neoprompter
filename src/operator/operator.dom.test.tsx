@@ -87,7 +87,7 @@ describe('the Operator view shell', () => {
   it('switches to Run mode through the core when the Operator presses Run', async () => {
     const { core, dispatched } = await mount();
     await act(async () => button('Run').click());
-    expect(dispatched[0]).toEqual({ type: 'setMode', mode: 'run' });
+    expect(dispatched).toContainEqual({ type: 'setMode', mode: 'run' });
     expect(core.getState().mode).toBe('run');
     expect(host.querySelector('main')!.getAttribute('data-mode')).toBe('run');
     expect(host.querySelector('footer')!.textContent).toContain('Run mode');
@@ -105,11 +105,17 @@ describe('the Operator view shell', () => {
     expect(lamp().getAttribute('aria-checked')).toBe('false');
     expect(lamp().textContent).toContain('Output');
     await act(async () => (lamp() as HTMLElement).click());
-    expect(dispatched).toEqual([{ type: 'setOutput', on: true }]);
+    // The mini Live view measures the Script while the Output is off; that is not the switch.
+    expect(dispatched.filter((c) => c.type === 'setOutput')).toEqual([
+      { type: 'setOutput', on: true },
+    ]);
     expect(core.getState().outputOn).toBe(true);
     expect(lamp().getAttribute('aria-checked')).toBe('true');
     await act(async () => (lamp() as HTMLElement).click());
-    expect(dispatched.at(-1)).toEqual({ type: 'setOutput', on: false });
+    expect(dispatched.filter((c) => c.type === 'setOutput').at(-1)).toEqual({
+      type: 'setOutput',
+      on: false,
+    });
   });
 
   it('follows an Output switch that came from somewhere else', async () => {

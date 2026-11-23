@@ -1,0 +1,205 @@
+/* Edit mode: the editor beside the right-hand column (mini Live view over the Script library). */
+.edit {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 14px;
+  height: 100%;
+  min-height: 0;
+}
+.edit[data-collapsed='true'] {
+  grid-template-columns: minmax(0, 1fr);
+}
+.edit-side {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-height: 0;
+  min-width: 0;
+}
+.mini {
+  padding: 10px;
+  background: #07090c;
+}
+:root[data-theme='light'] .mini {
+  background: #1b2029;
+}
+.mini .live-fit {
+  aspect-ratio: 16 / 9;
+  display: grid;
+  place-items: center;
+}
+.edit-lib {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.edit-lib > .np-panel {
+  flex: 1;
+}
+
+.lib-tools {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 8px;
+  border-bottom: 1px solid var(--border);
+}
+.lib-search {
+  flex: 1;
+  min-width: 0;
+  margin-left: 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px;
+  height: 32px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--muted);
+}
+.lib-search:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+}
+.lib-search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+}
+.lib-confirm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  font-size: 12px;
+}
+.lib-confirm span {
+  flex: 1 1 100%;
+}
+.lib-list {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 8px;
+  display: grid;
+  gap: 6px;
+  align-content: start;
+}
+.lib-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--raised);
+  cursor: pointer;
+}
+.lib-card:hover {
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
+}
+.lib-card:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.lib-card[aria-current='true'] {
+  cursor: default;
+  border-color: color-mix(in srgb, var(--accent) 65%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 25%, transparent) inset;
+}
+.lib-card .np-icon {
+  color: var(--muted);
+  flex: none;
+}
+.lib-card > div {
+  min-width: 0;
+}
+.lib-card b {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.lib-card small {
+  color: var(--muted);
+}
+.lib-rename {
+  width: 100%;
+  font: inherit;
+  font-weight: 700;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--accent);
+  border-radius: 3px;
+  padding: 2px 6px;
+}
+.lib-empty {
+  margin: 0;
+  padding: 12px;
+  color: var(--muted);
+}
+
+.header-import {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 38px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: linear-gradient(var(--raised), var(--surface));
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+}
+.header-import:hover {
+  border-color: color-mix(in srgb, var(--accent) 50%, var(--border));
+}
+.header-import:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* A floating note, so it never moves the layout under it. */
+.shell {
+  position: relative;
+}
+.import-note {
+  position: absolute;
+  top: 64px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  max-width: min(640px, 90vw);
+  padding: 10px 14px;
+  background: var(--surface);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  font-size: 13px;
+}
+.import-note[data-ok='true'] {
+  border-color: var(--border);
+}
+.import-note button {
+  flex: none;
+  padding: 3px 10px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: var(--raised);
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+}

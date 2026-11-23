@@ -91,4 +91,49 @@ describe('script library', () => {
     core.dispatch({ type: 'saveScript', name: 'A', text: 'a' });
     expect(seen).toBe(1);
   });
+
+  it('lists when each Script was last edited', () => {
+    const { clock, core } = setup();
+    clock.advance(1000);
+    core.dispatch({ type: 'saveScript', name: 'A', text: 'a' });
+    expect(core.getState().library[0].editedAt).toBe(1000);
+    const id = core.getState().library[0].id;
+    core.dispatch({ type: 'loadScript', id });
+    clock.advance(5000);
+    core.dispatch({ type: 'setScriptLines', lines: ['changed'] });
+    expect(core.getState().library[0].editedAt).toBe(6000);
+    clock.advance(1000);
+    core.dispatch({ type: 'renameScript', id, name: 'A2' });
+    expect(core.getState().library[0].editedAt).toBe(7000);
+  });
+
+  it('creates a new empty Script and loads it', () => {
+    const { core } = setup();
+    core.dispatch({ type: 'newScript' });
+    const state = core.getState();
+    expect(state.library).toHaveLength(1);
+    expect(state.loadedScriptId).toBe(state.library[0].id);
+    expect(state.script).toEqual({ name: state.library[0].name, lines: [''] });
+    expect(state.library[0].name).toBe('New Script');
+  });
+
+  it('duplicates a Script under a new name without loading the copy', () => {
+    const { clock, core } = setup();
+    core.dispatch({ type: 'saveScript', name: 'Sunday', text: 'a\nb', lines: ['a', 'b'] });
+    const id = core.getState().library[0].id;
+    clock.advance(10);
+    core.dispatch({ type: 'duplicateScript', id });
+    const state = core.getState();
+    expect(state.library.map((s) => s.name)).toEqual(['Sunday', 'Sunday copy']);
+    expect(state.library[1].editedAt).toBe(10);
+    expect(state.loadedScriptId).toBeNull();
+    core.dispatch({ type: 'loadScript', id: state.library[1].id });
+    expect(core.getState().script.lines).toEqual(['a', 'b']);
+  });
+
+  it('ignores duplicating an unknown id', () => {
+    const { core } = setup();
+    core.dispatch({ type: 'duplicateScript', id: 'nope' });
+    expect(core.getState().library).toEqual([]);
+  });
 });

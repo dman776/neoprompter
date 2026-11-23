@@ -2,7 +2,7 @@ import type { Mode, Theme } from '../core';
 import type { OutputBlocked } from '../output-window';
 import { Segment } from './ui/Segment';
 import { Switch } from './ui/Switch';
-import { EditIcon, RunIcon, SidebarIcon, ThemeIcon } from './ui/icons';
+import { EditIcon, ImportIcon, RunIcon, SidebarIcon, ThemeIcon } from './ui/icons';
 
 interface HeaderProps {
   scriptName: string;
@@ -17,6 +17,8 @@ interface HeaderProps {
   onToggleColumn: () => void;
   theme: Theme;
   onToggleTheme: () => void;
+  /** Edit mode's Import button; absent where Import does not belong. */
+  onImport?: () => void;
 }
 
 export const BLOCKED_TEXT: Record<OutputBlocked, string> = {
@@ -37,6 +39,7 @@ export function Header({
   onToggleColumn,
   theme,
   onToggleTheme,
+  onImport,
 }: HeaderProps) {
   return (
     <header className="shell-header">
@@ -59,6 +62,12 @@ export function Header({
           <span className="output-note" role="alert">
             {BLOCKED_TEXT[outputBlocked]}
           </span>
+        )}
+        {onImport && (
+          <button type="button" className="header-import" data-testid="import" onClick={onImport}>
+            <ImportIcon />
+            Import
+          </button>
         )}
         <button
           type="button"

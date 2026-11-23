@@ -59,6 +59,10 @@ export type Command =
   | { type: 'loadScript'; id: string }
   | { type: 'renameScript'; id: string; name: string }
   | { type: 'deleteScript'; id: string }
+  /** Create an empty Script in the library and load it. */
+  | { type: 'newScript' }
+  /** Save a copy of a library Script under a new name ("<name> copy"); the copy is not loaded. */
+  | { type: 'duplicateScript'; id: string }
   /** Minimal editing. Replace the text of one line (newlines split it); styling on unchanged text is kept. */
   | { type: 'editLine'; line: number; text: string }
   /**
@@ -132,6 +136,8 @@ export const LEAD_IN_LINES = 4;
 export interface LibraryEntry {
   id: string;
   name: string;
+  /** When it was last edited (clock milliseconds), or null if unknown. */
+  editedAt: number | null;
 }
 
 /** Appearance settings of the Output; a Preset is a named saved copy of these. */
