@@ -518,7 +518,13 @@ describe('Run mode: the speed meter, the direction indicator and arrow keys', ()
   const press = (key: string, init: KeyboardEventInit = {}, target: Element = document.body) =>
     act(async () => {
       target.dispatchEvent(
-        new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, ...init }),
+        new KeyboardEvent('keydown', {
+          key,
+          code: key === ' ' ? 'Space' : key,
+          bubbles: true,
+          cancelable: true,
+          ...init,
+        }),
       );
     });
 

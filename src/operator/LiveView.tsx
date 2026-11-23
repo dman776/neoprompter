@@ -343,6 +343,7 @@ export function LiveView({
               onPointerMove={dragLine}
               onPointerUp={endLineDrag}
               onPointerCancel={endLineDrag}
+              data-keeps-arrows
               onKeyDown={nudgeLine}
               onDoubleClick={(e) => e.stopPropagation()}
             />

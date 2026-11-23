@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useRef } from 'react';
 import type { PointerEvent as ReactPointerEvent } from 'react';
 import { MAX_SPEED_LEVEL, type Command, type CoreState } from '../core';
 import { levelFromMeter } from './speedMeter';
@@ -15,7 +15,7 @@ export function formatLinesPerSecond(linesPerSecond: number): string {
  * The speed meter, and the Operator's mouse control for speed: one segment per level, lit from
  * the bottom, the last lit segment showing a partial level through `data-fill` (0 to 1). Press or
  * drag anywhere on it to set the speed like a fader (top is fastest, bottom is stopped); the
- * readout under it is lines per second. Arrow keys are handled by `useSpeedKeys`.
+ * readout under it is lines per second. The keys are Key bindings (`useKeyBindings`).
  */
 export function SpeedMeter({
   state,
@@ -78,21 +78,4 @@ export function isTyping(target: EventTarget | null): boolean {
   if (!el || !el.tagName) return false;
   if (el.isContentEditable || /^(TEXTAREA|SELECT)$/.test(el.tagName)) return true;
   return el.tagName === 'INPUT' && (el as HTMLInputElement).type !== 'range';
-}
-
-/**
- * Up and down arrows nudge the speed (Shift for a larger step), also while playing, and never
- * while the Operator types in a text field.
- */
-export function useSpeedKeys(dispatch: (command: Command) => void) {
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if ((e.key !== 'ArrowUp' && e.key !== 'ArrowDown') || isTyping(e.target)) return;
-      if (e.metaKey || e.ctrlKey || e.altKey) return;
-      e.preventDefault();
-      dispatch({ type: 'nudgeSpeed', direction: e.key === 'ArrowUp' ? 1 : -1, big: e.shiftKey });
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [dispatch]);
 }

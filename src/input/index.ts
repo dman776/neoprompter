@@ -1,4 +1,4 @@
-import type { Core } from '../core';
+import type { Command, Core, CoreState } from '../core';
 import {
   BINDABLE_ACTIONS,
   createKeyBindings,
@@ -63,18 +63,37 @@ export const ACTION_LABELS: Record<string, string> = {
   dismissNotification: 'Dismiss Notification',
 };
 
-const KEYS: Record<string, ActionId> = {
-  ' ': 'playPause',
-  ArrowUp: 'speedUp',
-  ArrowDown: 'speedDown',
-  PageUp: 'jumpBack',
-  PageDown: 'jumpForward',
-  ArrowLeft: 'jumpBack',
-  ArrowRight: 'jumpForward',
-};
-
-export function keyToAction(key: string): ActionId | null {
-  return KEYS[key] ?? null;
+/**
+ * The core command an action sends, or null for an action that sends none. Play / Pause pauses
+ * whichever way the Script is playing; Play backward turns a forward play round and pauses a
+ * backward one.
+ */
+export function actionCommand(
+  action: ActionId,
+  state: Pick<CoreState, 'playing' | 'direction'>,
+): Command | null {
+  switch (action) {
+    case 'playPause':
+      return { type: state.playing ? 'pause' : 'play' };
+    case 'playBackward':
+      return state.playing && state.direction === 'reverse'
+        ? { type: 'pause' }
+        : { type: 'play', direction: 'reverse' };
+    case 'jumpBack':
+      return { type: 'jumpBack' };
+    case 'jumpForward':
+      return { type: 'jumpForward' };
+    case 'returnToPlayStart':
+      return { type: 'returnToPlayStart' };
+    case 'speedUp':
+      return { type: 'nudgeSpeed', direction: 1, big: false };
+    case 'speedDown':
+      return { type: 'nudgeSpeed', direction: -1, big: false };
+    case 'dismissNotification':
+      return { type: 'dismissNotification' };
+    default:
+      return null;
+  }
 }
 
 const PIXELS_PER_LINE = 40;
@@ -101,26 +120,13 @@ export function createInputMapper(
   core: Pick<Core, 'dispatch' | 'getState'>,
   initialMapping: Partial<ButtonMapping> = {},
 ): InputMapper {
+  const send = (action: ActionId) => () => {
+    const command = actionCommand(action, core.getState());
+    if (command) core.dispatch(command);
+  };
   const actions = new Map<ActionId, () => void>([
     ['none', () => {}],
-    ['playPause', () => core.dispatch({ type: core.getState().playing ? 'pause' : 'play' })],
-    [
-      'playBackward',
-      () => {
-        const { playing, direction } = core.getState();
-        core.dispatch(
-          playing && direction === 'reverse'
-            ? { type: 'pause' }
-            : { type: 'play', direction: 'reverse' },
-        );
-      },
-    ],
-    ['jumpBack', () => core.dispatch({ type: 'jumpBack' })],
-    ['jumpForward', () => core.dispatch({ type: 'jumpForward' })],
-    ['returnToPlayStart', () => core.dispatch({ type: 'returnToPlayStart' })],
-    ['speedUp', () => core.dispatch({ type: 'nudgeSpeed', direction: 1, big: false })],
-    ['speedDown', () => core.dispatch({ type: 'nudgeSpeed', direction: -1, big: false })],
-    ['dismissNotification', () => core.dispatch({ type: 'dismissNotification' })],
+    ...BINDABLE_ACTIONS.map((id): [ActionId, () => void] => [id, send(id)]),
   ]);
   let mapping: ButtonMapping = { ...defaultButtonMapping };
   let lastJog: number | null = null;

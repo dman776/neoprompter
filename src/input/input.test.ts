@@ -5,7 +5,7 @@ import {
   createInputService,
   normalizeButtonMapping,
   defaultButtonMapping,
-  keyToAction,
+  actionCommand,
   wheelToLines,
   JOG_WRAP,
 } from './index';
@@ -123,20 +123,25 @@ describe('input mapping', () => {
 });
 
 describe('keyboard and mouse', () => {
-  it('keys cover play/pause, speed up/down, back and forward a Screen', () => {
-    expect(keyToAction(' ')).toBe('playPause');
-    expect(keyToAction('ArrowUp')).toBe('speedUp');
-    expect(keyToAction('ArrowDown')).toBe('speedDown');
-    expect(keyToAction('PageUp')).toBe('jumpBack');
-    expect(keyToAction('PageDown')).toBe('jumpForward');
-    expect(keyToAction('ArrowLeft')).toBe('jumpBack');
-    expect(keyToAction('ArrowRight')).toBe('jumpForward');
-    expect(keyToAction('x')).toBeNull();
+  it('actions become the same core commands the buttons send', () => {
+    const idle = { playing: false, direction: 'forward' } as const;
+    expect(actionCommand('playPause', idle)).toEqual({ type: 'play' });
+    expect(actionCommand('playPause', { playing: true, direction: 'reverse' })).toEqual({
+      type: 'pause',
+    });
+    expect(actionCommand('speedUp', idle)).toEqual({
+      type: 'nudgeSpeed',
+      direction: 1,
+      big: false,
+    });
+    expect(actionCommand('jumpBack', idle)).toEqual({ type: 'jumpBack' });
+    expect(actionCommand('none', idle)).toBeNull();
+    expect(actionCommand('mirror', idle)).toBeNull();
   });
 
-  it('keyboard actions go through the same command path as the buttons', () => {
+  it('running an action goes through the same command path as the buttons', () => {
     const { core, mapper } = setup();
-    mapper.runAction(keyToAction(' ')!);
+    mapper.runAction('playPause');
     expect(core.getState().playing).toBe(true);
   });
 

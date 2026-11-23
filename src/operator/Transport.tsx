@@ -1,7 +1,5 @@
-import { useEffect, useRef, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { formatTimeLeft, type Command, type CoreState } from '../core';
-import { keyToAction } from '../input';
-import { isTyping } from './Speed';
 import { Key } from './ui/Key';
 import {
   BackScreenIcon,
@@ -12,60 +10,6 @@ import {
   PlayStartIcon,
   TopIcon,
 } from './ui/icons';
-
-/**
- * Space plays forward and Shift+Space plays back (the same key again pauses; the other turns the
- * playing round). The Left arrow and Page Up go back a Screen, the Right arrow and Page Down go
- * forward a Screen (`keyToAction` in src/input). The Up and Down arrows set the speed
- * (`useSpeedKeys`). A focused text field keeps its own keys. Space is the prompter's key whatever
- * else has the focus: a button the Operator just clicked is not pressed again by it.
- */
-export function useTransportKeys(state: CoreState, dispatch: (command: Command) => void) {
-  // The handler reads the newest state at the moment of the key press, not the state of the last
-  // time its effect ran: a key right after a change must see that change.
-  const latest = useRef(state);
-  latest.current = state;
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      const state = latest.current;
-      if (e.metaKey || e.ctrlKey || e.altKey || isTyping(e.target)) return;
-      let command: Command | null = null;
-      if (e.key === ' ') {
-        // Space plays forward, Shift+Space plays back. The same key again pauses; the other one
-        // turns the playing round.
-        const reverse = e.shiftKey;
-        const playingThisWay = state.playing && (state.direction === 'reverse') === reverse;
-        command = playingThisWay
-          ? { type: 'pause' }
-          : { type: 'play', direction: reverse ? 'reverse' : 'forward' };
-      } else {
-        const action = keyToAction(e.key);
-        command =
-          action === 'jumpBack'
-            ? { type: 'jumpBack' }
-            : action === 'jumpForward'
-              ? { type: 'jumpForward' }
-              : null;
-      }
-      if (!command) return;
-      e.preventDefault();
-      dispatch(command);
-    };
-    // A button is pressed by Space when the key goes up, so that is stopped as well.
-    const onKeyUp = (e: KeyboardEvent) => {
-      if (e.key === ' ' && !e.metaKey && !e.ctrlKey && !e.altKey && !isTyping(e.target)) {
-        e.preventDefault();
-      }
-    };
-    // In the capture phase, so a focused control never sees the key first.
-    window.addEventListener('keydown', onKey, true);
-    window.addEventListener('keyup', onKeyUp, true);
-    return () => {
-      window.removeEventListener('keydown', onKey, true);
-      window.removeEventListener('keyup', onKeyUp, true);
-    };
-  }, [dispatch]);
-}
 
 /** BACK and FWD: which way the Script is playing; FWD is lit (dimly) while it is paused. */
 export function DirectionIndicator({ state }: { state: CoreState }) {
