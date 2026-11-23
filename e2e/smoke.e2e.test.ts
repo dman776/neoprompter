@@ -112,6 +112,35 @@ describe('the running app', () => {
     await expect.poll(() => operator.locator('main').getAttribute('data-mode')).toBe('edit');
   });
 
+  it('shows a Notification over the content without moving anything, and dismisses it', async () => {
+    const rects = () =>
+      operator.evaluate(() =>
+        ['header', 'main', 'footer'].map((tag) => {
+          const r = document.querySelector(tag)!.getBoundingClientRect();
+          return [r.x, r.y, r.width, r.height];
+        }),
+      );
+    for (const mode of ['edit', 'run'] as const) {
+      await dispatch({ type: 'setMode', mode });
+      await expect.poll(() => operator.locator('main').getAttribute('data-mode')).toBe(mode);
+      const before = await rects();
+      await dispatch({ type: 'notify', text: 'Wrap up in two minutes', durationMs: 60_000 });
+      await dispatch({ type: 'notify', text: 'Second message', durationMs: 60_000 });
+      await expect.poll(() => operator.locator('.notification').count()).toBe(2);
+      expect(await rects()).toEqual(before);
+      await new Promise((r) => setTimeout(r, 400)); // let the slide-in finish before the picture
+      await operator.screenshot({ path: join(artifacts, `operator-notification-${mode}.png`) });
+      // Nothing reaches the Output.
+      expect(await output.evaluate(() => document.body.innerText)).not.toContain('Wrap up');
+      await operator.getByRole('button', { name: 'Dismiss' }).first().click();
+      await expect.poll(() => operator.locator('.notification').count()).toBe(1);
+      expect(await rects()).toEqual(before);
+      await operator.getByRole('button', { name: 'Dismiss' }).click();
+      await expect.poll(() => operator.locator('.notification').count()).toBe(0);
+    }
+    await dispatch({ type: 'setMode', mode: 'edit' });
+  });
+
   describe('the Producer page with a token set', () => {
     const port = 47811;
     const TOKEN = 'e2e-token';
