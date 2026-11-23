@@ -41,6 +41,7 @@ async function mount(lines: string[] = ['Hello there.', 'Second line.']) {
       core.dispatch(c);
     },
     onState: (l) => listeners.push(l),
+    getOutputView: async () => ({ blocked: false }) as never,
   };
   root = createRoot(host);
   await act(async () => root.render(<App bridge={bridge} />));
