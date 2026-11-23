@@ -7,7 +7,15 @@ import type { ApiSettings, ApiView } from '../api';
 import type { QuickMessage } from '../api/producer';
 import type { WatchedFolderView } from '../watched-folder';
 import type { UpdateView } from '../updates';
-import type { ActionId, ButtonId, ButtonMappingView, DeviceEvent } from '../input';
+import type {
+  ActionId,
+  AddKeyResult,
+  ButtonId,
+  ButtonMappingView,
+  DeviceEvent,
+  KeyBindingsView,
+  KeyChord,
+} from '../input';
 
 const api = {
   getState: (): Promise<CoreState> => ipcRenderer.invoke(IPC.getState),
@@ -54,6 +62,23 @@ const api = {
     ipcRenderer.invoke(IPC.inputSetButton, button, action),
   onButtonMapping: (listener: (view: ButtonMappingView) => void): void => {
     ipcRenderer.on(IPC.inputMapping, (_e, view: ButtonMappingView) => listener(view));
+  },
+  getKeyBindings: (): Promise<KeyBindingsView> => ipcRenderer.invoke(IPC.inputGetKeys),
+  addKey: (
+    action: ActionId,
+    key: KeyChord,
+  ): Promise<{ result: AddKeyResult; view: KeyBindingsView }> =>
+    ipcRenderer.invoke(IPC.inputAddKey, action, key),
+  moveKey: (
+    action: ActionId,
+    key: KeyChord,
+  ): Promise<{ result: AddKeyResult; view: KeyBindingsView }> =>
+    ipcRenderer.invoke(IPC.inputMoveKey, action, key),
+  removeKey: (action: ActionId, key: KeyChord): Promise<KeyBindingsView> =>
+    ipcRenderer.invoke(IPC.inputRemoveKey, action, key),
+  resetKeys: (): Promise<KeyBindingsView> => ipcRenderer.invoke(IPC.inputResetKeys),
+  onKeyBindings: (listener: (view: KeyBindingsView) => void): void => {
+    ipcRenderer.on(IPC.inputKeys, (_e, view: KeyBindingsView) => listener(view));
   },
   /** Native menu items for the Operator view (New, Import, theme, right column, find). */
   onMenuAction: (listener: (action: UiAction) => void): void => {

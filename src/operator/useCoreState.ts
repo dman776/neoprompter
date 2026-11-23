@@ -3,7 +3,14 @@ import type { Command, CoreState } from '../core';
 import type { OutputBlocked, OutputWindowView } from '../output-window';
 import type { ApiSettings, ApiView } from '../api';
 import type { QuickMessage } from '../api/producer';
-import type { ActionId, ButtonId, ButtonMappingView } from '../input';
+import type {
+  ActionId,
+  AddKeyResult,
+  ButtonId,
+  ButtonMappingView,
+  KeyBindingsView,
+  KeyChord,
+} from '../input';
 import type { UiAction } from '../window-host';
 import type { WatchedFolderView } from '../watched-folder';
 import type { UpdateView } from '../updates';
@@ -29,6 +36,9 @@ export interface CoreBridge {
   importScript?(): Promise<ImportOutcome | null>;
   /** An automatic Import of the Watched folder reports here. */
   onWatchedFolderNotice?(listener: (outcome: ImportOutcome) => void): void;
+  /** The Key bindings and their changes. Absent in a bridge that has none. */
+  getKeyBindings?(): Promise<KeyBindingsView>;
+  onKeyBindings?(listener: (view: KeyBindingsView) => void): void;
   /** The Update check's view, and its changes. Absent in a bridge that has no network. */
   getUpdateView?(): Promise<UpdateView>;
   onUpdateView?(listener: (view: UpdateView) => void): void;
@@ -43,6 +53,13 @@ export interface PreferencesBridge extends CoreBridge {
   getButtonMapping(): Promise<ButtonMappingView>;
   setButton(button: ButtonId, action: ActionId): Promise<ButtonMappingView>;
   onButtonMapping(listener: (view: ButtonMappingView) => void): void;
+  addKey(action: ActionId, key: KeyChord): Promise<{ result: AddKeyResult; view: KeyBindingsView }>;
+  moveKey(
+    action: ActionId,
+    key: KeyChord,
+  ): Promise<{ result: AddKeyResult; view: KeyBindingsView }>;
+  removeKey(action: ActionId, key: KeyChord): Promise<KeyBindingsView>;
+  resetKeys(): Promise<KeyBindingsView>;
   setApiSettings(settings: ApiSettings): Promise<ApiView>;
   getQuickMessages(): Promise<QuickMessage[]>;
   setQuickMessages(messages: QuickMessage[]): Promise<QuickMessage[]>;

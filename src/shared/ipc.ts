@@ -43,6 +43,18 @@ export const IPC = {
   inputSetButton: 'input:set-button',
   /** main -> renderers: the button mapping changed */
   inputMapping: 'input:mapping',
+  /** renderer -> main (invoke): the Key bindings and the actions in listing order */
+  inputGetKeys: 'input:get-keys',
+  /** renderer -> main (invoke): give a key to an action; returns the result and the new view */
+  inputAddKey: 'input:add-key',
+  /** renderer -> main (invoke): take a key over from another action; returns the result and the new view */
+  inputMoveKey: 'input:move-key',
+  /** renderer -> main (invoke): take a key off an action, returns the new view */
+  inputRemoveKey: 'input:remove-key',
+  /** renderer -> main (invoke): back to the default Key bindings, returns the new view */
+  inputResetKeys: 'input:reset-keys',
+  /** main -> renderers: the Key bindings changed */
+  inputKeys: 'input:keys',
   /** renderer -> main (invoke): the Update check's view */
   updateGet: 'update:get',
   /** renderer -> main (invoke): check now, returns the new view */

@@ -19,7 +19,14 @@ import { fetchLatestRelease } from './githubReleases';
 import { createUpdateService } from '../updates';
 import { createFileApiSettingsStore } from './fileApiSettingsStore';
 import { createFileButtonMappingStore } from './fileButtonMappingStore';
-import { createInputService, type ActionId, type ButtonId, type DeviceEvent } from '../input';
+import {
+  createInputService,
+  parseKeyChord,
+  type ActionId,
+  type ButtonId,
+  type DeviceEvent,
+} from '../input';
+import { createFileKeyBindingsStore } from './fileKeyBindingsStore';
 import {
   buildMenuTemplate,
   createWindowHost,
@@ -357,6 +364,7 @@ app.whenReady().then(() => {
   const input = createInputService(
     core,
     createFileButtonMappingStore(path.join(app.getPath('userData'), 'button-mapping.json')),
+    createFileKeyBindingsStore(path.join(app.getPath('userData'), 'key-bindings.json')),
   );
   ipcMain.on(IPC.deviceEvent, (_e, event: DeviceEvent) => input.handle(event));
   ipcMain.handle(IPC.inputGetMapping, () => input.getView());
@@ -365,6 +373,37 @@ app.whenReady().then(() => {
     return input.getView();
   });
   input.subscribe((view) => windows.forEach((w) => w.webContents.send(IPC.inputMapping, view)));
+  ipcMain.handle(IPC.inputGetKeys, () => input.getKeyView());
+  const keyChange =
+    (change: (action: ActionId, key: NonNullable<ReturnType<typeof parseKeyChord>>) => unknown) =>
+    (_e: unknown, action: ActionId, rawKey: unknown) => {
+      const key = parseKeyChord(rawKey);
+      if (typeof action !== 'string' || !key) {
+        return {
+          result: { status: 'refused', reason: 'That key could not be read.' },
+          view: input.getKeyView(),
+        };
+      }
+      return { result: change(action, key), view: input.getKeyView() };
+    };
+  ipcMain.handle(
+    IPC.inputAddKey,
+    keyChange((a, k) => input.addKey(a, k)),
+  );
+  ipcMain.handle(
+    IPC.inputMoveKey,
+    keyChange((a, k) => input.moveKey(a, k)),
+  );
+  ipcMain.handle(IPC.inputRemoveKey, (_e, action: ActionId, rawKey: unknown) => {
+    const key = parseKeyChord(rawKey);
+    if (typeof action === 'string' && key) input.removeKey(action, key);
+    return input.getKeyView();
+  });
+  ipcMain.handle(IPC.inputResetKeys, () => {
+    input.resetKeys();
+    return input.getKeyView();
+  });
+  input.subscribeKeys((view) => windows.forEach((w) => w.webContents.send(IPC.inputKeys, view)));
 
   // Broadcast on command changes, plus a steady tick so scrolling is visible.
   const broadcast = () => {

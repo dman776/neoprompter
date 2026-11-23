@@ -1,4 +1,14 @@
 import type { Core } from '../core';
+import {
+  BINDABLE_ACTIONS,
+  createKeyBindings,
+  type AddKeyResult,
+  type KeyBindingsStore,
+  type KeyBindingsView,
+  type KeyChord,
+} from './keyBindings';
+
+export * from './keyBindings';
 
 /**
  * Abstract device events. The Virtual shuttle, the keyboard, the mouse/trackpad and the real
@@ -44,6 +54,7 @@ export const defaultButtonMapping: ButtonMapping = {
 export const ACTION_LABELS: Record<string, string> = {
   none: 'Unassigned',
   playPause: 'Play / Pause',
+  playBackward: 'Play backward',
   jumpBack: 'Back a Screen',
   jumpForward: 'Forward a Screen',
   returnToPlayStart: 'Play start',
@@ -93,6 +104,17 @@ export function createInputMapper(
   const actions = new Map<ActionId, () => void>([
     ['none', () => {}],
     ['playPause', () => core.dispatch({ type: core.getState().playing ? 'pause' : 'play' })],
+    [
+      'playBackward',
+      () => {
+        const { playing, direction } = core.getState();
+        core.dispatch(
+          playing && direction === 'reverse'
+            ? { type: 'pause' }
+            : { type: 'play', direction: 'reverse' },
+        );
+      },
+    ],
     ['jumpBack', () => core.dispatch({ type: 'jumpBack' })],
     ['jumpForward', () => core.dispatch({ type: 'jumpForward' })],
     ['returnToPlayStart', () => core.dispatch({ type: 'returnToPlayStart' })],
@@ -187,14 +209,36 @@ export interface InputService {
   setButton(button: ButtonId, action: ActionId): boolean;
   /** Called with the new view after every mapping change. */
   subscribe(listener: (view: ButtonMappingView) => void): void;
+  /** The Key bindings and the actions in listing order. */
+  getKeyView(): KeyBindingsView;
+  /** Give a key to an action; a key that is another action's reports a conflict and changes nothing. */
+  addKey(action: ActionId, key: KeyChord): AddKeyResult;
+  /** Take a key over from the action that has it. */
+  moveKey(action: ActionId, key: KeyChord): AddKeyResult;
+  removeKey(action: ActionId, key: KeyChord): boolean;
+  resetKeys(): void;
+  /** Called with the new view after every change to the Key bindings. */
+  subscribeKeys(listener: (view: KeyBindingsView) => void): void;
 }
 
 export function createInputService(
   core: Pick<Core, 'dispatch' | 'getState'>,
   store: ButtonMappingStore,
+  keyStore: KeyBindingsStore = { load: () => null, save: () => {} },
 ): InputService {
   const mapper = createInputMapper(core, store.load() ?? {});
   const listeners: Array<(view: ButtonMappingView) => void> = [];
+  const keys = createKeyBindings(keyStore.load());
+  const keyListeners: Array<(view: KeyBindingsView) => void> = [];
+  const getKeyView = (): KeyBindingsView => ({
+    table: keys.getTable(),
+    actions: [...BINDABLE_ACTIONS],
+  });
+  const keysChanged = () => {
+    keyStore.save(keys.getTable());
+    const view = getKeyView();
+    keyListeners.forEach((l) => l(view));
+  };
   const getView = (): ButtonMappingView => ({
     mapping: mapper.getMapping(),
     actions: mapper.availableActions(),
@@ -211,5 +255,26 @@ export function createInputService(
       return true;
     },
     subscribe: (listener) => void listeners.push(listener),
+    getKeyView,
+    addKey(action, key) {
+      const result = keys.add(action, key);
+      if (result.status === 'added') keysChanged();
+      return result;
+    },
+    moveKey(action, key) {
+      const result = keys.move(action, key);
+      if (result.status === 'added') keysChanged();
+      return result;
+    },
+    removeKey(action, key) {
+      const removed = keys.remove(action, key);
+      if (removed) keysChanged();
+      return removed;
+    },
+    resetKeys() {
+      keys.reset();
+      keysChanged();
+    },
+    subscribeKeys: (listener) => void keyListeners.push(listener),
   };
 }

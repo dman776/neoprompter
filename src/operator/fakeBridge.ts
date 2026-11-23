@@ -1,7 +1,7 @@
 // Test helper (DOM tests only): a bridge over a real core, so a test says only what differs.
 import { act } from 'react';
 import type { Command, Core, CoreState } from '../core';
-import { defaultButtonMapping } from '../input';
+import { BINDABLE_ACTIONS, defaultButtonMapping, defaultKeyBindings } from '../input';
 import type { OutputWindowView } from '../output-window';
 import type { UiAction } from '../window-host';
 import type { WatchedFolderView } from '../watched-folder';
@@ -78,6 +78,18 @@ export function createFakeBridge(
     getButtonMapping: async () => ({ mapping: { ...defaultButtonMapping }, actions: [] }),
     setButton: async () => ({ mapping: { ...defaultButtonMapping }, actions: [] }),
     onButtonMapping: () => {},
+    getKeyBindings: async () => ({ table: defaultKeyBindings(), actions: [...BINDABLE_ACTIONS] }),
+    addKey: async () => ({
+      result: { status: 'unchanged' },
+      view: { table: defaultKeyBindings(), actions: [...BINDABLE_ACTIONS] },
+    }),
+    moveKey: async () => ({
+      result: { status: 'unchanged' },
+      view: { table: defaultKeyBindings(), actions: [...BINDABLE_ACTIONS] },
+    }),
+    removeKey: async () => ({ table: defaultKeyBindings(), actions: [...BINDABLE_ACTIONS] }),
+    resetKeys: async () => ({ table: defaultKeyBindings(), actions: [...BINDABLE_ACTIONS] }),
+    onKeyBindings: () => {},
     setApiSettings: async () => ({
       port: 4780,
       token: '',
