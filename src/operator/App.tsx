@@ -24,7 +24,12 @@ export function App({ bridge }: { bridge: CoreBridge }) {
       />
       <main className="shell-body" data-mode={state.mode}>
         {state.mode === 'edit' ? (
-          <ScriptEditor bridge={bridge} script={state.script} editable={state.mode === 'edit'} />
+          <ScriptEditor
+            bridge={bridge}
+            script={state.script}
+            editable={state.mode === 'edit'}
+            recentColors={state.recentColors}
+          />
         ) : (
           <Panel title="Live view">
             <p className="placeholder">The Live view and transport keys arrive here.</p>

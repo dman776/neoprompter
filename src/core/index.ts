@@ -24,4 +24,4 @@ export { createMemoryPresetStore } from './presets';
 export type { PresetStore } from './presets';
 export { createMemorySessionStore } from './session';
 export type { Session, SessionStore } from './session';
-export { PALETTE, PALETTE_COLORS } from './palette';
+export { MAX_RECENT_COLORS, SEED_COLORS, isHexColor } from './palette';

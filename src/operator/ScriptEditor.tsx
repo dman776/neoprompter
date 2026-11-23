@@ -11,6 +11,7 @@ import type { CoreState, ScriptLine } from '../core';
 import { docToLines, formatReadTime, linesToDoc, scriptStats } from '../editor';
 import type { CoreBridge } from './useCoreState';
 import { ColorMark } from './colorMark';
+import { ColorTool } from './ColorTool';
 import { Panel } from './ui/Panel';
 import { Button } from './ui/Button';
 import { BoldIcon, HeadingIcon, ItalicIcon, RedoIcon, UndoIcon } from './ui/icons';
@@ -37,10 +38,12 @@ interface ScriptEditorProps {
   script: CoreState['script'];
   /** True only in Edit mode (the lock for Run mode comes from the core as well). */
   editable: boolean;
+  /** The core's recent colors, newest first. */
+  recentColors: readonly string[];
 }
 
 /** The full Script editor: formatting bar, word count, Saved state, and the document itself. */
-export function ScriptEditor({ bridge, script, editable }: ScriptEditorProps) {
+export function ScriptEditor({ bridge, script, editable, recentColors }: ScriptEditorProps) {
   const [saving, setSaving] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   /** What the Operator typed that has not been sent to the core yet. */
@@ -159,6 +162,12 @@ export function ScriptEditor({ bridge, script, editable }: ScriptEditorProps) {
         >
           <ItalicIcon />
         </Button>
+        <ColorTool
+          editor={editor}
+          editable={editable}
+          recentColors={recentColors}
+          onUse={(color) => bridge.dispatch({ type: 'pickColor', color })}
+        />
         <span className="word-count" aria-live="polite">
           <b>{stats.words}</b> words · <b>{formatReadTime(stats.readSeconds)}</b>
         </span>

@@ -18,7 +18,7 @@ import { createMemoryLibraryStorage, type LibraryStorage } from './library';
 import { createMemoryPresetStore, type PresetStore } from './presets';
 import { defaultAppearance, type Appearance } from './types';
 import { colorLineRange, editLineText, remapPosition } from './editing';
-import { PALETTE_COLORS } from './palette';
+import { MAX_RECENT_COLORS, SEED_COLORS, isHexColor, moveColorToFront } from './palette';
 import { changedSpan, sanitizeLines } from './scriptLines';
 import { contrastRatio, MIN_CONTRAST, readableTextOn } from './readableColor';
 import { lineText } from './richScript';
@@ -116,6 +116,8 @@ export function createCore(options: CoreOptions = {}): Core {
   let notifications: { id: number; text: string; expiresAt: number }[] = [];
   let nextNotificationId = 1;
 
+  let recentColors: string[] = [...SEED_COLORS];
+
   const restored = sessionStore.load();
   if (restored) {
     const entry = restored.loadedScriptId
@@ -138,6 +140,13 @@ export function createCore(options: CoreOptions = {}): Core {
     notificationDurationMs = clampDuration(restored.notificationDurationMs);
   }
 
+  if (restored?.recentColors) {
+    recentColors = restored.recentColors
+      .filter(isHexColor)
+      .map((c) => c.toLowerCase())
+      .slice(0, MAX_RECENT_COLORS);
+  }
+
   function autosave(): void {
     lastSave = clock.now();
     sessionStore.save({
@@ -149,6 +158,7 @@ export function createCore(options: CoreOptions = {}): Core {
       activePreset,
       mode,
       notificationDurationMs,
+      recentColors,
     });
   }
 
@@ -217,6 +227,7 @@ export function createCore(options: CoreOptions = {}): Core {
       mode,
       notifications: notifications.map(({ id, text }) => ({ id, text })).reverse(),
       notificationDurationMs,
+      recentColors: [...recentColors],
     };
   }
 
@@ -322,12 +333,15 @@ export function createCore(options: CoreOptions = {}): Core {
         case 'colorRange': {
           const old = script.lines[command.line];
           if (old === undefined) return;
-          if (command.color !== null && !PALETTE_COLORS.includes(command.color)) return;
+          if (command.color !== null && !isHexColor(command.color)) return;
           spliceLines(command.line, 1, [
-            colorLineRange(old, command.start, command.end, command.color),
+            colorLineRange(old, command.start, command.end, command.color?.toLowerCase() ?? null),
           ]);
           break;
         }
+        case 'pickColor':
+          recentColors = moveColorToFront(recentColors, command.color);
+          break;
         case 'setAppearance':
           appearance = readable({ ...appearance, ...command.changes });
           break;

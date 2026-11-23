@@ -131,3 +131,74 @@ describe('the Script editor in Edit mode', () => {
     expect(tiptap().isEditable).toBe(true);
   });
 });
+
+describe('the Color button', () => {
+  const swatches = () => [...host.querySelectorAll<HTMLButtonElement>('.swatch')];
+  const altKey = (digit: string) =>
+    window.dispatchEvent(
+      new KeyboardEvent('keydown', { code: `Digit${digit}`, altKey: true, cancelable: true }),
+    );
+
+  it('opens a panel of ten slots: the five seed colors, then empty slots', async () => {
+    await mount();
+    await act(async () => button('Color').click());
+    expect(swatches().map((s) => s.style.background)).toEqual([
+      'rgb(255, 0, 0)',
+      'rgb(0, 255, 0)',
+      'rgb(0, 0, 255)',
+      'rgb(255, 255, 0)',
+      'rgb(255, 255, 255)',
+    ]);
+    expect(host.querySelectorAll('.swatch-empty')).toHaveLength(5);
+    expect(host.querySelector('.color-more')!.textContent).toBe('Any color…');
+  });
+
+  it('colors the selected text from a swatch, moves it to the front and saves it as-is', async () => {
+    const { core } = await mount();
+    await act(async () => void tiptap().commands.setTextSelection({ from: 1, to: 6 }));
+    await act(async () => button('Color').click());
+    await act(async () => swatches()[2].click());
+    await wait(SAVE_DELAY_MS + 100);
+    expect(core.getState().script.lines[0]).toEqual({
+      runs: [{ text: 'Hello', color: '#0000ff' }, { text: ' there.' }],
+    });
+    expect(core.getState().recentColors[0]).toBe('#0000ff');
+    expect(host.querySelector('.swatch-grid')).toBeNull();
+  });
+
+  it('colors with Alt+1 to Alt+0 from the recent colors', async () => {
+    const { core } = await mount();
+    await act(async () => void tiptap().commands.setTextSelection({ from: 1, to: 6 }));
+    await act(async () => void altKey('2'));
+    await wait(SAVE_DELAY_MS + 100);
+    expect(core.getState().script.lines[0]).toMatchObject({
+      runs: [{ text: 'Hello', color: '#00ff00' }, { text: ' there.' }],
+    });
+    expect(core.getState().recentColors[0]).toBe('#00ff00');
+  });
+
+  it('does nothing for a shortcut whose slot is empty', async () => {
+    const { dispatched } = await mount();
+    await act(async () => void altKey('0'));
+    expect(dispatched.some((c) => c.type === 'pickColor')).toBe(false);
+  });
+
+  it('counts an Any color pick as used when the picker closes, not while dragging', async () => {
+    const { core } = await mount();
+    await act(async () => void tiptap().commands.setTextSelection({ from: 1, to: 6 }));
+    const input = host.querySelector<HTMLInputElement>('input[type="color"]')!;
+    await act(async () => {
+      input.value = '#123456';
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    expect(core.getState().recentColors).not.toContain('#123456');
+    await act(async () => {
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    expect(core.getState().recentColors[0]).toBe('#123456');
+    await wait(SAVE_DELAY_MS + 100);
+    expect(core.getState().script.lines[0]).toMatchObject({
+      runs: [{ text: 'Hello', color: '#123456' }, { text: ' there.' }],
+    });
+  });
+});
