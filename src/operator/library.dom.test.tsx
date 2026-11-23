@@ -33,7 +33,7 @@ const view: OutputWindowView = {
   missingMonitorId: null,
   monitors: [],
 };
-const apiView: ApiView = { port: 4780, token: '', running: true, error: null };
+const apiView: ApiView = { port: 4780, token: '', running: true, error: null, producerUrls: [] };
 
 async function mount(importResult: ImportOutcome | null = null) {
   const clock = createFakeClock(Date.UTC(2026, 10, 22, 12, 0));
