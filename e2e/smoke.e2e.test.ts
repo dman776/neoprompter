@@ -445,6 +445,112 @@ describe('the running app', () => {
     await dispatch({ type: 'setScriptLines', lines: original.lines });
   });
 
+  /** Clicks a native menu item by its label, as the Operator would. */
+  const clickMenu = (label: string) =>
+    app.evaluate(({ Menu }, label) => {
+      const find = (items: Electron.MenuItem[]): Electron.MenuItem | undefined => {
+        for (const item of items) {
+          if (item.label === label && item.submenu === null) return item;
+          const hit = item.submenu ? find(item.submenu.items) : undefined;
+          if (hit) return hit;
+        }
+        return undefined;
+      };
+      find(Menu.getApplicationMenu()!.items)!.click();
+    }, label);
+  const menuItem = (id: string) =>
+    app.evaluate(({ Menu }, id) => {
+      const item = Menu.getApplicationMenu()!.getMenuItemById(id)!;
+      return { enabled: item.enabled, checked: item.checked };
+    }, id);
+
+  it('has one Output menu item that follows the Output, Import only in Edit mode, and Undo that reaches the editor', async () => {
+    const original = (await state()).script.lines;
+    await dispatch({ type: 'setMode', mode: 'edit' });
+    expect((await menuItem('import')).enabled).toBe(true);
+    expect((await menuItem('output')).checked).toBe(true);
+    await clickMenu('Output on');
+    await expect.poll(async () => (await state()).outputOn).toBe(false);
+    await expect.poll(async () => (await menuItem('output')).checked).toBe(false);
+    await clickMenu('Output on');
+    await expect.poll(async () => (await state()).outputOn).toBe(true);
+    output = await windowTitled('Output');
+
+    // Typing, then Edit > Undo from the native menu, takes the typing back out of the editor.
+    await operator.bringToFront();
+    await operator.locator('.ProseMirror p').first().click();
+    await operator.keyboard.press('End');
+    await operator.keyboard.type(' ZZZ');
+    await expect.poll(() => operator.locator('.ProseMirror').textContent()).toContain('ZZZ');
+    await clickMenu('Undo');
+    await expect.poll(() => operator.locator('.ProseMirror').textContent()).not.toContain('ZZZ');
+    await clickMenu('Redo');
+    await expect.poll(() => operator.locator('.ProseMirror').textContent()).toContain('ZZZ');
+    // Switching to Run mode at once keeps the typing (the editor saves it before the switch).
+    await clickMenu('Run mode');
+    await expect.poll(async () => (await state()).mode).toBe('run');
+    expect((await state()).script.lines.map((l: unknown) => JSON.stringify(l)).join()).toContain(
+      'ZZZ',
+    );
+    await expect.poll(async () => (await menuItem('import')).enabled).toBe(false);
+    await dispatch({ type: 'setMode', mode: 'edit' });
+    await expect.poll(async () => (await menuItem('import')).enabled).toBe(true);
+    await dispatch({ type: 'setScriptLines', lines: original });
+  });
+
+  it('keeps the Run mode layout together at the minimum window size and in a small window', async () => {
+    const resize = (width: number, height: number) =>
+      app.evaluate(
+        ({ BrowserWindow }, { width, height }) => {
+          const win = BrowserWindow.getAllWindows().find((w) => w.getTitle().includes('Operator'))!;
+          win.setMinimumSize(0, 0);
+          win.setSize(width, height);
+        },
+        { width, height },
+      );
+    const overlaps = () =>
+      operator.evaluate(() => {
+        const box = (sel: string) =>
+          document.querySelector<HTMLElement>(sel)?.getBoundingClientRect();
+        const center = box('.run-center');
+        const side = box('.run-side');
+        const transport = document.querySelector<HTMLElement>('[data-testid="transport"]')!;
+        const problems: string[] = [];
+        if (center && side && side.width > 0 && center.right > side.left + 1)
+          problems.push('center over side');
+        if (transport.scrollWidth > transport.clientWidth + 1) problems.push('transport too wide');
+        const live = box('[data-testid="live-view"]');
+        const bezel = box('.run-bezel');
+        if (live && bezel && (live.right > bezel.right + 1 || live.bottom > bezel.bottom + 1)) {
+          problems.push('live view outside bezel');
+        }
+        if (document.documentElement.scrollWidth > window.innerWidth + 1)
+          problems.push('page scrolls sideways');
+        return problems;
+      });
+    await dispatch({ type: 'setMode', mode: 'run' });
+    await expect.poll(() => operator.locator('main').getAttribute('data-mode')).toBe('run');
+    for (const [name, width, height] of [
+      ['min', 1100, 640],
+      ['small', 640, 480],
+    ] as const) {
+      await resize(width, height);
+      await expect
+        .poll(() => operator.evaluate(() => window.innerWidth))
+        .toBeLessThanOrEqual(width);
+      await new Promise((r) => setTimeout(r, 400));
+      await operator.screenshot({ path: join(artifacts, `operator-run-${name}.png`) });
+      expect(await overlaps()).toEqual([]);
+      await dispatch({ type: 'setRightColumnCollapsed', collapsed: true });
+      await new Promise((r) => setTimeout(r, 300));
+      await operator.screenshot({ path: join(artifacts, `operator-run-${name}-collapsed.png`) });
+      expect(await overlaps()).toEqual([]);
+      await dispatch({ type: 'setRightColumnCollapsed', collapsed: false });
+    }
+    await resize(1200, 780);
+    await dispatch({ type: 'setMode', mode: 'edit' });
+  });
+
   describe('the Producer page with a token set', () => {
     const port = 47811;
     const TOKEN = 'e2e-token';

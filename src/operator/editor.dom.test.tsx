@@ -4,7 +4,7 @@ import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { Editor } from '@tiptap/core';
-import { createCore, createFakeClock, lineText } from '../core';
+import { createCore, createFakeClock, lineText, type Command } from '../core';
 import { App } from './App';
 import { SAVE_DELAY_MS } from './ScriptEditor';
 import { createFakeBridge } from './fakeBridge';
@@ -31,10 +31,10 @@ afterEach(() => {
 
 async function mount(lines: string[] = ['Hello there.', 'Second line.']) {
   const core = createCore({ clock: createFakeClock(), script: { name: 'T', lines } });
-  const { bridge, dispatched, menu } = createFakeBridge(core);
+  const { bridge, dispatched, menu, pushState } = createFakeBridge(core);
   root = createRoot(host);
   await act(async () => root.render(<App bridge={bridge} />));
-  return { core, dispatched, menu };
+  return { core, dispatched, menu, pushState, bridge };
 }
 
 const tiptap = () =>
@@ -143,6 +143,30 @@ describe('the Script editor in Edit mode', () => {
     expect(host.querySelector('.ProseMirror')!.textContent).not.toContain('XHello');
     await menu('redo');
     expect(host.querySelector('.ProseMirror')!.textContent).toContain('XHello');
+  });
+
+  it('undoes from the Edit menu even after the typing was saved', async () => {
+    const { menu } = await mount();
+    await act(async () => void tiptap().commands.insertContentAt(1, 'X'));
+    await wait(SAVE_DELAY_MS + 100);
+    await menu('undo');
+    expect(host.querySelector('.ProseMirror')!.textContent).not.toContain('XHello');
+  });
+
+  it('keeps typing and undo history when an older state arrives just after a save', async () => {
+    const { core, menu, pushState, bridge } = await mount();
+    // The save is still travelling to the core when a state from before it comes in.
+    const travelling: Command[] = [];
+    const send = bridge.dispatch;
+    bridge.dispatch = (c) => (c.type === 'setScriptLines' ? void travelling.push(c) : send(c));
+    const older = core.getState();
+    await act(async () => void tiptap().commands.insertContentAt(1, 'X'));
+    await wait(SAVE_DELAY_MS + 100);
+    pushState(older);
+    expect(host.querySelector('.ProseMirror')!.textContent).toContain('XHello');
+    await act(async () => travelling.forEach((c) => core.dispatch(c)));
+    await menu('undo');
+    expect(host.querySelector('.ProseMirror')!.textContent).not.toContain('XHello');
   });
 
   it('is not editable when the app is not in Edit mode', async () => {

@@ -189,3 +189,79 @@
   background: var(--accent);
   box-shadow: 0 0 8px var(--accent);
 }
+
+/*
+ * Narrow windows (the minimum is 1100px wide, but a smaller one must still hold together): the
+ * right-hand column goes (its Script lock moves beside the transport) and the transport tightens
+ * and wraps, so nothing overlaps.
+ */
+@media (max-width: 960px) {
+  .run,
+  .run:has(> .run-slot-meter:not(:empty)),
+  .run[data-collapsed='true'],
+  .run[data-collapsed='true']:has(> .run-slot-meter:not(:empty)) {
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 10px;
+  }
+  .run-side {
+    display: none;
+  }
+  .run-center {
+    gap: 10px;
+  }
+  .run-bezel {
+    padding: 8px;
+  }
+  .run-transport,
+  .run-transport:has(> .run-slot-dial:not(:empty)) {
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 8px 12px;
+    padding: 8px 12px;
+  }
+  .run-keys {
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .run-transport .np-key {
+    width: 64px;
+    height: 50px;
+    font-size: 8.5px;
+    letter-spacing: 0.02em;
+  }
+  .run-transport .np-key span {
+    text-align: center;
+    line-height: 1.15;
+  }
+  .run-transport .np-key[data-big='true'] {
+    width: 78px;
+    height: 56px;
+  }
+  .run-read {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: space-around;
+    text-align: center;
+    min-width: 0;
+  }
+  .run-read > div {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+  }
+  .run-read b {
+    font-size: 18px;
+  }
+  .run-slot-dial .speed-dial {
+    width: 88px;
+    height: 88px;
+  }
+  .run-transport .lock-compact {
+    padding-top: 6px;
+  }
+  .run-slot-dial .speed-dial-cap b {
+    font-size: 20px;
+  }
+  .np-segment button {
+    min-width: 88px;
+  }
+}

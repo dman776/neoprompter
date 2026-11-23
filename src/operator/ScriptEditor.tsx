@@ -81,6 +81,10 @@ export function ScriptEditor({
   bridgeRef.current = bridge;
   const initial = useMemo(() => linesToDoc(script.lines), []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  /** The last save sent and the Script lines before it, until the core's echo of it arrives. */
+  const inFlight = useRef<{ before: ScriptLine[]; sent: ScriptLine[] } | null>(null);
+  const linesRef = useRef(script.lines);
+  linesRef.current = script.lines;
   const rejectedRef = useRef(onSaveRejected);
   rejectedRef.current = onSaveRejected;
 
@@ -89,6 +93,7 @@ export function ScriptEditor({
     timer.current = null;
     if (!pending.current) return;
     const sent = pending.current;
+    inFlight.current = { before: linesRef.current, sent };
     bridgeRef.current.dispatch({ type: 'setScriptLines', lines: sent });
     pending.current = null;
     setSaving(false);
@@ -143,6 +148,13 @@ export function ScriptEditor({
   // document. While the Operator has unsent typing, an echo of an older save must not overwrite it.
   useEffect(() => {
     if (!editor || editor.isDestroyed || pending.current) return;
+    // A state that was sent before our last save reached the core is older than the editor:
+    // ignore it, so the typing does not flicker back and the undo history is kept.
+    const flight = inFlight.current;
+    if (flight) {
+      if (sameLines(script.lines, flight.before) && !sameLines(flight.before, flight.sent)) return;
+      inFlight.current = null;
+    }
     if (sameLines(docToLines(editor.getJSON()), script.lines)) return;
     editor.commands.setContent(linesToDoc(script.lines), { emitUpdate: false });
   }, [editor, script.lines]);

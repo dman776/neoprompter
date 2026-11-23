@@ -214,12 +214,13 @@ app.whenReady().then(() => {
       core.dispatch({ type: 'setOutput', on: !core.getState().outputOn });
     } else if (
       (action.action === 'undo' || action.action === 'redo') &&
-      BrowserWindow.getFocusedWindow() !== operatorWin
+      BrowserWindow.getFocusedWindow() &&
+      ![operatorWin, outputWin].includes(BrowserWindow.getFocusedWindow())
     ) {
       // Preferences and the Virtual shuttle have no editor: undo in their own text fields.
-      const focused = BrowserWindow.getFocusedWindow();
-      if (action.action === 'undo') focused?.webContents.undo();
-      else focused?.webContents.redo();
+      const focused = BrowserWindow.getFocusedWindow()!;
+      if (action.action === 'undo') focused.webContents.undo();
+      else focused.webContents.redo();
     } else if (operatorWin && !operatorWin.isDestroyed()) {
       operatorWin.webContents.send(IPC.menuAction, action.action);
     }

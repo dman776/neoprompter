@@ -20,6 +20,8 @@ export interface FakeBridge {
   bridge: PreferencesBridge;
   /** Every command the renderer sent, in order. */
   dispatched: Command[];
+  /** Sends the renderer a state as if it arrived late over IPC (it need not be the core's latest). */
+  pushState(state: CoreState): void;
   /** Fires a native menu item at the renderer, as the main process would. */
   menu(action: UiAction): Promise<void>;
 }
@@ -72,6 +74,7 @@ export function createFakeBridge(
   return {
     bridge,
     dispatched,
+    pushState: (state) => act(() => stateListeners.forEach((l) => l(state))),
     menu: (action) => act(async () => menuListeners.forEach((l) => l(action))),
   };
 }

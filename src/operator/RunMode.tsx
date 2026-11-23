@@ -43,14 +43,13 @@ export function RunMode({
         <Transport
           state={state}
           dispatch={bridge.dispatch}
+          // Shown by the stylesheet when the right-hand column is collapsed or does not fit.
           lock={
-            columnCollapsed && (
-              <ScriptLock
-                compact
-                unlocked={state.unlocked}
-                onChange={(unlocked) => bridge.dispatch({ type: 'setUnlocked', unlocked })}
-              />
-            )
+            <ScriptLock
+              compact
+              unlocked={state.unlocked}
+              onChange={(unlocked) => bridge.dispatch({ type: 'setUnlocked', unlocked })}
+            />
           }
         />
       </div>

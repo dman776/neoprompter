@@ -57,7 +57,7 @@
 /* The lock beside the transport, while the right-hand column is collapsed. */
 .lock-compact {
   grid-column: 1 / -1;
-  display: flex;
+  display: none;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
@@ -67,4 +67,13 @@
 }
 .lock-compact[data-unlocked='true'] b {
   color: var(--accent);
+}
+
+.run[data-collapsed='true'] .lock-compact {
+  display: flex;
+}
+@media (max-width: 960px) {
+  .lock-compact {
+    display: flex;
+  }
 }
