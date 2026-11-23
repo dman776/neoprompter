@@ -165,8 +165,8 @@ describe('importDocument', () => {
   it('dispatches by extension', () => {
     const doc = importDocument(makeDoc([{ runs: [{ text: 'hi' }] }]), 'A.DOC');
     expect(doc).toEqual({ ok: true, script: { name: 'A', lines: [{ runs: [{ text: 'hi' }] }] } });
-    const other = importDocument(strToU8('x'), 'A.txt');
+    const other = importDocument(strToU8('x'), 'A.png');
     expect(other.ok).toBe(false);
-    if (!other.ok) expect(other.message).toMatch(/\.doc or \.docx/);
+    if (!other.ok) expect(other.message).toMatch(/\.doc, \.docx or \.txt/);
   });
 });

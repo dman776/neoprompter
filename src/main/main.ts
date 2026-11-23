@@ -239,7 +239,7 @@ app.whenReady().then(() => {
     const picked = await dialog.showOpenDialog({
       title: 'Import Script',
       properties: ['openFile'],
-      filters: [{ name: 'Word document', extensions: ['docx', 'doc'] }],
+      filters: [{ name: 'Word and text files', extensions: ['docx', 'doc', 'txt'] }],
     });
     if (picked.canceled || picked.filePaths.length === 0) return null;
     const file = picked.filePaths[0];

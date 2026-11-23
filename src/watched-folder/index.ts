@@ -98,11 +98,11 @@ export interface WatchedFolderResult {
 /** The name of the subfolder that Imported files move into. */
 export const IMPORTED_FOLDER = 'imported';
 
-const WORD_FILE = /\.docx?$/i;
+const IMPORTABLE_FILE = /\.(docx?|txt)$/i;
 
 /** Word's own lock files (`~$name.docx`) and hidden files are never Scripts. */
 function isCandidate(name: string): boolean {
-  return WORD_FILE.test(name) && !name.startsWith('~$') && !name.startsWith('.');
+  return IMPORTABLE_FILE.test(name) && !name.startsWith('~$') && !name.startsWith('.');
 }
 
 /** `name`, or the first free "<name> 2", "<name> 3"... when the library already has it. */
