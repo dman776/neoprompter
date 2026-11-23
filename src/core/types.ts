@@ -141,6 +141,8 @@ export interface CoreState {
   position: number;
   /** Fraction of the Script read, 0 to 1. Drives the Progress bar. */
   progress: number;
+  /** Visual lines left to read, from the reading position to the end-of-Script stop. */
+  remainingLines: number;
   /** Scroll speed in visual lines per second (independent of font size). */
   speed: number;
   /** Speed as a level, 0 (stopped) to MAX_SPEED_LEVEL. */

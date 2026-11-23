@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { Command, CoreState } from '../core';
 import type { OutputBlocked, OutputWindowView } from '../output-window';
+import type { ApiView } from '../api';
 
 /** The slice of `window.neoprompter` the Operator view uses; a test passes a fake. */
 export interface CoreBridge {
@@ -8,6 +9,7 @@ export interface CoreBridge {
   dispatch(command: Command): void;
   onState(listener: (state: CoreState) => void): void;
   getOutputView(): Promise<OutputWindowView>;
+  getApiView(): Promise<ApiView>;
 }
 
 /** The latest core state (null until the first one arrives). Components render it and dispatch. */
@@ -26,6 +28,32 @@ export function useCoreState(bridge: CoreBridge): CoreState | null {
 
 /** How often to look again at why the Output is not showing (a monitor may be plugged in). */
 const BLOCKED_POLL_MS = 1500;
+
+/** Asks the main process for something now and again every `ms`, until the component goes. */
+function usePolled<T>(ask: () => Promise<T>, ms: number): T | null {
+  const [value, setValue] = useState<T | null>(null);
+  useEffect(() => {
+    let live = true;
+    const look = () => void ask().then((v) => live && setValue(v));
+    look();
+    const timer = setInterval(look, ms);
+    return () => {
+      live = false;
+      clearInterval(timer);
+    };
+  }, [ask, ms]);
+  return value;
+}
+
+/** The Output window's view (monitors, which is chosen), kept fresh for the status panel. */
+export function useOutputView(bridge: CoreBridge): OutputWindowView | null {
+  return usePolled(bridge.getOutputView, BLOCKED_POLL_MS);
+}
+
+/** The Producer page's view (listening or not), kept fresh for the status panel. */
+export function useApiView(bridge: CoreBridge): ApiView | null {
+  return usePolled(bridge.getApiView, BLOCKED_POLL_MS);
+}
 
 /**
  * Why the Output is switched On but not showing (no monitor, monitor unplugged), or null.

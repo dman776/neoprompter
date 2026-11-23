@@ -8,6 +8,7 @@ import { createCore, createFakeClock, type Command } from '../core';
 import { App } from './App';
 import type { CoreBridge } from './useCoreState';
 import type { OutputWindowView } from '../output-window';
+import type { ApiView } from '../api';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -32,8 +33,15 @@ const shownView: OutputWindowView = {
   monitors: [],
 };
 
-async function mount(outputView: OutputWindowView = shownView) {
-  const core = createCore({ clock: createFakeClock() });
+const apiView: ApiView = { port: 4780, token: '', running: true, error: null };
+
+async function mount(
+  outputView: OutputWindowView = shownView,
+  api: ApiView = apiView,
+  lines: string[] = ['alpha', 'beta', 'gamma'],
+) {
+  const clock = createFakeClock();
+  const core = createCore({ clock, script: { name: 'Sunday', lines } });
   const dispatched: Command[] = [];
   const listeners: Array<(s: ReturnType<typeof core.getState>) => void> = [];
   core.subscribe((s) => listeners.forEach((l) => act(() => l(s))));
@@ -45,10 +53,11 @@ async function mount(outputView: OutputWindowView = shownView) {
     },
     onState: (l) => listeners.push(l),
     getOutputView: async () => outputView,
+    getApiView: async () => api,
   };
   root = createRoot(host);
   await act(async () => root.render(<App bridge={bridge} />));
-  return { core, dispatched };
+  return { core, clock, dispatched };
 }
 
 const button = (name: string) =>
@@ -72,7 +81,7 @@ describe('the Operator view shell', () => {
   it('switches to Run mode through the core when the Operator presses Run', async () => {
     const { core, dispatched } = await mount();
     await act(async () => button('Run').click());
-    expect(dispatched).toEqual([{ type: 'setMode', mode: 'run' }]);
+    expect(dispatched[0]).toEqual({ type: 'setMode', mode: 'run' });
     expect(core.getState().mode).toBe('run');
     expect(host.querySelector('main')!.getAttribute('data-mode')).toBe('run');
     expect(host.querySelector('footer')!.textContent).toContain('Run mode');
@@ -148,5 +157,162 @@ describe('Notification overlays', () => {
     });
     const items = host.querySelectorAll('[data-testid="notifications"] [role="status"]');
     expect(items).toHaveLength(2);
+  });
+});
+
+describe('Run mode: the Live view', () => {
+  const runMode = async (view?: OutputWindowView, api?: ApiView) => {
+    const m = await mount(view, api);
+    await act(async () => m.core.dispatch({ type: 'setMode', mode: 'run' }));
+    return m;
+  };
+  const live = () => host.querySelector('[data-testid="live-view"]')!;
+  const paragraphs = () =>
+    Array.from(live().querySelectorAll('[data-live="text"] > div'), (p) => p.textContent?.trim());
+
+  it('shows the Script as the Talent sees it, with the Reading line and Progress bar', async () => {
+    await runMode();
+    expect(paragraphs()).toEqual(['alpha', 'beta', 'gamma']);
+    expect(live().querySelector('[data-live="reading-line"]')).not.toBeNull();
+    expect(live().querySelector('[data-live="progress"]')).not.toBeNull();
+  });
+
+  it('stays in step with the Output after a Script edit and a Preset change', async () => {
+    const { core } = await runMode();
+    await act(async () => core.dispatch({ type: 'editLine', line: 1, text: 'BETA' }));
+    expect(paragraphs()).toEqual(['alpha', 'BETA', 'gamma']);
+    await act(async () => core.dispatch({ type: 'setAppearance', changes: { mirror: true } }));
+    expect((live().querySelector('[data-live="surface"]') as HTMLElement).style.transform).toBe(
+      'scaleX(-1)',
+    );
+  });
+
+  it('moves the text with the reading position', async () => {
+    const m = await mount(
+      shownView,
+      apiView,
+      Array.from({ length: 80 }, (_, i) => `line ${i}`),
+    );
+    await act(async () => m.core.dispatch({ type: 'setMode', mode: 'run' }));
+    const { core, clock } = m;
+    const shift = () => (live().querySelector('[data-live="text"]') as HTMLElement).style.transform;
+    const before = shift();
+    await act(async () => {
+      core.dispatch({ type: 'play' });
+      clock.advance(1000);
+      core.dispatch({ type: 'setSpeed', level: core.getState().speedLevel });
+    });
+    expect(shift()).not.toBe(before);
+  });
+
+  it('says whether the Output is on or off', async () => {
+    const { core } = await runMode();
+    const badge = () => live().querySelector('[data-testid="live-badge"]')!.textContent;
+    expect(badge()).toBe('Output off');
+    await act(async () => core.dispatch({ type: 'setOutput', on: true }));
+    expect(badge()).toBe('Output on');
+  });
+
+  it('measures the Script itself only while the Output is not showing', async () => {
+    const { core, dispatched } = await runMode();
+    expect(dispatched.some((c) => c.type === 'setViewport')).toBe(true);
+    expect(dispatched.some((c) => c.type === 'setLineExtents')).toBe(true);
+    dispatched.length = 0;
+    await act(async () => core.dispatch({ type: 'setOutput', on: true }));
+    await act(async () => core.dispatch({ type: 'editLine', line: 0, text: 'changed' }));
+    expect(dispatched.filter((c) => c.type !== 'setOutput' && c.type !== 'editLine')).toEqual([]);
+  });
+});
+
+describe('Run mode: transport', () => {
+  const runMode = async () => {
+    const m = await mount(
+      shownView,
+      apiView,
+      Array.from({ length: 80 }, (_, i) => `line ${i}`),
+    );
+    await act(async () => m.core.dispatch({ type: 'setMode', mode: 'run' }));
+    m.dispatched.length = 0;
+    return m;
+  };
+  const key = (name: string) =>
+    host.querySelector<HTMLButtonElement>(
+      `[data-testid="transport"] button[aria-label="${name}"]`,
+    )!;
+
+  it('plays and pauses with the same commands as every other surface', async () => {
+    const { core, dispatched } = await runMode();
+    await act(async () => key('Play').click());
+    expect(dispatched).toEqual([{ type: 'play' }]);
+    expect(core.getState().playing).toBe(true);
+    await act(async () => key('Pause').click());
+    expect(dispatched.at(-1)).toEqual({ type: 'pause' });
+    expect(core.getState().playing).toBe(false);
+  });
+
+  it('jumps a Screen back or forward and returns to Play start', async () => {
+    const { dispatched } = await runMode();
+    await act(async () => key('Back a Screen').click());
+    await act(async () => key('Forward a Screen').click());
+    await act(async () => key('Play start').click());
+    expect(dispatched).toEqual([
+      { type: 'jumpBack' },
+      { type: 'jumpForward' },
+      { type: 'returnToPlayStart' },
+    ]);
+  });
+
+  it('shows time left and position, and they update while playing', async () => {
+    const { core, clock } = await runMode();
+    const read = (id: string) => host.querySelector(`[data-testid="${id}"]`)!.textContent;
+    await act(async () => core.dispatch({ type: 'setSpeed', level: 2 }));
+    const left = read('time-left');
+    expect(left).toMatch(/^\d+:\d\d$/);
+    expect(read('position')).toBe('0%');
+    await act(async () => {
+      core.dispatch({ type: 'play' });
+      clock.advance(3000);
+      core.dispatch({ type: 'setSpeed', level: 2 });
+    });
+    expect(read('time-left')).not.toBe(left);
+    expect(read('position')).not.toBe('0%');
+  });
+
+  it('shows no time left while the speed is zero', async () => {
+    const { core } = await runMode();
+    await act(async () => core.dispatch({ type: 'setSpeed', level: 0 }));
+    expect(host.querySelector('[data-testid="time-left"]')!.textContent).toBe('--:--');
+  });
+});
+
+describe('Run mode: status panel', () => {
+  const status = () => host.querySelector('[data-testid="status-panel"]')!;
+  const item = (name: string) =>
+    Array.from(status().querySelectorAll('[data-status]')).find(
+      (el) => el.getAttribute('data-status') === name,
+    )!.textContent;
+
+  it('shows the state of Output, monitor, ShuttleXPress, Producer page and Preset', async () => {
+    const m = await mount({
+      ...shownView,
+      monitors: [{ id: 'prompter', label: 'Prompter monitor', isOperatorDisplay: false }],
+    });
+    await act(async () => {
+      m.core.dispatch({ type: 'savePreset', name: 'Pastor Dan' });
+      m.core.dispatch({ type: 'setMode', mode: 'run' });
+    });
+    expect(item('output')).toContain('Off');
+    expect(item('monitor')).toContain('Prompter monitor');
+    expect(item('shuttle')).toContain('Not connected');
+    expect(item('producer')).toContain('Listening');
+    expect(item('preset')).toContain('Pastor Dan');
+    await act(async () => m.core.dispatch({ type: 'setOutput', on: true }));
+    expect(item('output')).toContain('On');
+  });
+
+  it('says plainly when the Producer page could not start', async () => {
+    const m = await mount(shownView, { ...apiView, running: false, error: 'Port 4780 is in use' });
+    await act(async () => m.core.dispatch({ type: 'setMode', mode: 'run' }));
+    expect(item('producer')).toContain('Port 4780 is in use');
   });
 });

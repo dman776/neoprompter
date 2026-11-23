@@ -118,6 +118,32 @@ describe('the running app', () => {
     await expect.poll(() => operator.locator('main').getAttribute('data-mode')).toBe('edit');
   });
 
+  it('shows the Output in the Run mode Live view and drives the transport', async () => {
+    await dispatch({ type: 'scrollBy', lines: -10_000 });
+    await operator.getByRole('radio', { name: 'Run' }).click();
+    const live = operator.locator('[data-testid="live-view"]');
+    await expect
+      .poll(() => live.locator('[data-live="text"] > div').allTextContents())
+      .toEqual(await outputLines());
+    // The same picture: the Live view's text sits where the Output's does, scaled.
+    const shift = (page: Page, sel: string) =>
+      page.evaluate((s) => document.querySelector<HTMLElement>(s)!.style.transform, sel);
+    await expect
+      .poll(() => shift(operator, '[data-live="text"]'))
+      .toBe(await shift(output, '#text'));
+    await operator.getByRole('button', { name: 'Play', exact: true }).click();
+    await expect.poll(async () => (await state()).playing).toBe(true);
+    await expect
+      .poll(() => operator.locator('[data-testid="position"]').textContent())
+      .not.toBe('0%');
+    await operator.getByRole('button', { name: 'Pause', exact: true }).click();
+    await expect.poll(async () => (await state()).playing).toBe(false);
+    await operator.getByRole('button', { name: 'Play start' }).click();
+    await expect.poll(async () => (await state()).progress).toBe(0);
+    await operator.screenshot({ path: join(artifacts, 'operator-run-live.png') });
+    await operator.getByRole('radio', { name: 'Edit' }).click();
+  });
+
   it('switches the Output Off and On from the lamp, keeping the reading position', async () => {
     const before = (await state()).position;
     const lamp = operator.getByRole('switch', { name: 'Output' });

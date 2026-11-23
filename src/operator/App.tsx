@@ -4,6 +4,7 @@ import { Header } from './Header';
 import { StatusBar } from './StatusBar';
 import { Notifications } from './Notifications';
 import { Panel } from './ui/Panel';
+import { RunMode } from './RunMode';
 
 /** The Operator view: header, a body for the current mode, and a status bar. */
 export function App({ bridge }: { bridge: CoreBridge }) {
@@ -27,9 +28,7 @@ export function App({ bridge }: { bridge: CoreBridge }) {
             <p className="placeholder">The Script editor and library arrive here.</p>
           </Panel>
         ) : (
-          <Panel title="Live view">
-            <p className="placeholder">The Live view and transport keys arrive here.</p>
-          </Panel>
+          <RunMode state={state} bridge={bridge} outputBlocked={outputBlocked !== null} />
         )}
       </main>
       <StatusBar state={state} />

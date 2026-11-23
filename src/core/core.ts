@@ -201,6 +201,7 @@ export function createCore(options: CoreOptions = {}): Core {
       scriptRevision,
       position,
       progress,
+      remainingLines: Math.max(0, maxPosition() - position),
       speed: speedLevel * LINES_PER_SECOND_PER_LEVEL,
       speedLevel,
       playing,
