@@ -105,3 +105,7 @@ the one place behaviour lives; the windows are thin renderers of its state.
 - [docs/installers.md](docs/installers.md): building and installing
 - [docs/adr/](docs/adr/): architecture decisions (why Electron, React + Tiptap, the Script model)
 - [CODING_STANDARDS.md](CODING_STANDARDS.md): coding standards
+
+## License
+
+[MIT](LICENSE)

@@ -2,6 +2,7 @@
   "name": "neoprompter",
   "version": "0.1.0",
   "private": true,
+  "license": "MIT",
   "description": "Teleprompter for a church live production team",
   "main": "dist/main/main.js",
   "scripts": {
