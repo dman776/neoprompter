@@ -307,6 +307,13 @@
   margin: 12px 0 4px;
   color: var(--muted);
 }
+.pf-keys {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: flex-end;
+}
 .pf-chips {
   display: flex;
   flex-wrap: wrap;
@@ -347,4 +354,32 @@
   display: flex;
   justify-content: flex-end;
   padding: 10px 0 0;
+}
+
+.pf-capture {
+  padding: 5px 10px;
+  border: 1px dashed var(--accent);
+  border-radius: var(--radius);
+  color: var(--text);
+  text-align: center;
+}
+.pf-move {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  align-items: center;
+  justify-content: flex-end;
+}
+/* Keys sit beside their name on one line, so the eight actions and Reset fit without scrolling. */
+.pf-row:has(.pf-keys) {
+  grid-template-columns: 200px 1fr;
+  padding: 6px 0;
+}
+.pf-keys .np-button {
+  height: 26px;
+  padding: 0 10px;
+  white-space: nowrap;
+}
+.pf-move .pf-inline {
+  flex: none;
 }

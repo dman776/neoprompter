@@ -90,4 +90,45 @@ describe('Key bindings in the running app', () => {
     await settle();
     expect((await state()).playing).toBe(false);
   });
+
+  it('captures a key in Preferences, saves it, and the Operator view runs it', async () => {
+    await app.evaluate(({ Menu }) => {
+      Menu.getApplicationMenu()!
+        .items.find((i) => i.label === 'File')!
+        .submenu!.items.find((i) => i.label === 'Preferences')!
+        .click();
+    });
+    const prefs = await windowTitled('Preferences');
+    await prefs.setViewportSize({ width: 900, height: 640 }).catch(() => {});
+    await prefs.getByRole('button', { name: 'Controls', exact: true }).click();
+    await prefs.getByRole('tab', { name: 'Keyboard' }).click();
+    await prefs.getByRole('button', { name: 'Add key to Play start' }).click();
+    await expect.poll(() => prefs.getByText('Press a key…').count()).toBe(1);
+    await prefs.screenshot({ path: join(root, 'e2e', 'artifacts', 'key-capture-waiting.png') });
+    await prefs.keyboard.press('F7');
+    await expect.poll(() => prefs.getByText('Press a key…').count()).toBe(0);
+    await prefs.getByRole('list', { name: 'Keys for Play start' }).getByText('F7').waitFor();
+    // A key another action has asks before it moves.
+    await prefs.getByRole('button', { name: 'Add key to Speed up' }).click();
+    await prefs.keyboard.press('ArrowDown');
+    await prefs.getByText('Down arrow is Speed down. Move it here?').waitFor();
+    await prefs.screenshot({ path: join(root, 'e2e', 'artifacts', 'key-capture-move.png') });
+    await prefs.getByRole('button', { name: 'Cancel' }).click();
+    // The Operator view picks the new key up without a restart.
+    await setMode('run');
+    await settle();
+    await operator.bringToFront();
+    await operator.evaluate(() =>
+      (window as any).neoprompter.dispatch({ type: 'scrollBy', lines: 5 }),
+    );
+    const before = (await state()).playing;
+    await operator.keyboard.press('F7');
+    await settle();
+    // Play start rewinds to the start and does not start playing.
+    expect((await state()).playing).toBe(before);
+    expect(
+      await operator.evaluate(async () => (await (window as any).neoprompter.getState()).position),
+    ).toBeLessThan(5);
+    await prefs.close();
+  });
 });

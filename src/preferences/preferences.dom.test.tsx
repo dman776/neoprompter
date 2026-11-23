@@ -74,6 +74,14 @@ async function mount(
   const { bridge, dispatched } = createFakeBridge(core, {
     getKeyBindings: async () => keys.getKeyView(),
     onKeyBindings: (l) => keys.subscribeKeys(l),
+    addKey: async (action, key) => {
+      const result = keys.addKey(action, key);
+      return { result, view: keys.getKeyView() };
+    },
+    moveKey: async (action, key) => {
+      const result = keys.moveKey(action, key);
+      return { result, view: keys.getKeyView() };
+    },
     removeKey: async (action, key) => {
       keys.removeKey(action, key);
       return keys.getKeyView();
@@ -701,6 +709,137 @@ describe('Controls: Keyboard', () => {
         }),
     );
     expect(chips('Play start')).toEqual(['F6']);
+  });
+
+  const addKeyTo = (action: string) =>
+    click(host.querySelector(`button[aria-label="Add key to ${action}"]`));
+  const capture = (code: string, init: KeyboardEventInit = {}) =>
+    act(async () => {
+      document.body.dispatchEvent(
+        new KeyboardEvent('keydown', { code, bubbles: true, cancelable: true, ...init }),
+      );
+    });
+  const status = () => host.querySelector('[role="status"].pf-capture')?.textContent;
+  const button = (text: string) =>
+    Array.from(host.querySelectorAll('button')).find((b) => b.textContent === text) ?? null;
+
+  describe('capturing a key', () => {
+    it('Add key waits for a key, saves it at once and leaves capture mode', async () => {
+      const { keys } = await openKeyboard();
+      await addKeyTo('Play start');
+      expect(status()).toBe('Press a key…');
+      await capture('F5');
+      expect(chips('Play start')).toEqual(['F5']);
+      expect(status()).toBeUndefined();
+      expect(keys.getKeyView().table.returnToPlayStart).toHaveLength(1);
+    });
+
+    it('records the modifiers held, but a modifier alone is not a key', async () => {
+      await openKeyboard();
+      await addKeyTo('Play start');
+      await capture('ShiftLeft', { shiftKey: true });
+      await capture('MetaLeft', { metaKey: true });
+      expect(status()).toBe('Press a key…');
+      await capture('KeyJ', { ctrlKey: true, shiftKey: true });
+      expect(chips('Play start')).toEqual(['Ctrl + Shift + J']);
+    });
+
+    it('Esc cancels and changes nothing', async () => {
+      await openKeyboard();
+      await addKeyTo('Play start');
+      await capture('Escape');
+      expect(status()).toBeUndefined();
+      expect(chips('Play start')).toEqual([]);
+    });
+
+    it('clicking away cancels, and Add key on another action starts there', async () => {
+      await openKeyboard();
+      await addKeyTo('Play start');
+      await act(async () => {
+        host
+          .querySelector('.pf-head h2')!
+          .dispatchEvent(new Event('pointerdown', { bubbles: true }));
+      });
+      expect(status()).toBeUndefined();
+      await addKeyTo('Play start');
+      await act(async () => {
+        host
+          .querySelector('button[aria-label="Add key to Speed up"]')!
+          .dispatchEvent(new Event('pointerdown', { bubbles: true }));
+      });
+      await addKeyTo('Speed up');
+      await capture('F7');
+      expect(chips('Speed up')).toEqual(['Up arrow', 'F7']);
+      expect(chips('Play start')).toEqual([]);
+    });
+
+    it('a key the app keeps for itself shows why, and records nothing', async () => {
+      await openKeyboard();
+      await addKeyTo('Play start');
+      await capture('Tab');
+      expect(host.querySelector('main')!.textContent).toMatch(/Tab moves between controls/);
+      expect(chips('Play start')).toEqual([]);
+      expect(status()).toBeUndefined();
+      await addKeyTo('Play start');
+      await capture('KeyN', { metaKey: true });
+      expect(host.querySelector('main')!.textContent).toMatch(/used by a menu item/);
+      // The next try clears the message.
+      await addKeyTo('Play start');
+      expect(host.querySelector('main')!.textContent).not.toMatch(/menu item/);
+    });
+
+    it('a key on another action asks before moving it; Move transfers it', async () => {
+      await openKeyboard();
+      await addKeyTo('Speed up');
+      await capture('Space');
+      expect(host.querySelector('[role="alertdialog"]')!.textContent).toContain(
+        'Space is Play / Pause. Move it here?',
+      );
+      expect(chips('Play / Pause')).toEqual(['Space']);
+      await click(button('Move'));
+      expect(chips('Speed up')).toEqual(['Up arrow', 'Space']);
+      expect(chips('Play / Pause')).toEqual([]);
+      expect(host.querySelector('[role="alertdialog"]')).toBeNull();
+    });
+
+    it('Cancel on the Move prompt changes nothing', async () => {
+      await openKeyboard();
+      await addKeyTo('Speed up');
+      await capture('Space');
+      await click(button('Cancel'));
+      expect(host.querySelector('[role="alertdialog"]')).toBeNull();
+      expect(chips('Speed up')).toEqual(['Up arrow']);
+      expect(chips('Play / Pause')).toEqual(['Space']);
+    });
+
+    it('Esc closes the Move prompt too', async () => {
+      await openKeyboard();
+      await addKeyTo('Speed up');
+      await capture('Space');
+      await capture('Escape');
+      expect(host.querySelector('[role="alertdialog"]')).toBeNull();
+      expect(chips('Play / Pause')).toEqual(['Space']);
+    });
+
+    it('a key the action already has does nothing and ends capture', async () => {
+      await openKeyboard();
+      await addKeyTo('Play / Pause');
+      await capture('Space');
+      expect(chips('Play / Pause')).toEqual(['Space']);
+      expect(status()).toBeUndefined();
+    });
+
+    it('the key pressed does not run its action or reach anything else', async () => {
+      const { core } = await openKeyboard();
+      await addKeyTo('Speed up');
+      const seen: string[] = [];
+      const spy = (e: Event) => void seen.push((e as KeyboardEvent).code);
+      document.body.addEventListener('keydown', spy);
+      await capture('Space');
+      document.body.removeEventListener('keydown', spy);
+      expect(core.getState().playing).toBe(false);
+      expect(seen).toEqual([]);
+    });
   });
 
   it('leaves the Button mapping on its own tab', async () => {

@@ -1,10 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ACTION_LABELS,
   BUTTON_IDS,
+  chordFromEvent,
   chordLabel,
+  type ActionId,
   type ButtonMappingView,
   type KeyBindingsView,
+  type KeyChord,
 } from '../input';
 import { Button } from '../operator/ui/Button';
 import { Row } from './controls';
@@ -58,13 +61,27 @@ export function ButtonsTab({ bridge }: PageProps) {
   );
 }
 
+/** A key waiting for the Operator to say whether it moves from the action that has it. */
+interface PendingMove {
+  action: ActionId;
+  key: KeyChord;
+  owner: ActionId;
+}
+
 /**
  * The Key bindings: each action with the keys that run it, in Run mode. The main process owns
  * the table (the Operator view reads the same one), so a change is sent there and the page
- * follows what comes back.
+ * follows what comes back. "Add key" waits for the next key pressed and saves it at once; Esc or
+ * a click elsewhere cancels. A key another action has is moved only when the Operator says so.
  */
 export function KeyboardTab({ bridge }: PageProps) {
   const [view, setView] = useState<KeyBindingsView | null>(null);
+  const [capturing, setCapturing] = useState<ActionId | null>(null);
+  const [pending, setPending] = useState<PendingMove | null>(null);
+  const [refused, setRefused] = useState<{ action: ActionId; reason: string } | null>(null);
+  // A key's release must not press the button that was focused when it went down (Space does).
+  const swallowUp = useRef<string | null>(null);
+  const busy = useRef(false);
   useEffect(() => {
     let live = true;
     bridge.onKeyBindings((v) => live && setView(v));
@@ -73,6 +90,58 @@ export function KeyboardTab({ bridge }: PageProps) {
       live = false;
     };
   }, [bridge]);
+
+  const finish = () => {
+    setCapturing(null);
+    setPending(null);
+  };
+
+  useEffect(() => {
+    if (capturing === null) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (e.code === 'Escape') return finish();
+      if (e.repeat || pending || busy.current) return;
+      const key = chordFromEvent(e);
+      if (!key) return; // a modifier alone is not a key yet
+      swallowUp.current = e.code;
+      busy.current = true;
+      void bridge
+        .addKey(capturing, key)
+        .then(({ result, view: next }) => {
+          setView(next);
+          if (result.status === 'conflict') {
+            setPending({ action: capturing, key, owner: result.action });
+            return;
+          }
+          if (result.status === 'refused') setRefused({ action: capturing, reason: result.reason });
+          finish();
+        })
+        .finally(() => (busy.current = false));
+    };
+    const onPointerDown = (e: Event) => {
+      if (!(e.target as HTMLElement | null)?.closest?.('[data-capture]')) finish();
+    };
+    window.addEventListener('keydown', onKeyDown, true);
+    window.addEventListener('pointerdown', onPointerDown, true);
+    return () => {
+      window.removeEventListener('keydown', onKeyDown, true);
+      window.removeEventListener('pointerdown', onPointerDown, true);
+    };
+  }, [bridge, capturing, pending]);
+
+  useEffect(() => {
+    const onKeyUp = (e: KeyboardEvent) => {
+      if (swallowUp.current !== e.code) return;
+      swallowUp.current = null;
+      e.preventDefault();
+      e.stopPropagation();
+    };
+    window.addEventListener('keyup', onKeyUp, true);
+    return () => window.removeEventListener('keyup', onKeyUp, true);
+  }, []);
+
   if (!view) return null;
 
   return (
@@ -80,25 +149,75 @@ export function KeyboardTab({ bridge }: PageProps) {
       {view.actions.map((action) => {
         const name = ACTION_LABELS[action] ?? action;
         const keys = view.table[action] ?? [];
+        const waiting = capturing === action;
+        const move = pending?.action === action ? pending : null;
         return (
-          <Row key={action} title={name}>
-            <div className="pf-chips" role="list" aria-label={`Keys for ${name}`}>
-              {keys.length === 0 && <small className="pf-fixed">No keys</small>}
-              {keys.map((key) => {
-                const label = chordLabel(key);
-                return (
-                  <span className="pf-chip" role="listitem" key={label}>
-                    {label}
-                    <button
-                      type="button"
-                      aria-label={`Remove ${label} from ${name}`}
-                      onClick={() => void bridge.removeKey(action, key).then(setView)}
-                    >
-                      ×
-                    </button>
+          <Row
+            key={action}
+            title={name}
+            help={refused?.action === action ? refused.reason : undefined}
+          >
+            <div className="pf-keys">
+              <div className="pf-chips" role="list" aria-label={`Keys for ${name}`}>
+                {keys.length === 0 && !waiting && <small className="pf-fixed">No keys</small>}
+                {keys.map((key) => {
+                  const label = chordLabel(key);
+                  return (
+                    <span className="pf-chip" role="listitem" key={label}>
+                      {label}
+                      <button
+                        type="button"
+                        aria-label={`Remove ${label} from ${name}`}
+                        onClick={() => void bridge.removeKey(action, key).then(setView)}
+                      >
+                        ×
+                      </button>
+                    </span>
+                  );
+                })}
+              </div>
+              {move ? (
+                <div
+                  className="pf-move"
+                  data-capture
+                  role="alertdialog"
+                  aria-label="Move this key?"
+                >
+                  <span>
+                    {chordLabel(move.key)} is {ACTION_LABELS[move.owner] ?? move.owner}. Move it
+                    here?
                   </span>
-                );
-              })}
+                  <div className="pf-inline">
+                    <Button
+                      variant="primary"
+                      onClick={() =>
+                        void bridge.moveKey(move.action, move.key).then(({ view: next }) => {
+                          setView(next);
+                          finish();
+                        })
+                      }
+                    >
+                      Move
+                    </Button>
+                    <Button onClick={finish}>Cancel</Button>
+                  </div>
+                </div>
+              ) : waiting ? (
+                <span className="pf-capture" data-capture role="status">
+                  Press a key…
+                </span>
+              ) : (
+                <Button
+                  aria-label={`Add key to ${name}`}
+                  onClick={() => {
+                    setRefused(null);
+                    setPending(null);
+                    setCapturing(action);
+                  }}
+                >
+                  Add key
+                </Button>
+              )}
             </div>
           </Row>
         );
