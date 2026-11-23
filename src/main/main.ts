@@ -171,6 +171,8 @@ app.whenReady().then(() => {
     output.setWindowed(windowed);
     return output.getView();
   });
+  // The Output window follows the core's Output switch, which is Off at every launch.
+  core.subscribe((state) => output.setOutputOn(state.outputOn));
   screen.on('display-added', () => output.refresh());
   screen.on('display-removed', () => output.refresh());
   screen.on('display-metrics-changed', () => output.refresh());

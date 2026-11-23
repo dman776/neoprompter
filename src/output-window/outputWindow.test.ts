@@ -36,6 +36,7 @@ function setup(initialDisplays: Display[], initialSettings?: OutputSettings) {
       },
     },
   });
+  manager.setOutputOn(true);
   return {
     manager,
     log,
@@ -102,6 +103,8 @@ describe('Output monitor selection', () => {
     t.manager.chooseMonitor('prompter');
     expect(t.manager.getView()).toEqual({
       windowed: false,
+      outputOn: true,
+      blocked: null,
       chosenMonitorId: 'prompter',
       missingMonitorId: null,
       monitors: [
@@ -156,5 +159,46 @@ describe('remembered monitor missing', () => {
     t.setDisplays([laptop]);
     t.manager.setWindowed(true);
     expect(t.manager.getView().missingMonitorId).toBeNull();
+  });
+});
+
+describe('the Output switch', () => {
+  it('stays closed while Off, opens when switched On and closes when switched Off', () => {
+    const t = setup([laptop, prompter]);
+    t.manager.setOutputOn(false);
+    t.manager.chooseMonitor('prompter');
+    expect(t.isOpen()).toBe(false);
+    t.manager.setOutputOn(true);
+    expect(t.log.at(-1)).toEqual({ mode: 'fullscreen', bounds: prompter.bounds });
+    t.manager.setOutputOn(false);
+    expect(t.isOpen()).toBe(false);
+  });
+
+  it('opens a window for Windowed Output when switched On', () => {
+    const t = setup([laptop]);
+    t.manager.setOutputOn(false);
+    t.manager.setWindowed(true);
+    expect(t.isOpen()).toBe(false);
+    t.manager.setOutputOn(true);
+    expect(t.log.at(-1)).toEqual({ mode: 'windowed' });
+  });
+
+  it('says why it stays closed when switched On', () => {
+    const t = setup([laptop, prompter]);
+    expect(t.manager.getView().blocked).toBe('no-monitor');
+    t.manager.chooseMonitor('laptop');
+    expect(t.manager.getView().blocked).toBe('operator-display');
+    t.manager.chooseMonitor('prompter');
+    expect(t.manager.getView().blocked).toBeNull();
+    t.setDisplays([laptop]);
+    expect(t.manager.getView().blocked).toBe('missing-monitor');
+    t.manager.setWindowed(true);
+    expect(t.manager.getView().blocked).toBeNull();
+  });
+
+  it('reports nothing blocked while Off', () => {
+    const t = setup([laptop]);
+    t.manager.setOutputOn(false);
+    expect(t.manager.getView().blocked).toBeNull();
   });
 });

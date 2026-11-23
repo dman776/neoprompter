@@ -68,8 +68,8 @@ export type Command =
   | { type: 'savePreset'; name: string }
   | { type: 'loadPreset'; name: string }
   | { type: 'deletePreset'; name: string }
-  /** Operator confirms after a restore; until then the Output stays blank. */
-  | { type: 'confirmOutput' }
+  /** Switch the one Output on or off. Off keeps the reading position. Never persisted. */
+  | { type: 'setOutput'; on: boolean }
   /** Switch the Operator view between Edit mode and Run mode (persisted). */
   | { type: 'setMode'; mode: Mode }
   /**
@@ -165,8 +165,8 @@ export interface CoreState {
   /** Names of saved Presets. */
   presets: string[];
   activePreset: string | null;
-  /** True after a restore until the Operator confirms; the Output renders nothing. */
-  outputBlank: boolean;
+  /** Whether the Output is switched on. Always Off at launch. */
+  outputOn: boolean;
   /** Which mode the Operator view is in. */
   mode: Mode;
   /** Visible Notifications, newest first. Operator view only; see `outputState`. */

@@ -24,6 +24,10 @@ async function windowTitled(part: string): Promise<Page> {
   throw new Error(`No window titled "${part}"`);
 }
 
+const outputWindows = async () =>
+  (await Promise.all(app.windows().map((w) => w.title()))).filter((t) => t.includes('Output'))
+    .length;
+
 /** Runs a core command from the Operator view, exactly as its buttons do. */
 const dispatch = (command: object) =>
   operator.evaluate((c) => (window as any).neoprompter.dispatch(c), command);
@@ -45,8 +49,11 @@ beforeAll(async () => {
     env: { ...process.env, NEOPROMPTER_USER_DATA: userData },
   });
   operator = await windowTitled('Operator view');
+  // The Output starts Off: no Output window until the Operator switches it On.
+  expect((await state()).outputOn).toBe(false);
+  expect(await outputWindows()).toBe(0);
+  await operator.getByRole('switch', { name: 'Output' }).click();
   output = await windowTitled('Output');
-  await dispatch({ type: 'confirmOutput' });
   await dispatch({
     type: 'saveScript',
     name: 'Smoke',
@@ -54,7 +61,6 @@ beforeAll(async () => {
   });
   const id = (await state()).library.find((e: { name: string }) => e.name === 'Smoke').id;
   await dispatch({ type: 'loadScript', id });
-  await dispatch({ type: 'confirmOutput' });
 });
 
 afterAll(async () => {
@@ -110,6 +116,49 @@ describe('the running app', () => {
     await operator.screenshot({ path: join(artifacts, 'operator-run.png') });
     await operator.getByRole('radio', { name: 'Edit' }).click();
     await expect.poll(() => operator.locator('main').getAttribute('data-mode')).toBe('edit');
+  });
+
+  it('switches the Output Off and On from the lamp, keeping the reading position', async () => {
+    const before = (await state()).position;
+    const lamp = operator.getByRole('switch', { name: 'Output' });
+    await operator.screenshot({ path: join(artifacts, 'operator-output-on.png') });
+    await lamp.click();
+    await expect.poll(outputWindows).toBe(0);
+    expect((await state()).position).toBe(before);
+    await operator.screenshot({ path: join(artifacts, 'operator-output-off.png') });
+    await lamp.click();
+    await expect.poll(outputWindows).toBe(1);
+    output = await windowTitled('Output');
+    await expect.poll(async () => (await outputLines()).length).toBe(3);
+  });
+
+  it('shows a Notification over the content without moving anything, and dismisses it', async () => {
+    const rects = () =>
+      operator.evaluate(() =>
+        ['header', 'main', 'footer'].map((tag) => {
+          const r = document.querySelector(tag)!.getBoundingClientRect();
+          return [r.x, r.y, r.width, r.height];
+        }),
+      );
+    for (const mode of ['edit', 'run'] as const) {
+      await dispatch({ type: 'setMode', mode });
+      await expect.poll(() => operator.locator('main').getAttribute('data-mode')).toBe(mode);
+      const before = await rects();
+      await dispatch({ type: 'notify', text: 'Wrap up in two minutes', durationMs: 60_000 });
+      await dispatch({ type: 'notify', text: 'Second message', durationMs: 60_000 });
+      await expect.poll(() => operator.locator('.notification').count()).toBe(2);
+      expect(await rects()).toEqual(before);
+      await new Promise((r) => setTimeout(r, 400)); // let the slide-in finish before the picture
+      await operator.screenshot({ path: join(artifacts, `operator-notification-${mode}.png`) });
+      // Nothing reaches the Output.
+      expect(await output.evaluate(() => document.body.innerText)).not.toContain('Wrap up');
+      await operator.getByRole('button', { name: 'Dismiss' }).first().click();
+      await expect.poll(() => operator.locator('.notification').count()).toBe(1);
+      expect(await rects()).toEqual(before);
+      await operator.getByRole('button', { name: 'Dismiss' }).click();
+      await expect.poll(() => operator.locator('.notification').count()).toBe(0);
+    }
+    await dispatch({ type: 'setMode', mode: 'edit' });
   });
 
   describe('the Producer page with a token set', () => {
