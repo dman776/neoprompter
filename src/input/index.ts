@@ -58,6 +58,8 @@ const KEYS: Record<string, ActionId> = {
   ArrowDown: 'speedDown',
   PageUp: 'jumpBack',
   PageDown: 'jumpForward',
+  ArrowLeft: 'jumpBack',
+  ArrowRight: 'jumpForward',
 };
 
 export function keyToAction(key: string): ActionId | null {

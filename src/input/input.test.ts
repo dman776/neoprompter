@@ -129,6 +129,8 @@ describe('keyboard and mouse', () => {
     expect(keyToAction('ArrowDown')).toBe('speedDown');
     expect(keyToAction('PageUp')).toBe('jumpBack');
     expect(keyToAction('PageDown')).toBe('jumpForward');
+    expect(keyToAction('ArrowLeft')).toBe('jumpBack');
+    expect(keyToAction('ArrowRight')).toBe('jumpForward');
     expect(keyToAction('x')).toBeNull();
   });
 

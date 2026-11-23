@@ -6,15 +6,17 @@ import { Key } from './ui/Key';
 import { BackScreenIcon, ForwardScreenIcon, PauseIcon, PlayIcon, PlayStartIcon } from './ui/icons';
 
 /**
- * Space plays and pauses; Page Up and Page Down go back and forward a Screen (the key table is
- * `keyToAction` in src/input, the same actions the Virtual shuttle's buttons run). The arrow keys
- * are `useSpeedKeys`. A focused button or text field keeps its own keys.
+ * Space plays and pauses; the Left arrow and Page Up go back a Screen, the Right arrow and Page
+ * Down go forward a Screen (the key table is `keyToAction` in src/input, the same actions the
+ * Virtual shuttle's buttons run). The Up and Down arrows set the speed (`useSpeedKeys`). A focused
+ * text field keeps its own keys, and a focused button keeps Space.
  */
 export function useTransportKeys(state: CoreState, dispatch: (command: Command) => void) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey || e.altKey || isTyping(e.target)) return;
-      if ((e.target as HTMLElement | null)?.tagName === 'BUTTON') return;
+      // A focused button keeps Space (it presses it); the other keys still reach the prompter.
+      if ((e.target as HTMLElement | null)?.tagName === 'BUTTON' && e.key === ' ') return;
       const action = keyToAction(e.key);
       const command: Command | null =
         action === 'playPause'

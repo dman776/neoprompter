@@ -832,6 +832,31 @@ describe('the running app', () => {
     expect(await position()).toBeCloseTo(beforeClick, 5);
   });
 
+  it('goes forward and back a Screen with the Right and Left arrow keys', async () => {
+    await dispatch({ type: 'setMode', mode: 'run' });
+    // Big text, so the Script is many Screens long and a Screen jump is not cut short by the end.
+    const fontBefore = (await state()).appearance.fontSize;
+    await dispatch({ type: 'setAppearance', changes: { fontSize: 96 } });
+    await vi.waitFor(async () => expect((await state()).viewportLines).toBe(8));
+    await dispatch({ type: 'scrollBy', lines: -10_000 });
+    await operator.getByTestId('live-view').click();
+    const position = async () => (await state()).position;
+    const start = await position();
+    // A Screen is the Output's visible height in lines, minus one.
+    const screen = (await state()).viewportLines - 1;
+    await operator.keyboard.press('ArrowRight');
+    await vi.waitFor(async () => expect(await position()).toBeCloseTo(start + screen, 1));
+    const forward = await position();
+    // Still works with a button holding the focus (the Play key was just clicked in real use).
+    await operator.getByRole('button', { name: /Forward a Screen/i }).focus();
+    await operator.keyboard.press('ArrowRight');
+    await vi.waitFor(async () => expect(await position()).toBeGreaterThan(forward));
+    await operator.keyboard.press('ArrowLeft');
+    await operator.keyboard.press('ArrowLeft');
+    await vi.waitFor(async () => expect(await position()).toBeCloseTo(start, 1));
+    await dispatch({ type: 'setAppearance', changes: { fontSize: fontBefore } });
+  });
+
   describe('the Producer page with a token set', () => {
     const port = 47811;
     const TOKEN = 'e2e-token';
