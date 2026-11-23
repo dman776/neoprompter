@@ -90,6 +90,8 @@ export function createOutputWindowManager(deps: {
   displays: DisplayProvider;
   store: OutputSettingsStore;
   host: OutputHost;
+  /** Whether Windowed Output follows the display count (default true); tests pin it by hand. */
+  followDisplayCount?: boolean;
 }): OutputWindowManager {
   const { displays, store, host } = deps;
   let settings = store.load();
@@ -128,6 +130,7 @@ export function createOutputWindowManager(deps: {
    */
   let lastDisplayCount: number | null = null;
   function followDisplayCount(): void {
+    if (deps.followDisplayCount === false) return;
     const count = displays.list().length;
     if (count === lastDisplayCount) return;
     lastDisplayCount = count;

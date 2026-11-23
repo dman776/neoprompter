@@ -170,6 +170,8 @@ function retireOutput(): void {
 function createOutputManager() {
   const file = path.join(app.getPath('userData'), 'output-settings.json');
   return createOutputWindowManager({
+    // The e2e tests seed Windowed Output themselves, whatever displays the machine has.
+    followDisplayCount: !process.env.NEOPROMPTER_NO_AUTO_WINDOWED,
     displays: {
       list: () => {
         const real = screen.getAllDisplays().map((d) => ({ id: String(d.id), bounds: d.bounds }));
