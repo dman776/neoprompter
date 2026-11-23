@@ -4,7 +4,7 @@ import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { _electron as electron, type ElectronApplication, type Page } from 'playwright-core';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { makeDocx, para, run } from '../src/import/fixtures';
 
 const root = process.cwd();
@@ -51,6 +51,13 @@ afterAll(async () => {
   rmSync(drop, { recursive: true, force: true });
 });
 
+const libraryNames = () =>
+  operator.evaluate(async () =>
+    ((await (window as any).neoprompter.getState()).library as { name: string }[]).map(
+      (s) => s.name,
+    ),
+  );
+
 describe('the Watched folder in the running app', () => {
   it('Imports the Word file at startup and moves it into imported/', async () => {
     const library = await operator.evaluate(async () =>
@@ -67,5 +74,16 @@ describe('the Watched folder in the running app', () => {
   it('leaves a file that cannot be Imported, and other file types, where they are', () => {
     expect(existsSync(join(drop, 'Broken.doc'))).toBe(true);
     expect(existsSync(join(drop, 'notes.txt'))).toBe(true);
+  });
+
+  it('Imports a file dropped in while the app runs', async () => {
+    writeFileSync(join(drop, 'Live.docx'), makeDocx(para([run('Dropped while running')])));
+    await vi.waitFor(async () => expect(await libraryNames()).toContain('Live'), {
+      timeout: 10_000,
+      interval: 250,
+    });
+    expect(existsSync(join(drop, 'Live.docx'))).toBe(false);
+    expect(existsSync(join(drop, 'imported', 'Live.docx'))).toBe(true);
+    await operator.screenshot({ path: join(artifacts, 'watched-folder-live-drop.png') });
   });
 });

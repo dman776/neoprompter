@@ -62,6 +62,8 @@ export interface WatchedFolderFs {
   listFiles(dir: string): string[] | null;
   readFile(path: string): Uint8Array;
   exists(path: string): boolean;
+  /** Size and modified time of a file, or null when it is not there. */
+  stat(path: string): { size: number; modifiedMs: number } | null;
   /** Moves a file, creating the destination's folder. */
   moveFile(from: string, to: string): void;
 }
@@ -72,6 +74,8 @@ export interface WatchedFolderResult {
   imported: string[];
   /** Files left where they were, each with a plain reason. */
   failed: Array<{ file: string; message: string }>;
+  /** Files not touched yet because they may still be being copied in. */
+  waiting: string[];
 }
 
 /** The name of the subfolder that Imported files move into. */
@@ -109,6 +113,8 @@ export interface WatchedFolderDeps {
   fs: WatchedFolderFs;
   core: Pick<Core, 'dispatch' | 'getState'>;
   importDocument: (bytes: Uint8Array, fileName: string) => ImportResult;
+  /** Says whether a file is finished arriving; a file that is not is skipped and reported as waiting. Omitted, every file is ready. */
+  isReady?: (file: string) => boolean;
 }
 
 /**
@@ -119,13 +125,17 @@ export interface WatchedFolderDeps {
  */
 export function importWatchedFolder(folder: string, deps: WatchedFolderDeps): WatchedFolderResult {
   const { fs, core } = deps;
-  const result: WatchedFolderResult = { imported: [], failed: [] };
+  const result: WatchedFolderResult = { imported: [], failed: [], waiting: [] };
   if (core.getState().mode !== 'edit') return result;
   const files = fs.listFiles(folder);
   if (!files) return result;
 
   for (const file of files.filter(isCandidate).sort()) {
     const from = fs.join(folder, file);
+    if (deps.isReady && !deps.isReady(file)) {
+      result.waiting.push(file);
+      continue;
+    }
     let imported: ImportResult;
     try {
       imported = deps.importDocument(fs.readFile(from), file);
@@ -167,4 +177,80 @@ export function importWatchedFolder(folder: string, deps: WatchedFolderDeps): Wa
     result.imported.push(name);
   }
   return result;
+}
+
+/** Tells the watcher when something in a folder changed. Returns a function that stops watching. */
+export interface FolderChangeSource {
+  watch(dir: string, onChange: () => void): () => void;
+}
+
+/** Runs `fn` after `ms`. Returns a function that cancels it. */
+export interface Scheduler {
+  after(ms: number, fn: () => void): () => void;
+}
+
+/** How long a file's size and modified time must stay the same before it counts as arrived. */
+export const SETTLE_MS = 1000;
+
+export interface FolderWatcherDeps extends Omit<WatchedFolderDeps, 'isReady'> {
+  changes: FolderChangeSource;
+  scheduler: Scheduler;
+  /** Called after each pass that did something. */
+  onResult?: (result: WatchedFolderResult) => void;
+}
+
+export interface FolderWatcher {
+  /** Watches this folder (stopping any earlier one) and Imports what is already in it; null stops. */
+  setFolder(folder: string | null): void;
+}
+
+/**
+ * Keeps the Watched folder Imported while the app runs. A change starts a check after
+ * SETTLE_MS; a file whose size or modified time moved since the last look is left for the next
+ * check, so a file still being copied in is never Imported half-written.
+ */
+export function createFolderWatcher(deps: FolderWatcherDeps): FolderWatcher {
+  let stopWatching: (() => void) | null = null;
+  let cancelCheck: (() => void) | null = null;
+  let looked = new Map<string, string>();
+
+  const pass = (folder: string, settled: boolean) => {
+    const result = importWatchedFolder(folder, {
+      ...deps,
+      isReady: settled
+        ? (file) => {
+            const path = deps.fs.join(folder, file);
+            const now = deps.fs.stat(path);
+            const key = now ? `${now.size}:${now.modifiedMs}` : '';
+            const same = looked.get(path) === key && key !== '';
+            looked.set(path, key);
+            return same;
+          }
+        : undefined,
+    });
+    if (result.imported.length || result.failed.length) deps.onResult?.(result);
+    return result;
+  };
+
+  const schedule = (folder: string) => {
+    if (cancelCheck) return;
+    cancelCheck = deps.scheduler.after(SETTLE_MS, () => {
+      cancelCheck = null;
+      const result = pass(folder, true);
+      if (result.waiting.length > 0) schedule(folder);
+    });
+  };
+
+  return {
+    setFolder(folder) {
+      stopWatching?.();
+      stopWatching = null;
+      cancelCheck?.();
+      cancelCheck = null;
+      looked = new Map();
+      if (!folder) return;
+      stopWatching = deps.changes.watch(folder, () => schedule(folder));
+      pass(folder, false);
+    },
+  };
 }

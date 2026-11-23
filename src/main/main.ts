@@ -11,8 +11,9 @@ import { createJsonFile, libraryFileIo } from './jsonFile';
 import { createApiController } from './apiController';
 import { createFileQuickMessageStore } from './fileQuickMessageStore';
 import { createFileWatchedFolderStore } from './fileWatchedFolderStore';
-import { createWatchedFolderSettings, importWatchedFolder } from '../watched-folder';
-import { watchedFolderFs } from './watchedFolderFs';
+import { createWatchedFolderSettings } from '../watched-folder';
+import { createFolderWatcher } from '../watched-folder';
+import { folderChanges, realScheduler, watchedFolderFs } from './watchedFolderFs';
 import { createFileApiSettingsStore } from './fileApiSettingsStore';
 import { createFileButtonMappingStore } from './fileButtonMappingStore';
 import { createInputService, type ActionId, type ButtonId, type DeviceEvent } from '../input';
@@ -263,13 +264,26 @@ app.whenReady().then(() => {
     },
   });
   ipcMain.handle(IPC.watchedFolderGet, () => watchedFolder.getView());
-  ipcMain.handle(IPC.watchedFolderChoose, () => watchedFolder.choose());
-  ipcMain.handle(IPC.watchedFolderClear, () => watchedFolder.clear());
-  // Files that arrived while the app was closed. (Live watching and messages come later.)
-  const startupFolder = watchedFolder.getView().path;
-  if (startupFolder) {
-    importWatchedFolder(startupFolder, { fs: watchedFolderFs, core, importDocument });
-  }
+  // Imports what is in the folder now (including files that arrived while the app was closed)
+  // and whatever is dropped in while the app runs. Messages come later.
+  const folderWatcher = createFolderWatcher({
+    fs: watchedFolderFs,
+    core,
+    importDocument,
+    changes: folderChanges,
+    scheduler: realScheduler,
+  });
+  ipcMain.handle(IPC.watchedFolderChoose, async () => {
+    const view = await watchedFolder.choose();
+    folderWatcher.setFolder(view.path);
+    return view;
+  });
+  ipcMain.handle(IPC.watchedFolderClear, () => {
+    const view = watchedFolder.clear();
+    folderWatcher.setFolder(null);
+    return view;
+  });
+  folderWatcher.setFolder(watchedFolder.getView().path);
 
   // Input: every device (the Virtual shuttle now, the real ShuttleXPress later) sends DeviceEvents
   // here; one mapper and one saved button mapping serve them all.

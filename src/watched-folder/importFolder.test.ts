@@ -21,6 +21,7 @@ function fakeFs(files: Record<string, string>) {
     },
     readFile: (p) => new TextEncoder().encode(disk.get(p) ?? ''),
     exists: (p) => disk.has(p),
+    stat: (p) => (disk.has(p) ? { size: disk.get(p)!.length, modifiedMs: 0 } : null),
     moveFile(from, to) {
       disk.set(to, disk.get(from)!);
       disk.delete(from);
@@ -117,7 +118,7 @@ describe('importWatchedFolder', () => {
   it('does nothing in Run mode', () => {
     const { core, fs, run } = setup({ '/Drop/Sunday.docx': 'sunday' });
     core.dispatch({ type: 'setMode', mode: 'run' });
-    expect(run()).toEqual({ imported: [], failed: [] });
+    expect(run()).toEqual({ imported: [], failed: [], waiting: [] });
     expect(names(core)).toEqual([]);
     expect(fs.disk.has('/Drop/Sunday.docx')).toBe(true);
   });
@@ -130,7 +131,7 @@ describe('importWatchedFolder', () => {
       core,
       importDocument: fakeImport,
     });
-    expect(result).toEqual({ imported: [], failed: [] });
+    expect(result).toEqual({ imported: [], failed: [], waiting: [] });
   });
 
   it('Imports a file only once across two passes', () => {
