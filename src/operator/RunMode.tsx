@@ -7,8 +7,8 @@ import { Transport, useTransportKeys } from './Transport';
 import { useApiView, useOutputView, type CoreBridge } from './useCoreState';
 
 /**
- * Run mode: the large Live view with the transport under it, and the right-hand column.
- * The speed meter sits on the left and the dial in the transport; the empty `data-slot` box in the
+ * Run mode: the large Live view with the short transport under it, the speed meter on the left
+ * (also the mouse control for speed), and the right-hand column. The `data-slot` box in the
  * right-hand column is where the Script lock goes.
  */
 export function RunMode({
@@ -30,7 +30,7 @@ export function RunMode({
   return (
     <div className="run" data-collapsed={columnCollapsed ? 'true' : undefined}>
       <div className="run-slot run-slot-meter" data-slot="speed-meter">
-        <SpeedMeter level={state.speedLevel} />
+        <SpeedMeter state={state} dispatch={bridge.dispatch} />
       </div>
       <div className="run-center">
         <div className="run-bezel">

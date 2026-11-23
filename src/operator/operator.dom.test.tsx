@@ -456,7 +456,7 @@ describe('Run mode: status panel', () => {
   });
 });
 
-describe('Run mode: speed meter, dial and arrow keys', () => {
+describe('Run mode: the speed meter, the direction indicator and arrow keys', () => {
   const runMode = async () => {
     const m = await mount(
       shownView,
@@ -473,6 +473,22 @@ describe('Run mode: speed meter, dial and arrow keys', () => {
       Number(s.getAttribute('data-fill')),
     );
   const dial = () => host.querySelector('[role="slider"][aria-label="Speed"]')!;
+  // jsdom has no layout: give the meter's lit column a 200px height starting at y 100.
+  const sized = () => {
+    const bar = dial() as HTMLElement;
+    bar.getBoundingClientRect = () =>
+      ({
+        top: 100,
+        height: 200,
+        bottom: 300,
+        left: 0,
+        right: 26,
+        width: 26,
+        x: 0,
+        y: 100,
+      }) as DOMRect;
+    return bar;
+  };
   const pointer = (el: Element, type: string, clientY: number) =>
     act(async () => {
       el.dispatchEvent(new MouseEvent(type, { bubbles: true, clientY, button: 0 }));
@@ -501,22 +517,48 @@ describe('Run mode: speed meter, dial and arrow keys', () => {
     expect(f.slice(4)).toEqual([0, 0, 0, 0, 0, 0]);
   });
 
-  it('the dial reports the level as a slider value', async () => {
+  it('the meter is the speed control and reports the level as a slider value', async () => {
     await runMode();
     expect(dial().getAttribute('aria-valuenow')).toBe('3.4');
     expect(dial().getAttribute('aria-valuemax')).toBe('10');
+    expect(dial().getAttribute('aria-valuetext')).toBe('1.70 lines per second');
   });
 
-  it('dragging the dial up raises the speed continuously, and down lowers it', async () => {
+  it('has no speed dial: the speed lives on the left', async () => {
+    await runMode();
+    expect(host.querySelector('[data-slot="speed-dial"]')).toBeNull();
+    expect(host.querySelector('.speed-dial')).toBeNull();
+    expect(host.querySelectorAll('[role="slider"][aria-label="Speed"]')).toHaveLength(1);
+  });
+
+  it('sets the speed from where the meter is pressed, top fastest and bottom stopped', async () => {
     const { core } = await runMode();
-    await pointer(dial(), 'pointerdown', 200);
-    await pointer(dial(), 'pointermove', 158);
-    expect(core.getState().speedLevel).toBeCloseTo(6.4);
-    await pointer(dial(), 'pointermove', 242);
-    expect(core.getState().speedLevel).toBeCloseTo(0.4);
-    await pointer(dial(), 'pointerup', 242);
-    await pointer(dial(), 'pointermove', 100);
-    expect(core.getState().speedLevel).toBeCloseTo(0.4);
+    const bar = sized();
+    await pointer(bar, 'pointerdown', 100);
+    expect(core.getState().speedLevel).toBe(10);
+    await pointer(bar, 'pointermove', 200);
+    expect(core.getState().speedLevel).toBeCloseTo(5);
+    await pointer(bar, 'pointermove', 250);
+    expect(core.getState().speedLevel).toBeCloseTo(2.5);
+    await pointer(bar, 'pointermove', 9999);
+    expect(core.getState().speedLevel).toBe(0);
+    await pointer(bar, 'pointerup', 9999);
+    await pointer(bar, 'pointermove', 120);
+    expect(core.getState().speedLevel).toBe(0);
+  });
+
+  it('shows the direction, FWD until it plays back', async () => {
+    const { core } = await runMode();
+    const direction = () => host.querySelector<HTMLElement>('[data-testid="direction"]')!;
+    expect(direction().textContent).toContain('FWD');
+    expect(direction().dataset.direction).toBe('forward');
+    await act(async () => core.dispatch({ type: 'scrollBy', lines: 20 }));
+    await act(async () => core.dispatch({ type: 'play', direction: 'reverse' }));
+    expect(direction().dataset.direction).toBe('reverse');
+    expect(direction().querySelector('[data-active="true"]')!.textContent).toBe('BACK');
+    await act(async () => core.dispatch({ type: 'pause' }));
+    expect(direction().dataset.direction).toBe('forward');
+    expect(direction().querySelector('[data-active="true"]')!.textContent).toBe('FWD');
   });
 
   it('arrow keys nudge the speed, Shift nudges more, while playing', async () => {
@@ -636,6 +678,26 @@ describe('Run mode: scrolling the Live view with the mouse', () => {
     expect(core.getState().playing).toBe(false);
     await pointer('pointerup', 180);
     expect(core.getState().playing).toBe(true);
+  });
+
+  it('resumes a Script that was playing back in reverse, still in reverse', async () => {
+    const { core, dispatched } = await runMode();
+    core.dispatch({ type: 'setViewport', lines: 1 });
+    core.dispatch({
+      type: 'setLineExtents',
+      extents: [10, 10, 10],
+      revision: core.getState().scriptRevision,
+    });
+    core.dispatch({ type: 'scrollBy', lines: 15 });
+    core.dispatch({ type: 'play', direction: 'reverse' });
+    expect(core.getState().direction).toBe('reverse');
+    dispatched.length = 0;
+    await pointer('pointerdown', 200);
+    await pointer('pointermove', 180);
+    expect(core.getState().playing).toBe(false);
+    await pointer('pointerup', 180);
+    expect(core.getState().playing).toBe(true);
+    expect(core.getState().direction).toBe('reverse');
   });
 
   it('does not drag the Script when the Reading line handle is dragged', async () => {

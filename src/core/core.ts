@@ -152,6 +152,8 @@ export function createCore(options: CoreOptions = {}): Core {
   let position = minPosition;
   let playStart = minPosition;
   let playing = false;
+  /** 1 forward, -1 reverse; only meaningful while playing. */
+  let direction: 1 | -1 = 1;
   let ring = 0;
   let lastTick = clock.now();
   const sessionStore = options.sessionStore ?? createMemorySessionStore();
@@ -287,9 +289,13 @@ export function createCore(options: CoreOptions = {}): Core {
     const now = clock.now();
     if (playing || ring !== 0) {
       const rate =
-        (playing ? speedLevel * LINES_PER_SECOND_PER_LEVEL : 0) + ring * RING_MAX_LINES_PER_SECOND;
+        (playing ? direction * speedLevel * LINES_PER_SECOND_PER_LEVEL : 0) +
+        ring * RING_MAX_LINES_PER_SECOND;
       position = clampPosition(position + ((now - lastTick) / 1000) * rate);
-      if (playing && position >= maxPosition()) playing = false;
+      // Playing stops at the end going forward, and at the start going back.
+      if (playing && (direction > 0 ? position >= maxPosition() : position <= minPosition)) {
+        playing = false;
+      }
     }
     lastTick = now;
     notifications = notifications.filter((n) => n.expiresAt > now);
@@ -307,6 +313,7 @@ export function createCore(options: CoreOptions = {}): Core {
       speed: speedLevel * LINES_PER_SECOND_PER_LEVEL,
       speedLevel,
       playing,
+      direction: playing && direction < 0 ? 'reverse' : 'forward',
       ringDeflection: ring,
       viewportLines,
       leadIn: LEAD_IN_LINES,
@@ -331,10 +338,14 @@ export function createCore(options: CoreOptions = {}): Core {
     dispatch(command) {
       tick();
       switch (command.type) {
-        case 'play':
+        case 'play': {
+          const next = command.direction === 'reverse' ? -1 : 1;
           if (!playing) playStart = position;
-          playing = position < maxPosition();
+          // Nothing to play past the end going forward, or past the start going back.
+          playing = next > 0 ? position < maxPosition() : position > minPosition;
+          direction = playing ? next : 1;
           break;
+        }
         case 'pause':
           playing = false;
           break;

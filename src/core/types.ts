@@ -31,9 +31,13 @@ export type Theme = 'dark' | 'light';
 /** Which mode the app opens in: the one last used, or always Edit mode or Run mode. */
 export type OpenInMode = 'last' | Mode;
 
+/** Which way the Script is playing. It is always forward when it is not playing. */
+export type Direction = 'forward' | 'reverse';
+
 /** Commands go in. Every input and surface (Operator view, shuttle, keyboard, API) uses these. */
 export type Command =
-  | { type: 'play' }
+  /** Plays forward unless `direction` says to play in reverse (Shift+Space). Playing again the other way turns round. */
+  | { type: 'play'; direction?: Direction }
   | { type: 'pause' }
   /** Speed level from 0 (stopped) to MAX_SPEED_LEVEL (fast); any value in between (continuous). */
   | { type: 'setSpeed'; level: number }
@@ -218,6 +222,8 @@ export interface CoreState {
   /** Speed as a level, 0 (stopped) to MAX_SPEED_LEVEL. */
   speedLevel: number;
   playing: boolean;
+  /** Which way it is playing: reverse (BACK) only while it plays back, forward (FWD) otherwise. */
+  direction: Direction;
   /** Current ring deflection, -1 to 1; 0 when released. */
   ringDeflection: number;
   /** Visible Output height in lines. A Screen is this minus one. */

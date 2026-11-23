@@ -7,3 +7,7 @@ A Script line is a paragraph and the Output wraps it, so position, speed (lines 
 ## Scrolling by hand in the Live view
 
 The Operator can reposition the Script with the mouse wheel or trackpad, or by dragging the text in the Live view (the Run mode one and the mini one in Edit mode). Both send `scrollBy` with a number of visual lines: screen px are divided by the Live view's scale and by one visual line's height (`fontSize * lineSpacing`, in stage px), so a drag moves the text exactly as far as the pointer moves. A drag moves the text with the pointer (up goes forward). A playing Script is paused while it is dragged and carries on when the pointer is released, like the ring. A click that moves under 4 px scrolls nothing, so a double-click can still open a live fix. The Reading line handle is dragged separately and never scrolls the Script.
+
+## Playing in reverse
+
+The core plays forward or in reverse (`play` takes an optional `direction`; `CoreState.direction` is `forward` or `reverse`). Reverse plays at the same speed, back toward the start, and stops there. Space plays forward and Shift+Space plays back: the same key again pauses, and the other one turns the playing round without stopping. `direction` is forward whenever the Script is not playing, and a restart is always paused, forward. The ring still adds to whichever way it plays. The Run mode transport shows it as BACK and FWD.

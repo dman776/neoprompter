@@ -6,7 +6,7 @@
   height: 100%;
   min-height: 0;
 }
-/* Reserved for the speed meter, the dial and the Script lock; empty ones take no room. */
+/* Reserved for the speed meter and the Script lock; empty ones take no room. */
 .run-slot:empty {
   display: none;
 }
@@ -137,35 +137,103 @@
 }
 
 .run-transport {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 18px;
+  display: flex;
+  /* .np-panel stacks its children; the transport is one row. */
+  flex-direction: row;
   align-items: center;
-  padding: 12px 18px;
+  gap: 18px;
+  padding: 7px 16px;
 }
 .run-keys {
+  flex: 1;
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
 }
-.run-transport:has(> .run-slot-dial:not(:empty)) {
-  grid-template-columns: auto 1fr auto;
+/* A short bar: the keys are low, so the Live view keeps the room. */
+.run-transport .np-key {
+  width: 70px;
+  height: 46px;
+  gap: 1px;
+  font-size: 8.5px;
+}
+.run-transport .np-key .np-icon {
+  width: 18px;
+  height: 18px;
+}
+.run-transport .np-key[data-big='true'] {
+  width: 104px;
+  height: 52px;
 }
 .run-read {
-  display: grid;
-  gap: 8px;
-  min-width: 108px;
+  display: flex;
+  gap: 18px;
   text-align: right;
+}
+.run-read > div {
+  display: grid;
+  gap: 3px;
+  min-width: 56px;
 }
 .run-read b {
   display: block;
-  font-size: 22px;
+  font-size: 19px;
   line-height: 1;
   font-variant-numeric: tabular-nums;
 }
 .run-read small {
-  font-size: 9.5px;
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* BACK and FWD: the one that is playing is lit. */
+.run-direction {
+  display: grid;
+  gap: 4px;
+  justify-items: center;
+}
+.run-direction-lamps {
+  display: flex;
+  padding: 2px;
+  background: #000;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+:root[data-theme='light'] .run-direction-lamps {
+  background: var(--raised);
+}
+.run-direction-lamps span {
+  min-width: 42px;
+  padding: 5px 6px;
+  border-radius: 4px;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+.run-direction-lamps span[data-active='true'] {
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+  color: var(--accent);
+  outline: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+}
+/* Playing: the lit one is solid. Back is also hot, so it is never missed. */
+.run-direction[data-playing='true'] .run-direction-lamps span[data-active='true'] {
+  background: var(--accent);
+  color: var(--accent-ink);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--accent) 60%, transparent);
+}
+.run-direction[data-direction='reverse'] .run-direction-lamps span[data-active='true'] {
+  background: #ff6a4d;
+  color: #1a0904;
+  outline-color: #ff6a4d;
+  box-shadow: 0 0 12px #ff6a4d;
+}
+.run-direction small {
+  font-size: 9px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--muted);
@@ -237,20 +305,18 @@
   .run-bezel {
     padding: 8px;
   }
-  .run-transport,
-  .run-transport:has(> .run-slot-dial:not(:empty)) {
-    grid-template-columns: auto minmax(0, 1fr);
-    gap: 8px 12px;
-    padding: 8px 12px;
+  .run-transport {
+    flex-wrap: wrap;
+    gap: 6px 12px;
+    padding: 6px 10px;
   }
   .run-keys {
     gap: 6px;
     flex-wrap: wrap;
   }
   .run-transport .np-key {
-    width: 64px;
-    height: 50px;
-    font-size: 8.5px;
+    width: 58px;
+    height: 42px;
     letter-spacing: 0.02em;
   }
   .run-transport .np-key span {
@@ -258,33 +324,17 @@
     line-height: 1.15;
   }
   .run-transport .np-key[data-big='true'] {
-    width: 78px;
-    height: 56px;
+    width: 74px;
+    height: 46px;
   }
   .run-read {
-    grid-column: 1 / -1;
-    display: flex;
-    justify-content: space-around;
-    text-align: center;
-    min-width: 0;
-  }
-  .run-read > div {
-    display: flex;
-    align-items: baseline;
-    gap: 8px;
+    gap: 12px;
   }
   .run-read b {
-    font-size: 18px;
-  }
-  .run-slot-dial .speed-dial {
-    width: 88px;
-    height: 88px;
+    font-size: 16px;
   }
   .run-transport .lock-compact {
     padding-top: 6px;
-  }
-  .run-slot-dial .speed-dial-cap b {
-    font-size: 20px;
   }
   .np-segment button {
     min-width: 88px;

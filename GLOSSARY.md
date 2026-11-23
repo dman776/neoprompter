@@ -76,6 +76,10 @@ _Avoid_: Theme, profile, template
 The ten text colors the Operator used most recently, newest first, offered as swatches in the editor's Color button. They start as red, green, blue, yellow and white.
 _Avoid_: Palette, color history, swatches
 
+**Direction**:
+Which way the Script is playing: forward (FWD) or back (BACK, in reverse). It is forward whenever the Script is not playing.
+_Avoid_: Reverse mode, rewind
+
 **Screen** (as a distance):
 The visible height of the Output minus one line, which is how far "back one screen" and "forward one screen" jump.
 _Avoid_: Page

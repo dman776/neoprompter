@@ -35,15 +35,41 @@ async function mount(mode: 'edit' | 'run') {
   return core;
 }
 
-const press = (key: string, target: Element = document.body) =>
+const press = (key: string, target: Element = document.body, init: KeyboardEventInit = {}) =>
   act(async () => {
-    target.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));
+    target.dispatchEvent(
+      new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, ...init }),
+    );
   });
 
 describe('Run mode keyboard shortcuts', () => {
   it('Space plays and pauses', async () => {
     const core = await mount('run');
     await press(' ');
+    expect(core.getState().playing).toBe(true);
+    await press(' ');
+    expect(core.getState().playing).toBe(false);
+  });
+
+  it('Shift+Space plays in reverse, Space plays forward, and either one pauses its own direction', async () => {
+    const core = await mount('run');
+    await act(async () => core.dispatch({ type: 'scrollBy', lines: 40 }));
+    await press(' ', document.body, { shiftKey: true });
+    expect(core.getState().playing).toBe(true);
+    expect(core.getState().direction).toBe('reverse');
+    // Space while playing back turns round to forward; it does not stop.
+    await press(' ');
+    expect(core.getState().playing).toBe(true);
+    expect(core.getState().direction).toBe('forward');
+    // Shift+Space while playing forward turns round to reverse.
+    await press(' ', document.body, { shiftKey: true });
+    expect(core.getState().direction).toBe('reverse');
+    // Shift+Space again pauses it.
+    await press(' ', document.body, { shiftKey: true });
+    expect(core.getState().playing).toBe(false);
+    // Space plays forward again, and pauses.
+    await press(' ');
+    expect(core.getState().direction).toBe('forward');
     expect(core.getState().playing).toBe(true);
     await press(' ');
     expect(core.getState().playing).toBe(false);

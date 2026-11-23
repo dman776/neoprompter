@@ -263,18 +263,20 @@ describe('the running app', () => {
     await operator.getByRole('button', { name: 'Play start' }).click();
     await expect.poll(async () => (await state()).progress).toBe(0);
     await operator.screenshot({ path: join(artifacts, 'operator-run-live.png') });
-    // Speed: arrow keys nudge it, dragging the dial sets it, the readout follows.
+    // Speed: arrow keys nudge it, pressing the meter on the left sets it, the readout follows.
     await dispatch({ type: 'setSpeed', level: 3 });
     await operator.keyboard.press('ArrowUp');
     await expect.poll(async () => (await state()).speedLevel).toBe(3.1);
     await operator.keyboard.press('Shift+ArrowDown');
     await expect.poll(async () => (await state()).speedLevel).toBe(2.6);
-    const dial = await operator.locator('[role="slider"][aria-label="Speed"]').boundingBox();
-    await operator.mouse.move(dial!.x + dial!.width / 2, dial!.y + dial!.height / 2);
-    await operator.mouse.down();
-    await operator.mouse.move(dial!.x + dial!.width / 2, dial!.y + dial!.height / 2 - 28);
-    await operator.mouse.up();
-    await expect.poll(async () => (await state()).speedLevel).toBeCloseTo(4.6, 1);
+    expect(await operator.locator('[data-slot="speed-dial"], .speed-dial').count()).toBe(0);
+    const meter = (await operator.locator('[role="slider"][aria-label="Speed"]').boundingBox())!;
+    // Half way up the meter is half speed; the top is the fastest.
+    await operator.mouse.click(meter.x + meter.width / 2, meter.y + meter.height / 2);
+    await expect.poll(async () => (await state()).speedLevel).toBeCloseTo(5, 0);
+    await operator.mouse.click(meter.x + meter.width / 2, meter.y + 1);
+    await expect.poll(async () => (await state()).speedLevel).toBeGreaterThan(9.5);
+    await dispatch({ type: 'setSpeed', level: 4.6 });
     await expect
       .poll(() => operator.locator('[data-testid="speed-readout"]').textContent())
       .toBe((await state()).speed.toFixed(2));
@@ -917,6 +919,41 @@ describe('the running app', () => {
     await expect
       .poll(async () => Math.round((await gap(output, '#text', '#stage')).left))
       .toBe(192);
+  });
+
+  it('plays forward with Space and back with Shift+Space, shows the direction, and has a short bar', async () => {
+    await dispatch({ type: 'setMode', mode: 'run' });
+    const font = (await state()).appearance.fontSize;
+    await dispatch({ type: 'setAppearance', changes: { fontSize: 96 } });
+    await vi.waitFor(async () => expect((await state()).viewportLines).toBe(8));
+    await dispatch({ type: 'pause' });
+    await dispatch({ type: 'scrollBy', lines: -10_000 });
+    await dispatch({ type: 'scrollBy', lines: 12 });
+    await dispatch({ type: 'setSpeed', level: 3 });
+    await operator.getByTestId('live-view').click();
+    const direction = () => operator.getByTestId('direction').getAttribute('data-direction');
+    expect(await direction()).toBe('forward');
+    await operator.keyboard.press('Shift+Space');
+    await vi.waitFor(async () => expect((await state()).direction).toBe('reverse'));
+    expect((await state()).playing).toBe(true);
+    await vi.waitFor(async () => expect(await direction()).toBe('reverse'));
+    await vi.waitFor(async () =>
+      expect(await operator.getByTestId('direction').textContent()).toContain('BACK'),
+    );
+    const moving = (await state()).position;
+    await vi.waitFor(async () => expect((await state()).position).toBeLessThan(moving - 0.3));
+    await operator.screenshot({ path: join(artifacts, 'operator-run-reverse.png') });
+    // Space turns it round to forward, and then pauses.
+    await operator.keyboard.press('Space');
+    await vi.waitFor(async () => expect((await state()).direction).toBe('forward'));
+    expect((await state()).playing).toBe(true);
+    await operator.keyboard.press('Space');
+    await vi.waitFor(async () => expect((await state()).playing).toBe(false));
+    await vi.waitFor(async () => expect(await direction()).toBe('forward'));
+    // The transport is a short single bar.
+    const bar = (await operator.getByTestId('transport').boundingBox())!;
+    expect(bar.height).toBeLessThan(86);
+    await dispatch({ type: 'setAppearance', changes: { fontSize: font } });
   });
 
   describe('the Producer page with a token set', () => {

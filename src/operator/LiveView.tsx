@@ -119,6 +119,7 @@ export function LiveView({ state, dispatch, outputShowing, badge = true }: LiveV
     lastY: number;
     moved: boolean;
     wasPlaying: boolean;
+    wasDirection: CoreState['direction'];
     pending: number;
     frame: number | null;
   } | null>(null);
@@ -138,6 +139,7 @@ export function LiveView({ state, dispatch, outputShowing, badge = true }: LiveV
       lastY: event.clientY,
       moved: false,
       wasPlaying: false,
+      wasDirection: 'forward',
       pending: 0,
       frame: null,
     };
@@ -153,6 +155,7 @@ export function LiveView({ state, dispatch, outputShowing, badge = true }: LiveV
       setHandling(true);
       // Hold a playing Script still under the pointer; it carries on when the drag ends.
       d.wasPlaying = latest.current.playing;
+      d.wasDirection = latest.current.direction;
       if (d.wasPlaying) dispatch({ type: 'pause' });
       try {
         event.currentTarget.setPointerCapture(event.pointerId);
@@ -174,7 +177,7 @@ export function LiveView({ state, dispatch, outputShowing, badge = true }: LiveV
     flushHand();
     handDrag.current = null;
     setHandling(false);
-    if (d.moved && d.wasPlaying) dispatch({ type: 'play' });
+    if (d.moved && d.wasPlaying) dispatch({ type: 'play', direction: d.wasDirection });
   };
 
   useEffect(() => {
