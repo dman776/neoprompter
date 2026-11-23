@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import { formatTimeLeft, type Command, type CoreState } from '../core';
 import { keyToAction } from '../input';
 import { isTyping } from './Speed';
@@ -13,8 +13,13 @@ import { BackScreenIcon, ForwardScreenIcon, PauseIcon, PlayIcon, PlayStartIcon }
  * else has the focus: a button the Operator just clicked is not pressed again by it.
  */
 export function useTransportKeys(state: CoreState, dispatch: (command: Command) => void) {
+  // The handler reads the newest state at the moment of the key press, not the state of the last
+  // time its effect ran: a key right after a change must see that change.
+  const latest = useRef(state);
+  latest.current = state;
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      const state = latest.current;
       if (e.metaKey || e.ctrlKey || e.altKey || isTyping(e.target)) return;
       let command: Command | null = null;
       if (e.key === ' ') {
@@ -51,7 +56,7 @@ export function useTransportKeys(state: CoreState, dispatch: (command: Command) 
       window.removeEventListener('keydown', onKey, true);
       window.removeEventListener('keyup', onKeyUp, true);
     };
-  }, [state.playing, state.direction, dispatch]);
+  }, [dispatch]);
 }
 
 /** BACK and FWD: which way the Script is playing; FWD is lit (dimly) while it is paused. */

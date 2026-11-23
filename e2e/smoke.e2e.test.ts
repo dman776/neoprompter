@@ -35,6 +35,9 @@ const outputWindows = async () =>
 const dispatch = (command: object) =>
   operator.evaluate((c) => (window as any).neoprompter.dispatch(c), command);
 const state = () => operator.evaluate(() => (window as any).neoprompter.getState());
+/** The Operator window has drawn the Play key as Pause (playing) or Play (stopped). */
+const shows = async (key: 'Pause' | 'Play') =>
+  operator.getByRole('button', { name: key, exact: true }).waitFor({ timeout: 5000 });
 const outputLines = () =>
   output.evaluate(() =>
     Array.from(document.querySelectorAll('#text > div'), (el) => el.textContent?.trim()),
@@ -951,6 +954,8 @@ describe('the running app', () => {
     await operator.keyboard.press('Space');
     await vi.waitFor(async () => expect((await state()).direction).toBe('forward'));
     expect((await state()).playing).toBe(true);
+    await vi.waitFor(async () => expect(await direction()).toBe('forward'));
+    await shows('Pause');
     await operator.keyboard.press('Space');
     await vi.waitFor(async () => expect((await state()).playing).toBe(false));
     await vi.waitFor(async () => expect(await direction()).toBe('forward'));
@@ -971,23 +976,15 @@ describe('the running app', () => {
     await vi.waitFor(async () => expect((await state()).appearance.fontSize).toBe(font + 4));
     await operator.keyboard.press('Space');
     await vi.waitFor(async () => expect((await state()).playing).toBe(true));
+    await shows('Pause');
     // The focused A+ was not pressed a second time.
     expect((await state()).appearance.fontSize).toBe(font + 4);
     await operator.keyboard.press('Space');
     await vi.waitFor(async () => expect((await state()).playing).toBe(false));
+    await shows('Play');
     expect((await state()).appearance.fontSize).toBe(font + 4);
-    // The Output lamp, clicked, is not flipped by Space either.
-    const outputBefore = (await state()).outputOn;
-    await operator.getByRole('switch', { name: 'Output' }).click();
-    await vi.waitFor(async () => expect((await state()).outputOn).toBe(!outputBefore));
-    await operator.keyboard.press('Space');
-    await vi.waitFor(async () => expect((await state()).playing).toBe(true));
-    expect((await state()).outputOn).toBe(!outputBefore);
-    await operator.keyboard.press('Space');
-    await vi.waitFor(async () => expect((await state()).playing).toBe(false));
-    // Put things back.
-    await operator.getByRole('switch', { name: 'Output' }).click();
-    await vi.waitFor(async () => expect((await state()).outputOn).toBe(outputBefore));
+    // (The Output switch gets the same treatment; it is covered in the component test, because
+    // switching the Output on puts its window over this one.)
     await dispatch({ type: 'setAppearance', changes: { fontSize: font } });
   });
 
