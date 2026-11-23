@@ -47,11 +47,12 @@ jobs:
             command: npm run dist:mac
             check: node scripts/check-installers.mjs mac
             files: release/*.dmg
-          - name: Windows
-            os: windows-latest
-            command: npm run dist:win
-            check: node scripts/check-installers.mjs win
-            files: release/*.exe
+          # Windows is switched off for now; uncomment to bring it back.
+          # - name: Windows
+          #   os: windows-latest
+          #   command: npm run dist:win
+          #   check: node scripts/check-installers.mjs win
+          #   files: release/*.exe
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
