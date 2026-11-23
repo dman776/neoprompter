@@ -127,4 +127,28 @@ describe('the Watched folder in the running app', () => {
     });
     expect(existsSync(join(drop, 'imported', 'Later.docx'))).toBe(true);
   });
+
+  it('adds a numbered Script when the name is already in the library', async () => {
+    writeFileSync(join(drop, 'Sunday.docx'), makeDocx(para([run('A second Sunday')])));
+    await vi.waitFor(async () => expect(await libraryNames()).toContain('Sunday 2'), {
+      timeout: 10_000,
+      interval: 250,
+    });
+    const names = await libraryNames();
+    expect(names.filter((n) => n === 'Sunday')).toHaveLength(1);
+    expect(existsSync(join(drop, 'imported', 'Sunday.docx'))).toBe(true);
+    expect(existsSync(join(drop, 'imported', 'Sunday 2.docx'))).toBe(true);
+    // The broken file failed once at startup; it is not reported again with these drops.
+    expect(await operator.getByTestId('notice').textContent()).not.toContain('Broken.doc');
+  });
+
+  it('stops watching when the folder is cleared', async () => {
+    await operator.evaluate(() => (window as any).neoprompter.clearWatchedFolder());
+    writeFileSync(join(drop, 'Ignored.docx'), makeDocx(para([run('Not watched')])));
+    await new Promise((r) => setTimeout(r, 4000));
+    expect(await libraryNames()).not.toContain('Ignored');
+    expect(existsSync(join(drop, 'Ignored.docx'))).toBe(true);
+    const view = await operator.evaluate(() => (window as any).neoprompter.getWatchedFolder());
+    expect(view.path).toBeNull();
+  });
 });

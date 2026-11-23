@@ -20,6 +20,12 @@ Renderers are `src/operator/` (the Operator view, Edit mode and Run mode), `src/
 
 To check a new behavior, add a test there: dispatch the commands, then assert on the Output DOM or take a screenshot.
 
+## Trying the Watched folder
+
+`e2e/watched-folder.e2e.test.ts` is its own file, with its own launch: it writes `watched-folder.json` and a `.docx` into throwaway folders, so a file is already waiting at startup. Run it alone with `npm run build && npx vitest run --config e2e/vitest.config.ts e2e/watched-folder`. To try it by hand, open Preferences, General, choose a folder, and drop a `.docx` in; it appears in the Script library a couple of seconds later and moves into `imported/`.
+
+The full `npm run test:e2e` also opens a real full screen Output, and on macOS Electron can crash (a crash report in `~/Library/Logs/DiagnosticReports`, and a popup) as that window leaves full screen. If you do not need that part, run a single file.
+
 ## Launching by hand
 
 `npm start` builds and launches the app.
