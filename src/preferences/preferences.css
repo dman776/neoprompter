@@ -149,3 +149,10 @@
   border-left: 0.7em solid var(--accent);
   border-block: 0.4em solid transparent;
 }
+.pf-notice {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  color: var(--text);
+}

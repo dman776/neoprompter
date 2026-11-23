@@ -1,10 +1,14 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useCoreState, type CoreBridge } from '../operator/useCoreState';
 import { CATEGORIES } from './categories';
 
 /** The Preferences window: category navigation and the chosen category's settings. */
 export function Preferences({ bridge }: { bridge: CoreBridge }) {
   const state = useCoreState(bridge);
+  const theme = state?.theme;
+  useEffect(() => {
+    if (theme) document.documentElement.dataset.theme = theme;
+  }, [theme]);
   const [selected, setSelected] = useState(CATEGORIES[0]!.id);
   const category = CATEGORIES.find((c) => c.id === selected)!;
   const Page = category.Page;
@@ -28,7 +32,7 @@ export function Preferences({ bridge }: { bridge: CoreBridge }) {
         <h2>{category.label}</h2>
         <p className="pf-sub">{category.subtitle}</p>
         {Page ? (
-          state && <Page state={state} dispatch={bridge.dispatch} />
+          state && <Page state={state} dispatch={bridge.dispatch} bridge={bridge} />
         ) : (
           <p className="pf-placeholder">Coming soon.</p>
         )}

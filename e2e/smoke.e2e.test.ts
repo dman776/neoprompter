@@ -112,6 +112,27 @@ describe('the running app', () => {
     await prefs.getByLabel('Font size').fill(String(before + 20));
     await expect.poll(async () => (await state()).appearance.fontSize).toBe(before + 20);
     await dispatch({ type: 'setAppearance', changes: { fontSize: before } });
+
+    await prefs.getByRole('button', { name: 'General' }).click();
+    await prefs.screenshot({ path: join(artifacts, 'preferences-general.png') });
+    await prefs.getByLabel('Theme').selectOption('light');
+    await expect.poll(async () => (await state()).theme).toBe('light');
+    await prefs.screenshot({ path: join(artifacts, 'preferences-general-light.png') });
+    await prefs.getByLabel('Theme').selectOption('dark');
+    await expect.poll(async () => (await state()).theme).toBe('dark');
+
+    await prefs.getByRole('button', { name: 'Output' }).click();
+    await expect
+      .poll(() => prefs.getByLabel('Windowed Output').getAttribute('aria-checked'))
+      .toBe('true');
+    await prefs.screenshot({ path: join(artifacts, 'preferences-output.png') });
+
+    await prefs.getByRole('button', { name: 'Notifications' }).click();
+    await prefs.getByLabel('Notification time').fill('20');
+    await expect.poll(async () => (await state()).notificationDurationMs).toBe(20000);
+    await expect.poll(() => prefs.locator('.pf-value').textContent()).toBe('20 s');
+    await prefs.screenshot({ path: join(artifacts, 'preferences-notifications.png') });
+    await dispatch({ type: 'setNotificationDuration', ms: 8000 });
     await prefs.close();
   });
 

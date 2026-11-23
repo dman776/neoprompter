@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import type { Mode } from '../core';
 import { useCoreState, useOutputBlocked, type CoreBridge } from './useCoreState';
 import { Header } from './Header';
@@ -11,6 +12,10 @@ import { RunMode } from './RunMode';
 export function App({ bridge }: { bridge: CoreBridge }) {
   const state = useCoreState(bridge);
   const outputBlocked = useOutputBlocked(bridge, state?.outputOn ?? false);
+  const theme = state?.theme;
+  useEffect(() => {
+    if (theme) document.documentElement.dataset.theme = theme;
+  }, [theme]);
   if (!state) return null;
   const setMode = (mode: Mode) => bridge.dispatch({ type: 'setMode', mode });
   return (

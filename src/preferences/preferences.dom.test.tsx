@@ -6,6 +6,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createCore, createFakeClock, createMemoryPresetStore, type Command } from '../core';
 import type { CoreBridge } from '../operator/useCoreState';
+import type { OutputWindowView } from '../output-window';
 import { Preferences } from './PreferencesWindow';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -21,7 +22,22 @@ afterEach(() => {
   host.remove();
 });
 
-async function mount() {
+const baseView: OutputWindowView = {
+  windowed: false,
+  outputOn: false,
+  blocked: null,
+  chosenMonitorId: 'b',
+  missingMonitorId: null,
+  monitors: [
+    { id: 'a', label: 'Built-in display', isOperatorDisplay: true },
+    { id: 'b', label: 'Prompter monitor', isOperatorDisplay: false },
+  ],
+};
+
+async function mount(initialView: Partial<OutputWindowView> = {}) {
+  let view: OutputWindowView = { ...baseView, ...initialView };
+  const chosen: string[] = [];
+  const windowedCalls: boolean[] = [];
   const core = createCore({ clock: createFakeClock(), presetStore: createMemoryPresetStore() });
   const dispatched: Command[] = [];
   const listeners: Array<(s: ReturnType<typeof core.getState>) => void> = [];
@@ -33,8 +49,16 @@ async function mount() {
       core.dispatch(c);
     },
     onState: (l) => listeners.push(l),
-    getOutputView: async () => {
-      throw new Error('not used by Preferences yet');
+    getOutputView: async () => view,
+    chooseOutputMonitor: async (id) => {
+      chosen.push(id);
+      view = { ...view, chosenMonitorId: id, blocked: null };
+      return view;
+    },
+    setWindowedOutput: async (w) => {
+      windowedCalls.push(w);
+      view = { ...view, windowed: w };
+      return view;
     },
     getApiView: async () => {
       throw new Error('not used by Preferences yet');
@@ -42,7 +66,7 @@ async function mount() {
   };
   root = createRoot(host);
   await act(async () => root.render(<Preferences bridge={bridge} />));
-  return { core, dispatched };
+  return { core, dispatched, chosen, windowedCalls };
 }
 
 const nav = (name: string) =>
@@ -189,5 +213,79 @@ describe('Presets', () => {
   it('cannot delete when no Preset is selected', async () => {
     await openAppearance();
     expect((button('Delete Preset') as HTMLButtonElement).disabled).toBe(true);
+  });
+});
+
+describe('General', () => {
+  it('switches the theme and applies it to this window', async () => {
+    const { core, dispatched } = await mount();
+    await setValue(field('Theme'), 'light');
+    expect(dispatched).toContainEqual({ type: 'setTheme', theme: 'light' });
+    expect(core.getState().theme).toBe('light');
+    expect(document.documentElement.dataset.theme).toBe('light');
+  });
+
+  it('chooses the mode the app opens in', async () => {
+    const { core } = await mount();
+    expect(field('Open in').value).toBe('last');
+    await setValue(field('Open in'), 'run');
+    expect(core.getState().openInMode).toBe('run');
+  });
+});
+
+describe('Output', () => {
+  async function openOutput(view: Partial<OutputWindowView> = {}) {
+    const m = await mount(view);
+    await act(async () => (nav('Output') as HTMLElement).click());
+    return m;
+  }
+
+  it('lists the connected displays and shows the chosen one', async () => {
+    await openOutput();
+    const options = Array.from(field('Monitor').querySelectorAll('option'), (o) =>
+      o.textContent?.trim(),
+    );
+    expect(options).toContain('Built-in display (this screen)');
+    expect(options).toContain('Prompter monitor');
+    expect(field('Monitor').value).toBe('b');
+  });
+
+  it('chooses another monitor', async () => {
+    const { chosen } = await openOutput();
+    await setValue(field('Monitor'), 'a');
+    expect(chosen).toEqual(['a']);
+  });
+
+  it('says when the remembered monitor is not connected', async () => {
+    await openOutput({ chosenMonitorId: 'gone', blocked: 'missing-monitor' });
+    expect(host.querySelector('main')!.textContent).toContain('not connected');
+  });
+
+  it('turns Windowed Output on', async () => {
+    const { windowedCalls } = await openOutput();
+    await act(async () => field('Windowed Output').click());
+    expect(windowedCalls).toEqual([true]);
+    expect(field('Windowed Output').getAttribute('aria-checked')).toBe('true');
+  });
+});
+
+describe('Notifications', () => {
+  async function openNotifications() {
+    const m = await mount();
+    await act(async () => (nav('Notifications') as HTMLElement).click());
+    return m;
+  }
+
+  it('shows the time in seconds beside the slider', async () => {
+    await openNotifications();
+    expect(field('Notification time').value).toBe('8');
+    expect(host.querySelector('.pf-value')!.textContent).toBe('8 s');
+  });
+
+  it('sets the time in milliseconds and shows the new seconds', async () => {
+    const { core } = await openNotifications();
+    await setValue(field('Notification time'), '15');
+    expect(core.getState().notificationDurationMs).toBe(15000);
+    expect(host.querySelector('.pf-value')!.textContent).toBe('15 s');
   });
 });
