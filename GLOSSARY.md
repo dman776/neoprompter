@@ -77,7 +77,7 @@ The ten text colors the Operator used most recently, newest first, offered as sw
 _Avoid_: Palette, color history, swatches
 
 **Direction**:
-Which way the Script is playing: forward (FWD) or back (BACK, in reverse). It is forward whenever the Script is not playing.
+Which way the Script is playing: forward (FWD) or back (BACK, in reverse). The Operator can set it with a middle click, playing or stopped. Otherwise it is forward whenever the Script is not playing, and a pause puts it back to forward.
 _Avoid_: Reverse mode, rewind
 
 **Screen** (as a distance):
