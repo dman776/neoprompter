@@ -116,3 +116,37 @@ describe('the Operator view shell', () => {
     expect(document.documentElement.getAttribute('data-theme') ?? 'dark').toBe('dark');
   });
 });
+
+describe('Notification overlays', () => {
+  it('shows a Notification with its text, its source and a Dismiss button, outside the layout flow', async () => {
+    const { core } = await mount();
+    await act(async () => core.dispatch({ type: 'notify', text: 'Wrap up in two minutes' }));
+    const overlay = host.querySelector('[data-testid="notifications"]')!;
+    expect(overlay.textContent).toContain('Wrap up in two minutes');
+    expect(overlay.textContent).toContain('Producer');
+    expect(overlay.querySelector('button')!.textContent).toBe('Dismiss');
+    // Not a child of the layout grid, so it cannot move or resize anything.
+    expect(host.querySelector('main')!.contains(overlay)).toBe(false);
+    expect(host.querySelector('header')!.contains(overlay)).toBe(false);
+  });
+
+  it('dismisses the Notification through the core', async () => {
+    const { core, dispatched } = await mount();
+    await act(async () => core.dispatch({ type: 'notify', text: 'Hello' }));
+    const id = core.getState().notifications[0]!.id;
+    await act(async () => button('Dismiss').click());
+    expect(dispatched).toContainEqual({ type: 'dismissNotification', id });
+    expect(host.querySelector('[data-testid="notifications"]')!.textContent).not.toContain('Hello');
+  });
+
+  it('stacks several Notifications and shows them in both modes', async () => {
+    const { core } = await mount();
+    await act(async () => {
+      core.dispatch({ type: 'notify', text: 'First' });
+      core.dispatch({ type: 'notify', text: 'Second' });
+      core.dispatch({ type: 'setMode', mode: 'run' });
+    });
+    const items = host.querySelectorAll('[data-testid="notifications"] [role="status"]');
+    expect(items).toHaveLength(2);
+  });
+});

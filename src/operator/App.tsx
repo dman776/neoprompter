@@ -2,6 +2,7 @@ import type { Mode } from '../core';
 import { useCoreState, useOutputBlocked, type CoreBridge } from './useCoreState';
 import { Header } from './Header';
 import { StatusBar } from './StatusBar';
+import { Notifications } from './Notifications';
 import { Panel } from './ui/Panel';
 
 /** The Operator view: header, a body for the current mode, and a status bar. */
@@ -32,6 +33,7 @@ export function App({ bridge }: { bridge: CoreBridge }) {
         )}
       </main>
       <StatusBar state={state} />
+      <Notifications notifications={state.notifications} dispatch={bridge.dispatch} />
     </div>
   );
 }
