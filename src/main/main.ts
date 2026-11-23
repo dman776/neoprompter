@@ -89,8 +89,13 @@ function openWindow(
   windows.add(win);
   win.on('closed', () => {
     windows.delete(win);
-    // The Operator can close the windowed Output by hand; nothing may keep pointing at it.
-    if (outputWin === win) outputWin = null;
+    // The Operator can close the windowed Output by hand: nothing may keep pointing at it, and
+    // the Output switch goes Off, so it says what is on screen. (A window the app retires itself
+    // is no longer `outputWin` by now.)
+    if (outputWin === win) {
+      outputWin = null;
+      core.dispatch({ type: 'setOutput', on: false });
+    }
   });
   return win;
 }

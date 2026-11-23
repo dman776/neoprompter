@@ -49,6 +49,14 @@ afterAll(async () => {
   rmSync(userData, { recursive: true, force: true });
 });
 
+const state = () => operator.evaluate(() => (window as any).neoprompter.getState());
+const menuChecked = () =>
+  app.evaluate(
+    ({ Menu }) =>
+      Menu.getApplicationMenu()!
+        .items.find((i) => i.label === 'Output')!
+        .submenu!.items.find((i) => i.label === 'Output on')!.checked,
+  );
 const uncaught = () =>
   app.evaluate(() => (globalThis as { __uncaught?: string[] }).__uncaught ?? []);
 
@@ -76,19 +84,21 @@ describe('closing the windowed Output by hand', () => {
     expect(after).toBeGreaterThan(before);
   });
 
-  it('can be switched on again afterwards', async () => {
-    const choose = () =>
-      app.evaluate(({ Menu }) => {
-        Menu.getApplicationMenu()!
-          .items.find((i) => i.label === 'Output')!
-          .submenu!.items.find((i) => i.label === 'Output on')!
-          .click();
-      });
-    // The switch still says On after the window was closed by hand: Off, then On again.
-    await choose();
-    await choose();
+  it('switches the Output Off, so the switch says what is on screen', async () => {
+    expect((await state()).outputOn).toBe(false);
+    expect(await menuChecked()).toBe(false);
+  });
+
+  it('is brought back by switching it On once', async () => {
+    await app.evaluate(({ Menu }) => {
+      Menu.getApplicationMenu()!
+        .items.find((i) => i.label === 'Output')!
+        .submenu!.items.find((i) => i.label === 'Output on')!
+        .click();
+    });
     const output = await windowTitled('Output');
     expect(output.isClosed()).toBe(false);
+    expect((await state()).outputOn).toBe(true);
     expect(await uncaught()).toEqual([]);
   });
 });
