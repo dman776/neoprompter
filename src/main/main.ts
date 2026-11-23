@@ -216,6 +216,11 @@ function createOutputManager() {
 }
 
 app.whenReady().then(() => {
+  // A packaged app gets its icon from the installer; `npm start` shows Electron's own in the Dock,
+  // so give it ours.
+  if (!app.isPackaged && process.platform === 'darwin') {
+    app.dock?.setIcon(path.join(__dirname, '../../build/icon.png'));
+  }
   // Notifications are Operator-only: the Output window only ever receives `outputState`.
   const stateFor = (contents: Electron.WebContents, state: CoreState) =>
     outputWin && contents === outputWin.webContents ? outputState(state) : state;
