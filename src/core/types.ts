@@ -25,8 +25,11 @@ export interface Script {
 /** The Operator view's two modes: preparing Scripts, and a live production. */
 export type Mode = 'edit' | 'run';
 
-/** The look of the Operator view and its windows. Dark first. */
+/** The Operator view's color theme. */
 export type Theme = 'dark' | 'light';
+
+/** Which mode the app opens in: the one last used, or always Edit mode or Run mode. */
+export type OpenInMode = 'last' | Mode;
 
 /** Commands go in. Every input and surface (Operator view, shuttle, keyboard, API) uses these. */
 export type Command =
@@ -77,10 +80,12 @@ export type Command =
   | { type: 'setOutput'; on: boolean }
   /** Switch the Operator view between Edit mode and Run mode (persisted). */
   | { type: 'setMode'; mode: Mode }
-  /** Switch the Operator view and its windows between the dark and light theme (persisted). */
+  /** Choose the theme (persisted). */
   | { type: 'setTheme'; theme: Theme }
   /** Collapse or restore the right-hand column, in both modes (persisted). */
   | { type: 'setRightColumnCollapsed'; collapsed: boolean }
+  /** Choose which mode the app opens in (persisted). */
+  | { type: 'setOpenInMode'; openIn: OpenInMode }
   /**
    * Show a plain-text Notification banner in the Operator view (never the Output). Called by
    * the HTTP API from the main process. `durationMs` overrides the display time.
@@ -183,6 +188,8 @@ export interface CoreState {
   theme: Theme;
   /** Whether the right-hand column is collapsed. Shared by Edit mode and Run mode. */
   rightColumnCollapsed: boolean;
+  /** Which mode the app opens in; `mode` above is the current one. */
+  openInMode: OpenInMode;
   /** Visible Notifications, newest first. Operator view only; see `outputState`. */
   notifications: Notification[];
   /** Default Notification display time in ms. */

@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import type { Mode } from '../core';
 import { useCoreState, useMenuActions, useOutputBlocked, type CoreBridge } from './useCoreState';
 import { Header } from './Header';
@@ -7,13 +7,15 @@ import { StatusBar } from './StatusBar';
 import { Notifications } from './Notifications';
 import { Panel } from './ui/Panel';
 import { RunMode } from './RunMode';
-import { useTheme } from './ui/useTheme';
 
 /** The Operator view: header, a body for the current mode, and a status bar. */
 export function App({ bridge }: { bridge: CoreBridge }) {
   const state = useCoreState(bridge);
   const outputBlocked = useOutputBlocked(bridge, state?.outputOn ?? false);
-  useTheme(state?.theme);
+  const theme = state?.theme;
+  useEffect(() => {
+    if (theme) document.documentElement.dataset.theme = theme;
+  }, [theme]);
   // The View menu's items; they need the latest state, so they read it when they fire.
   const latest = useRef(state);
   latest.current = state;

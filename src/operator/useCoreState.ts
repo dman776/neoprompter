@@ -13,6 +13,8 @@ export interface CoreBridge {
   getApiView(): Promise<ApiView>;
   /** Native menu items only the Operator view can handle. Absent in windows that have no menu. */
   onMenuAction?(listener: (action: UiAction) => void): void;
+  chooseOutputMonitor(id: string): Promise<OutputWindowView>;
+  setWindowedOutput(windowed: boolean): Promise<OutputWindowView>;
 }
 
 /** The latest core state (null until the first one arrives). Components render it and dispatch. */

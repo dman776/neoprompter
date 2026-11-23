@@ -1,4 +1,4 @@
-import type { Appearance, Mode, Script, Theme } from './types';
+import type { Appearance, Mode, OpenInMode, Script, Theme } from './types';
 
 /** What survives a crash or restart. Never includes "playing": a restore is always paused. */
 export interface Session {
@@ -10,8 +10,10 @@ export interface Session {
   activePreset: string | null;
   /** Optional so older session files still load (they open in Edit mode). */
   mode?: Mode;
-  /** Optional so older session files still load (they open dark). */
+  /** Optional so older session files still load (they get the dark theme). */
   theme?: Theme;
+  /** Optional so older session files still load (they open in the mode last used). */
+  openInMode?: OpenInMode;
   /** Optional so older session files still load (they open expanded). */
   rightColumnCollapsed?: boolean;
   /** Optional so older session files still load. */

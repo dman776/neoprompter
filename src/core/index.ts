@@ -8,6 +8,7 @@ export type {
   CoreState,
   LibraryEntry,
   Mode,
+  OpenInMode,
   Theme,
   Notification,
   OutputState,

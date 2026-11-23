@@ -19,7 +19,7 @@ interface HeaderProps {
   onToggleTheme: () => void;
 }
 
-const BLOCKED_TEXT: Record<OutputBlocked, string> = {
+export const BLOCKED_TEXT: Record<OutputBlocked, string> = {
   'missing-monitor': 'The Output monitor is not connected, so the Output stays closed.',
   'no-monitor': 'No monitor is chosen for the Output, so it stays closed.',
   'operator-display': 'The Output cannot cover the Operator view, so it stays closed.',

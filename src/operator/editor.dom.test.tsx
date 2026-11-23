@@ -50,6 +50,22 @@ async function mount(lines: string[] = ['Hello there.', 'Second line.']) {
         missingMonitorId: null,
       }) as never,
     getApiView: async () => ({ running: true, error: null }) as never,
+    chooseOutputMonitor: async () =>
+      ({
+        blocked: null,
+        windowed: false,
+        monitors: [],
+        chosenMonitorId: null,
+        missingMonitorId: null,
+      }) as never,
+    setWindowedOutput: async () =>
+      ({
+        blocked: null,
+        windowed: false,
+        monitors: [],
+        chosenMonitorId: null,
+        missingMonitorId: null,
+      }) as never,
   };
   root = createRoot(host);
   await act(async () => root.render(<App bridge={bridge} />));

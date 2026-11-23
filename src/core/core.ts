@@ -12,6 +12,7 @@ import {
   type Command,
   type CoreState,
   type Mode,
+  type OpenInMode,
   type Theme,
   type Script,
 } from './types';
@@ -112,6 +113,7 @@ export function createCore(options: CoreOptions = {}): Core {
   let mode: Mode = 'edit';
   let theme: Theme = 'dark';
   let rightColumnCollapsed = false;
+  let openInMode: OpenInMode = 'last';
   let notificationDurationMs = DEFAULT_NOTIFICATION_MS;
   const clampDuration = (ms: number) =>
     Math.max(MIN_NOTIFICATION_MS, Math.min(MAX_NOTIFICATION_MS, Math.round(ms)));
@@ -139,7 +141,11 @@ export function createCore(options: CoreOptions = {}): Core {
       restored.activePreset && presets[restored.activePreset] ? restored.activePreset : null;
   }
   if (restored?.mode === 'edit' || restored?.mode === 'run') mode = restored.mode;
-  if (restored?.theme === 'dark' || restored?.theme === 'light') theme = restored.theme;
+  if (restored?.theme === 'light') theme = 'light';
+  if (restored?.openInMode === 'edit' || restored?.openInMode === 'run') {
+    openInMode = restored.openInMode;
+    mode = openInMode;
+  }
   if (restored?.rightColumnCollapsed === true) rightColumnCollapsed = true;
   if (restored?.notificationDurationMs !== undefined) {
     notificationDurationMs = clampDuration(restored.notificationDurationMs);
@@ -164,6 +170,7 @@ export function createCore(options: CoreOptions = {}): Core {
       mode,
       theme,
       rightColumnCollapsed,
+      openInMode,
       notificationDurationMs,
       recentColors,
     });
@@ -235,6 +242,7 @@ export function createCore(options: CoreOptions = {}): Core {
       mode,
       theme,
       rightColumnCollapsed,
+      openInMode,
       notifications: notifications.map(({ id, text }) => ({ id, text })).reverse(),
       notificationDurationMs,
       recentColors: [...recentColors],
@@ -386,6 +394,10 @@ export function createCore(options: CoreOptions = {}): Core {
         case 'setRightColumnCollapsed':
           if (typeof command.collapsed !== 'boolean') return;
           rightColumnCollapsed = command.collapsed;
+          break;
+        case 'setOpenInMode':
+          if (!['last', 'edit', 'run'].includes(command.openIn)) return;
+          openInMode = command.openIn;
           break;
         case 'notify': {
           const text = command.text.trim();
