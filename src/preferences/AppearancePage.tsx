@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { CoreState } from '../core';
+import { MAX_FONT_SIZE, MIN_FONT_SIZE, type CoreState } from '../core';
 import { Button } from '../operator/ui/Button';
 import { Switch } from '../operator/ui/Switch';
 import { ColorField, Row, Slider } from './controls';
@@ -91,8 +91,8 @@ export function AppearancePage({ state, dispatch }: PageProps) {
         <Slider
           label="Font size"
           value={a.fontSize}
-          min={16}
-          max={160}
+          min={MIN_FONT_SIZE}
+          max={MAX_FONT_SIZE}
           step={2}
           unit=" px"
           onChange={(fontSize) => change({ fontSize })}

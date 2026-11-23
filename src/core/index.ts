@@ -29,6 +29,9 @@ export {
   DEFAULT_NOTIFICATION_MS,
   MAX_SPEED_LEVEL,
   SPEED_NUDGE_STEP,
+  FONT_SIZE_STEP,
+  MAX_FONT_SIZE,
+  MIN_FONT_SIZE,
 } from './types';
 export { createMemoryPresetStore } from './presets';
 export type { PresetStore } from './presets';

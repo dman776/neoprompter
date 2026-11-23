@@ -84,6 +84,28 @@ export function Transport({
           <b data-testid="position">{Math.round(state.progress * 100)}%</b>
           <small>Position</small>
         </div>
+        <div className="run-size" data-testid="text-size">
+          <div className="run-size-keys">
+            <button
+              type="button"
+              aria-label="Smaller text"
+              title="Smaller text (Ctrl or Command and minus)"
+              onClick={() => dispatch({ type: 'nudgeFontSize', direction: -1 })}
+            >
+              A<span aria-hidden="true">−</span>
+            </button>
+            <b data-testid="text-size-value">{state.appearance.fontSize}</b>
+            <button
+              type="button"
+              aria-label="Larger text"
+              title="Larger text (Ctrl or Command and plus)"
+              onClick={() => dispatch({ type: 'nudgeFontSize', direction: 1 })}
+            >
+              A<span aria-hidden="true">+</span>
+            </button>
+          </div>
+          <small>Text size</small>
+        </div>
       </div>
       {lock}
     </div>
