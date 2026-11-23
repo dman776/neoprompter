@@ -77,3 +77,10 @@
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
+
+.output-note {
+  color: var(--accent);
+  font-size: 12px;
+  text-align: right;
+  min-width: 0;
+}

@@ -17,9 +17,9 @@ function env() {
 const longText = Array.from({ length: 100 }, (_, i) => `line ${i}`).join('\n');
 
 describe('restore on launch', () => {
-  it('a first launch has nothing to restore and shows the Output', () => {
+  it('a first launch starts with the Output Off', () => {
     const core = createCore(env());
-    expect(core.getState().outputBlank).toBe(false);
+    expect(core.getState().outputOn).toBe(false);
   });
 
   it('autosaves after every command and restores Script, position and Preset', () => {
@@ -54,15 +54,16 @@ describe('restore on launch', () => {
     expect(b.getState().speedLevel).toBe(4);
   });
 
-  it('keeps the Output blank until the Operator confirms', () => {
+  it('starts the Output Off after a restart, whatever it was before', () => {
     const e = env();
-    createCore(e).dispatch({ type: 'pause' });
+    const a = createCore(e);
+    a.dispatch({ type: 'setOutput', on: true });
+    a.dispatch({ type: 'pause' });
+    expect(a.getState().outputOn).toBe(true);
     const b = createCore(e);
-    expect(b.getState().outputBlank).toBe(true);
+    expect(b.getState().outputOn).toBe(false);
     b.dispatch({ type: 'jumpForward' });
-    expect(b.getState().outputBlank).toBe(true);
-    b.dispatch({ type: 'confirmOutput' });
-    expect(b.getState().outputBlank).toBe(false);
+    expect(b.getState().outputOn).toBe(false);
   });
 
   it('survives a crash mid-play: saved state is at most about a second stale', () => {

@@ -46,8 +46,14 @@ export interface MonitorOption {
   isOperatorDisplay: boolean;
 }
 
+/** Why the Output is switched On but not showing; null when it shows or is Off. */
+export type OutputBlocked = 'no-monitor' | 'missing-monitor' | 'operator-display';
+
 export interface OutputWindowView {
   windowed: boolean;
+  /** Whether the Operator has switched the Output On (the core's `outputOn`). */
+  outputOn: boolean;
+  blocked: OutputBlocked | null;
   chosenMonitorId: string | null;
   /**
    * Set when no monitor is chosen for the current display setup but one remembered for a
@@ -58,6 +64,8 @@ export interface OutputWindowView {
 }
 
 export interface OutputWindowManager {
+  /** Follow the core's Output switch: Off closes the window, On shows it where it belongs. */
+  setOutputOn(on: boolean): void;
   chooseMonitor(id: string): void;
   setWindowed(windowed: boolean): void;
   /** Re-evaluate placement, e.g. after displays are added or removed. */
@@ -80,6 +88,7 @@ export function createOutputWindowManager(deps: {
   const { displays, store, host } = deps;
   let settings = store.load();
   let current: OutputPlacement = { mode: 'closed' };
+  let outputOn = false;
 
   const chosenId = (): string | null =>
     settings.monitorBySetup[displaySetupKey(displays.list())] ?? null;
@@ -97,6 +106,7 @@ export function createOutputWindowManager(deps: {
   }
 
   function decide(): OutputPlacement {
+    if (!outputOn) return { mode: 'closed' };
     if (settings.windowed) return { mode: 'windowed' };
     const id = chosenId();
     if (id === null || id === displays.operatorDisplayId()) return { mode: 'closed' };
@@ -112,6 +122,13 @@ export function createOutputWindowManager(deps: {
     else host.show(next);
   }
 
+  function blockedReason(): OutputBlocked | null {
+    if (!outputOn || settings.windowed) return null;
+    const id = chosenId();
+    if (id === null) return missingMonitor() !== null ? 'missing-monitor' : 'no-monitor';
+    return id === displays.operatorDisplayId() ? 'operator-display' : null;
+  }
+
   function update(next: OutputSettings): void {
     settings = next;
     store.save(settings);
@@ -119,6 +136,10 @@ export function createOutputWindowManager(deps: {
   }
 
   return {
+    setOutputOn(on) {
+      outputOn = on;
+      refresh();
+    },
     chooseMonitor(id) {
       const key = displaySetupKey(displays.list());
       update({ ...settings, monitorBySetup: { ...settings.monitorBySetup, [key]: id } });
@@ -131,6 +152,8 @@ export function createOutputWindowManager(deps: {
       const operatorId = displays.operatorDisplayId();
       return {
         windowed: settings.windowed,
+        outputOn,
+        blocked: blockedReason(),
         chosenMonitorId: chosenId(),
         missingMonitorId: missingMonitor(),
         monitors: displays.list().map((d, i) => ({

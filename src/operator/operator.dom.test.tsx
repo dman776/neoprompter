@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createCore, createFakeClock, type Command } from '../core';
 import { App } from './App';
 import type { CoreBridge } from './useCoreState';
+import type { OutputWindowView } from '../output-window';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -22,7 +23,16 @@ afterEach(() => {
   host.remove();
 });
 
-async function mount() {
+const shownView: OutputWindowView = {
+  windowed: false,
+  outputOn: true,
+  blocked: null,
+  chosenMonitorId: 'prompter',
+  missingMonitorId: null,
+  monitors: [],
+};
+
+async function mount(outputView: OutputWindowView = shownView) {
   const core = createCore({ clock: createFakeClock() });
   const dispatched: Command[] = [];
   const listeners: Array<(s: ReturnType<typeof core.getState>) => void> = [];
@@ -34,6 +44,7 @@ async function mount() {
       core.dispatch(c);
     },
     onState: (l) => listeners.push(l),
+    getOutputView: async () => outputView,
   };
   root = createRoot(host);
   await act(async () => root.render(<App bridge={bridge} />));
@@ -71,6 +82,33 @@ describe('the Operator view shell', () => {
     const { core } = await mount();
     await act(async () => core.dispatch({ type: 'setMode', mode: 'run' }));
     expect(host.querySelector('main')!.getAttribute('data-mode')).toBe('run');
+  });
+
+  it('shows the Output switch Off, then On after the Operator presses it', async () => {
+    const { core, dispatched } = await mount();
+    const lamp = () => host.querySelector('header [role="switch"]')!;
+    expect(lamp().getAttribute('aria-checked')).toBe('false');
+    expect(lamp().textContent).toContain('Output');
+    await act(async () => (lamp() as HTMLElement).click());
+    expect(dispatched).toEqual([{ type: 'setOutput', on: true }]);
+    expect(core.getState().outputOn).toBe(true);
+    expect(lamp().getAttribute('aria-checked')).toBe('true');
+    await act(async () => (lamp() as HTMLElement).click());
+    expect(dispatched.at(-1)).toEqual({ type: 'setOutput', on: false });
+  });
+
+  it('follows an Output switch that came from somewhere else', async () => {
+    const { core } = await mount();
+    await act(async () => core.dispatch({ type: 'setOutput', on: true }));
+    expect(host.querySelector('header [role="switch"]')!.getAttribute('aria-checked')).toBe('true');
+    expect(host.querySelector('footer')!.textContent).toContain('Output on');
+  });
+
+  it('says plainly why the Output stays closed when its monitor is not connected', async () => {
+    const { core } = await mount({ ...shownView, blocked: 'missing-monitor' });
+    expect(host.querySelector('[role="alert"]')).toBeNull();
+    await act(async () => core.dispatch({ type: 'setOutput', on: true }));
+    expect(host.querySelector('[role="alert"]')!.textContent).toContain('not connected');
   });
 
   it('uses the dark theme', async () => {

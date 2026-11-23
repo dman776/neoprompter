@@ -103,7 +103,7 @@ export function createCore(options: CoreOptions = {}): Core {
   let ring = 0;
   let lastTick = clock.now();
   const sessionStore = options.sessionStore ?? createMemorySessionStore();
-  let outputBlank = false;
+  let outputOn = false;
   let lastSave = clock.now();
   const SAVE_INTERVAL_MS = 1000;
 
@@ -131,7 +131,6 @@ export function createCore(options: CoreOptions = {}): Core {
     appearance = readable({ ...defaultAppearance, ...restored.appearance });
     activePreset =
       restored.activePreset && presets[restored.activePreset] ? restored.activePreset : null;
-    outputBlank = true;
   }
   if (restored?.mode === 'edit' || restored?.mode === 'run') mode = restored.mode;
   if (restored?.notificationDurationMs !== undefined) {
@@ -213,7 +212,7 @@ export function createCore(options: CoreOptions = {}): Core {
       appearance: { ...appearance },
       presets: Object.keys(presets),
       activePreset,
-      outputBlank,
+      outputOn,
       mode,
       notifications: notifications.map(({ id, text }) => ({ id, text })).reverse(),
       notificationDurationMs,
@@ -342,8 +341,9 @@ export function createCore(options: CoreOptions = {}): Core {
           appearance = readable({ ...presets[command.name] });
           activePreset = command.name;
           break;
-        case 'confirmOutput':
-          outputBlank = false;
+        case 'setOutput':
+          if (typeof command.on !== 'boolean') return;
+          outputOn = command.on;
           break;
         case 'setMode':
           if (command.mode !== 'edit' && command.mode !== 'run') return;

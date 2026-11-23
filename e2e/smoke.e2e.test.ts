@@ -24,6 +24,10 @@ async function windowTitled(part: string): Promise<Page> {
   throw new Error(`No window titled "${part}"`);
 }
 
+const outputWindows = async () =>
+  (await Promise.all(app.windows().map((w) => w.title()))).filter((t) => t.includes('Output'))
+    .length;
+
 /** Runs a core command from the Operator view, exactly as its buttons do. */
 const dispatch = (command: object) =>
   operator.evaluate((c) => (window as any).neoprompter.dispatch(c), command);
@@ -45,8 +49,11 @@ beforeAll(async () => {
     env: { ...process.env, NEOPROMPTER_USER_DATA: userData },
   });
   operator = await windowTitled('Operator view');
+  // The Output starts Off: no Output window until the Operator switches it On.
+  expect((await state()).outputOn).toBe(false);
+  expect(await outputWindows()).toBe(0);
+  await operator.getByRole('switch', { name: 'Output' }).click();
   output = await windowTitled('Output');
-  await dispatch({ type: 'confirmOutput' });
   await dispatch({
     type: 'saveScript',
     name: 'Smoke',
@@ -54,7 +61,6 @@ beforeAll(async () => {
   });
   const id = (await state()).library.find((e: { name: string }) => e.name === 'Smoke').id;
   await dispatch({ type: 'loadScript', id });
-  await dispatch({ type: 'confirmOutput' });
 });
 
 afterAll(async () => {
@@ -110,6 +116,20 @@ describe('the running app', () => {
     await operator.screenshot({ path: join(artifacts, 'operator-run.png') });
     await operator.getByRole('radio', { name: 'Edit' }).click();
     await expect.poll(() => operator.locator('main').getAttribute('data-mode')).toBe('edit');
+  });
+
+  it('switches the Output Off and On from the lamp, keeping the reading position', async () => {
+    const before = (await state()).position;
+    const lamp = operator.getByRole('switch', { name: 'Output' });
+    await operator.screenshot({ path: join(artifacts, 'operator-output-on.png') });
+    await lamp.click();
+    await expect.poll(outputWindows).toBe(0);
+    expect((await state()).position).toBe(before);
+    await operator.screenshot({ path: join(artifacts, 'operator-output-off.png') });
+    await lamp.click();
+    await expect.poll(outputWindows).toBe(1);
+    output = await windowTitled('Output');
+    await expect.poll(async () => (await outputLines()).length).toBe(3);
   });
 
   describe('the Producer page with a token set', () => {
