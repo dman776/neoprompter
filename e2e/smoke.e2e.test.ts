@@ -678,7 +678,7 @@ describe('the running app', () => {
     const after = await both();
     expect(after.operatorView.centerY).toBeGreaterThan(before.operatorView.centerY + 250);
     expect(Math.abs(after.talent.centerY - after.operatorView.centerY)).toBeLessThan(1.5);
-    expect(after.talent.height).toBeCloseTo(32, 0);
+    expect(after.talent.height).toBeCloseTo(64, 0);
     // The text did not scroll with it.
     expect((await state()).position).toBe(positionBefore);
     await operator.screenshot({ path: join(artifacts, 'live-view-reading-line-moved.png') });
@@ -746,7 +746,8 @@ describe('the running app', () => {
       expect(o.h).toBeLessThanOrEqual(0);
     }
     expect(await operator.evaluate(() => window.innerHeight)).toBeLessThanOrEqual(area.height);
-    // Preferences: no category needs scrolling when the screen is tall enough for its window.
+    // Preferences: the title (and Appearance's sample) stay fixed, the settings scroll beneath, and
+    // the last setting can always be reached, even in a short window.
     await app.evaluate(({ Menu }) => {
       Menu.getApplicationMenu()!
         .items.find((i) => i.label === 'File')!
@@ -754,7 +755,15 @@ describe('the running app', () => {
         .click();
     });
     const prefs = await windowTitled('Preferences');
-    const prefsHeight = await prefs.evaluate(() => window.innerHeight);
+    const shortWindow = (height: number) =>
+      app.evaluate(({ BrowserWindow }, height) => {
+        const win = BrowserWindow.getAllWindows().find((w) =>
+          w.getTitle().includes('Preferences'),
+        )!;
+        win.setMinimumSize(0, 0);
+        win.setSize(900, height);
+      }, height);
+    await shortWindow(500);
     for (const category of [
       'General',
       'Appearance',
@@ -764,14 +773,41 @@ describe('the running app', () => {
       'Network',
     ]) {
       await prefs.getByRole('button', { name: category }).click();
-      await prefs.waitForTimeout(150);
-      const scrolls = await prefs.evaluate(() =>
-        [...document.querySelectorAll('*')].some(
-          (e) => e.scrollHeight > e.clientHeight + 2 && getComputedStyle(e).overflowY !== 'visible',
-        ),
-      );
-      // A short screen may legitimately scroll the tallest pages; a tall one never should.
-      if (prefsHeight >= 940) expect(scrolls, `${category} scrolls`).toBe(false);
+      await prefs.waitForTimeout(200);
+      const before = await prefs.evaluate(() => {
+        const head = document.querySelector('.pf-head')!.getBoundingClientRect();
+        const scroll = document.querySelector('.pf-scroll') as HTMLElement;
+        return { headTop: head.top, scrolls: scroll.scrollHeight > scroll.clientHeight + 2 };
+      });
+      expect(before.headTop, `${category} title`).toBe(0);
+      // No sideways overflow, and the page itself never scrolls (only the settings do).
+      const page = await prefs.evaluate(() => ({
+        h: document.documentElement.scrollWidth - window.innerWidth,
+        v: document.documentElement.scrollHeight - window.innerHeight,
+      }));
+      expect(page.h, `${category} sideways`).toBeLessThanOrEqual(0);
+      expect(page.v, `${category} page`).toBeLessThanOrEqual(0);
+      await prefs.mouse.move(600, 400);
+      await prefs.mouse.wheel(0, 5000);
+      await prefs.waitForTimeout(200);
+      const after = await prefs.evaluate(() => {
+        const head = document.querySelector('.pf-head')!.getBoundingClientRect();
+        const scroll = document.querySelector('.pf-scroll') as HTMLElement;
+        const last = scroll.lastElementChild!.getBoundingClientRect();
+        const box = scroll.getBoundingClientRect();
+        return {
+          headTop: head.top,
+          moved: scroll.scrollTop > 0,
+          lastVisible: last.bottom <= box.bottom + 1,
+        };
+      });
+      expect(after.headTop, `${category} title stays`).toBe(0);
+      expect(after.lastVisible, `${category} last setting reachable`).toBe(true);
+      if (before.scrolls) expect(after.moved, `${category} scrolled`).toBe(true);
+      if (category === 'Appearance') {
+        expect(before.scrolls).toBe(true);
+        await prefs.screenshot({ path: join(artifacts, 'preferences-short-scrolled.png') });
+      }
     }
     await prefs.close();
     // The Virtual shuttle shows the whole device.

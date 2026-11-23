@@ -65,6 +65,12 @@ function readable(input: Appearance): Appearance {
     readingLineY: Number.isFinite(y)
       ? Math.max(READING_LINE_MIN_Y, Math.min(READING_LINE_MAX_Y, y))
       : defaultAppearance.readingLineY,
+    readingLineColor: isHexColor(input.readingLineColor)
+      ? input.readingLineColor
+      : defaultAppearance.readingLineColor,
+    progressColor: isHexColor(input.progressColor)
+      ? input.progressColor
+      : defaultAppearance.progressColor,
   };
   return contrastRatio(a.textColor, a.backgroundColor) >= MIN_CONTRAST
     ? a

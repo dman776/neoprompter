@@ -23,6 +23,8 @@ export { createMemoryLibraryStorage } from './library';
 export type { LibraryStorage, StoredScript } from './library';
 export {
   defaultAppearance,
+  READING_LINE_HEIGHT,
+  READING_LINE_WIDTH,
   READING_LINE_MAX_Y,
   READING_LINE_MIN_Y,
   outputState,

@@ -199,10 +199,10 @@ describe('Output Reading line', () => {
 
   it('is centered on its position in the Appearance, at the default a quarter down', async () => {
     const m = await mountOutput(script('one', 'two'));
-    // 0.25 of 1080px, less half of the 32px triangle.
-    expect(marker().style.top).toBe('254px');
+    // 0.25 of 1080px, less half of the 64px triangle.
+    expect(marker().style.top).toBe('238px');
     m.core.dispatch({ type: 'setAppearance', changes: { readingLineY: 0.5 } });
-    expect(marker().style.top).toBe('524px');
+    expect(marker().style.top).toBe('508px');
   });
 
   it('does not move the text, and hides with the switch', async () => {
@@ -217,6 +217,36 @@ describe('Output Reading line', () => {
   it('stays at the same height when mirrored', async () => {
     const m = await mountOutput(script('one', 'two'));
     m.core.dispatch({ type: 'setAppearance', changes: { mirror: true, readingLineY: 0.5 } });
-    expect(marker().style.top).toBe('524px');
+    expect(marker().style.top).toBe('508px');
+  });
+
+  it('is large, and red by default', async () => {
+    await mountOutput(script('one', 'two'));
+    // A 64px tall, 56px wide triangle on the 1080px stage.
+    expect(marker().style.borderTop).toContain('32px');
+    expect(marker().style.borderBottom).toContain('32px');
+    expect(marker().style.borderLeft).toContain('56px');
+    expect(marker().style.borderLeft).toContain('rgb(255, 0, 0)');
+  });
+
+  it('takes the color from the Appearance', async () => {
+    const m = await mountOutput(script('one', 'two'));
+    m.core.dispatch({ type: 'setAppearance', changes: { readingLineColor: '#00ff00' } });
+    expect(marker().style.borderLeft).toContain('rgb(0, 255, 0)');
+  });
+});
+
+describe('Output Progress bar color', () => {
+  const bar = () => document.getElementById('progress')!;
+
+  it('is red by default', async () => {
+    await mountOutput(script('one', 'two'));
+    expect(bar().style.background).toContain('rgb(255, 0, 0)');
+  });
+
+  it('takes the color from the Appearance', async () => {
+    const m = await mountOutput(script('one', 'two'));
+    m.core.dispatch({ type: 'setAppearance', changes: { progressColor: '#0000ff' } });
+    expect(bar().style.background).toContain('rgb(0, 0, 255)');
   });
 });

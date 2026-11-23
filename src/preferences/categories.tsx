@@ -1,7 +1,7 @@
 import type { ComponentType } from 'react';
 import type { Command, CoreState } from '../core';
 import type { PreferencesBridge } from '../operator/useCoreState';
-import { AppearancePage } from './AppearancePage';
+import { AppearancePage, AppearanceSample } from './AppearancePage';
 import { ControlsPage } from './ControlsPage';
 import { GeneralPage } from './GeneralPage';
 import { NetworkPage } from './NetworkPage';
@@ -23,6 +23,8 @@ export interface Category {
   subtitle: string;
   /** The category's settings. Omitted until the category has some: a placeholder shows instead. */
   Page?: ComponentType<PageProps>;
+  /** Stays fixed under the title while the settings scroll (Appearance pins its sample here). */
+  Pinned?: ComponentType<{ state: CoreState }>;
 }
 
 /**
@@ -36,6 +38,7 @@ export const CATEGORIES: Category[] = [
     label: 'Appearance',
     subtitle: 'What the Talent sees',
     Page: AppearancePage,
+    Pinned: AppearanceSample,
   },
   { id: 'output', label: 'Output', subtitle: 'Where the Output appears', Page: OutputPage },
   {

@@ -176,6 +176,40 @@ describe('Appearance', () => {
     expect(core.getState().appearance.textColor).toBe('#ffcc00');
   });
 
+  it('chooses the Reading line and Progress bar colors, red to begin with, and the sample shows them', async () => {
+    const { core } = await openAppearance();
+    expect(field('Reading line color').value).toBe('#ff0000');
+    expect(field('Progress bar color').value).toBe('#ff0000');
+    await setValue(field('Reading line color'), '#00cc66');
+    await setValue(field('Progress bar color'), '#3366ff');
+    expect(core.getState().appearance.readingLineColor).toBe('#00cc66');
+    expect(core.getState().appearance.progressColor).toBe('#3366ff');
+    const triangle = host.querySelector<HTMLElement>('[data-testid="sample-reading-line"]')!;
+    expect(triangle.style.borderLeftColor).toBe('rgb(0, 204, 102)');
+    const bar = host.querySelector<HTMLElement>('[data-testid="sample-progress"]')!;
+    expect(bar.style.backgroundColor).toBe('rgb(51, 102, 255)');
+  });
+
+  it('keeps the title and the sample fixed while only the settings scroll', async () => {
+    await openAppearance();
+    const head = host.querySelector('.pf-head')!;
+    const scroll = host.querySelector('.pf-scroll')!;
+    expect(head.querySelector('h2')!.textContent).toBe('Appearance');
+    expect(head.querySelector('[data-testid="sample"]')).not.toBeNull();
+    expect(scroll.contains(head)).toBe(false);
+    expect(scroll.querySelector('[data-testid="sample"]')).toBeNull();
+    expect(scroll.querySelector('[aria-label="Font size"]')).not.toBeNull();
+  });
+
+  it('puts every category inside a scrolling area under a fixed title', async () => {
+    await mount();
+    for (const name of ['General', 'Output', 'Controls', 'Notifications', 'Network']) {
+      await act(async () => (nav(name) as HTMLElement).click());
+      expect(host.querySelector('.pf-head h2')!.textContent).toBe(name);
+      expect(host.querySelector('.pf-scroll')).not.toBeNull();
+    }
+  });
+
   it('sets the Reading line position with a slider, and the sample shows it', async () => {
     const m = await openAppearance();
     expect(field('Reading line position').value).toBe('25');

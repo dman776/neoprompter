@@ -262,13 +262,13 @@ describe('Run mode: the Live view', () => {
 
     it('sits where the setting says and offers itself as a slider', async () => {
       const { core } = await runMode();
-      expect(handle().style.top).toBe('254px');
+      expect(handle().style.top).toBe('238px');
       expect(handle().getAttribute('role')).toBe('slider');
       expect(handle().getAttribute('aria-valuenow')).toBe('25');
       await act(async () =>
         core.dispatch({ type: 'setAppearance', changes: { readingLineY: 0.6 } }),
       );
-      expect(handle().style.top).toBe('632px');
+      expect(handle().style.top).toBe('616px');
       expect(handle().getAttribute('aria-valuenow')).toBe('60');
     });
 
@@ -283,7 +283,8 @@ describe('Run mode: the Live view', () => {
       await pointer('pointerdown', 100);
       await pointer('pointermove', -5000);
       await pointer('pointerup', -5000);
-      expect(core.getState().appearance.readingLineY).toBeLessThan(0.02);
+      // Pulled off the top, it stops with the whole 64px triangle still on the stage.
+      expect(core.getState().appearance.readingLineY).toBeCloseTo(32 / 1080, 5);
     });
 
     it('drags the same when the Script is unlocked and when the Output is mirrored', async () => {

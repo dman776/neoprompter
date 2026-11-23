@@ -84,27 +84,25 @@
   top: 0;
   width: 0;
   height: 0;
-  border-top: 16px solid transparent;
-  border-bottom: 16px solid transparent;
-  border-left: 28px solid #f5a623;
+  /* Size and color come from the Appearance (src/output/renderer.ts). */
   cursor: ns-resize;
   touch-action: none;
 }
-/* A comfortable hit area: the stage is scaled down, so the triangle itself is tiny. */
+/* A comfortable hit area: the stage is scaled down, so the triangle itself is small. */
 .live-line::before {
   content: '';
   position: absolute;
-  left: -20px;
-  top: -64px;
-  width: 140px;
-  height: 160px;
+  left: -70px;
+  top: -52px;
+  width: 170px;
+  height: 104px;
   border-radius: 16px;
 }
 .live-line:hover::before,
 .live-line:focus-visible::before,
 .live-line[data-dragging='true']::before {
-  background: rgba(245, 166, 35, 0.22);
-  outline: 3px solid rgba(245, 166, 35, 0.8);
+  background: rgba(255, 255, 255, 0.16);
+  outline: 3px solid rgba(255, 255, 255, 0.7);
 }
 .live-line:focus-visible {
   outline: none;
@@ -118,7 +116,6 @@
   bottom: 0;
   height: 3px;
   width: 100%;
-  background: #fff;
   transform-origin: left;
   transform: scaleX(0);
 }

@@ -3,13 +3,12 @@ import {
   lineHeading,
   lineRuns,
   lineText,
+  READING_LINE_HEIGHT,
+  READING_LINE_WIDTH,
   type Command,
   type OutputState,
 } from '../core';
 import { STAGE_HEIGHT } from './stage';
-
-/** The Reading line triangle's height in stage px (see the borders in the Output's CSS). */
-export const READING_LINE_HEIGHT = 32;
 
 /** The pieces of a picture of the Output, wherever it is drawn (the Output page or the Live view). */
 export interface OutputSurface {
@@ -73,6 +72,11 @@ export function createOutputRenderer(target: OutputSurface): (state: OutputState
     lineEl.style.display = a.readingLine ? 'block' : 'none';
     // Centered on its position; purely a marker, so the text does not scroll with it.
     lineEl.style.top = `${a.readingLineY * STAGE_HEIGHT - READING_LINE_HEIGHT / 2}px`;
+    // The triangle is drawn with borders: its size and color are set here, once, for both pictures.
+    lineEl.style.borderTop = `${READING_LINE_HEIGHT / 2}px solid transparent`;
+    lineEl.style.borderBottom = `${READING_LINE_HEIGHT / 2}px solid transparent`;
+    lineEl.style.borderLeft = `${READING_LINE_WIDTH}px solid ${a.readingLineColor}`;
+    progressEl.style.background = a.progressColor;
     // One visual line, in px. Position, speed and the viewport are in these units; a Script line
     // (paragraph) that wraps occupies several, which the core learns from the measurement below.
     const lineHeight = a.fontSize * a.lineSpacing;

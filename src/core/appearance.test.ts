@@ -3,7 +3,12 @@ import { createCore } from './core';
 import { createFakeClock } from './clock';
 import { createMemoryPresetStore, type PresetStore } from './presets';
 import { contrastRatio, MIN_CONTRAST } from './readableColor';
-import { defaultAppearance, READING_LINE_MAX_Y, READING_LINE_MIN_Y } from './types';
+import {
+  defaultAppearance,
+  READING_LINE_HEIGHT,
+  READING_LINE_MAX_Y,
+  READING_LINE_MIN_Y,
+} from './types';
 
 function setup(store: PresetStore = createMemoryPresetStore()) {
   const core = createCore({ clock: createFakeClock(), presetStore: store });
@@ -141,9 +146,9 @@ describe('reading line position', () => {
     expect(core.getState().appearance.readingLineY).toBe(READING_LINE_MIN_Y);
     core.dispatch({ type: 'setAppearance', changes: { readingLineY: 9 } });
     expect(core.getState().appearance.readingLineY).toBe(READING_LINE_MAX_Y);
-    // A 32px triangle centered on the limits stays inside a 1080px stage.
-    expect(READING_LINE_MIN_Y * 1080).toBeGreaterThanOrEqual(16);
-    expect(READING_LINE_MAX_Y * 1080).toBeLessThanOrEqual(1080 - 16);
+    // The triangle centered on the limits stays inside the 1080px stage.
+    expect(READING_LINE_MIN_Y * 1080).toBeGreaterThanOrEqual(READING_LINE_HEIGHT / 2);
+    expect(READING_LINE_MAX_Y * 1080).toBeLessThanOrEqual(1080 - READING_LINE_HEIGHT / 2);
     core.dispatch({ type: 'setAppearance', changes: { readingLineY: Number.NaN } });
     expect(core.getState().appearance.readingLineY).toBe(defaultAppearance.readingLineY);
   });
@@ -167,5 +172,45 @@ describe('reading line position', () => {
     const { core } = setup(store);
     core.dispatch({ type: 'loadPreset', name: 'Old' });
     expect(core.getState().appearance.readingLineY).toBe(0.25);
+  });
+});
+
+describe('the Reading line and Progress bar colors', () => {
+  it('are red unless the Operator chooses otherwise', () => {
+    const a = setup().core.getState().appearance;
+    expect(a.readingLineColor).toBe('#ff0000');
+    expect(a.progressColor).toBe('#ff0000');
+  });
+
+  it('can be changed, and a bad value falls back to red', () => {
+    const { core } = setup();
+    core.dispatch({
+      type: 'setAppearance',
+      changes: { readingLineColor: '#00ff00', progressColor: '#0000ff' },
+    });
+    expect(core.getState().appearance.readingLineColor).toBe('#00ff00');
+    expect(core.getState().appearance.progressColor).toBe('#0000ff');
+    core.dispatch({
+      type: 'setAppearance',
+      changes: { readingLineColor: 'not a color', progressColor: '' },
+    });
+    expect(core.getState().appearance.readingLineColor).toBe('#ff0000');
+    expect(core.getState().appearance.progressColor).toBe('#ff0000');
+  });
+
+  it('are saved in a Preset, and an old Preset without them loads with red', () => {
+    const { core } = setup();
+    core.dispatch({ type: 'setAppearance', changes: { readingLineColor: '#ffee00' } });
+    core.dispatch({ type: 'savePreset', name: 'Yellow' });
+    core.dispatch({ type: 'setAppearance', changes: { readingLineColor: '#112233' } });
+    core.dispatch({ type: 'loadPreset', name: 'Yellow' });
+    expect(core.getState().appearance.readingLineColor).toBe('#ffee00');
+    const { readingLineColor: _a, progressColor: _b, ...old } = defaultAppearance;
+    const oldStore = createMemoryPresetStore();
+    oldStore.save({ Old: old as typeof defaultAppearance });
+    const { core: older } = setup(oldStore);
+    older.dispatch({ type: 'loadPreset', name: 'Old' });
+    expect(older.getState().appearance.readingLineColor).toBe('#ff0000');
+    expect(older.getState().appearance.progressColor).toBe('#ff0000');
   });
 });

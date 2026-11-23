@@ -61,11 +61,11 @@ The web page the app serves on the local network, where the Producer sends Notif
 _Avoid_: Producer app, remote, dashboard
 
 **Progress bar**:
-A thin line along the bottom of the Output that fills with the current position in the Script. It shows no numbers.
+A thin line along the bottom of the Output that fills with the current position in the Script. It is red unless the Operator chooses another color, and it shows no numbers.
 _Avoid_: Progress indicator, timeline
 
 **Reading line**:
-A small triangle at the side of the Output that marks the line the Talent should be reading.
+A large triangle at the side of the Output that marks the line the Talent should be reading. It is red unless the Operator chooses another color. The Operator drags it up or down in the Live view to place it, and its position and color are saved in the Preset. It only marks a place; it never moves the text.
 _Avoid_: Cursor, marker, indicator
 
 **Preset**:

@@ -165,6 +165,10 @@ export interface Appearance {
    * Operator drags it in the Live view; it never changes how the text scrolls.
    */
   readingLineY: number;
+  /** The Reading line triangle's color (`#rrggbb`). Red unless the Operator chooses otherwise. */
+  readingLineColor: string;
+  /** The Progress bar's color along the bottom of the Output (`#rrggbb`). */
+  progressColor: string;
   /** Flip the Output horizontally for beam-splitter glass. */
   mirror: boolean;
 }
@@ -178,12 +182,17 @@ export const defaultAppearance: Appearance = {
   backgroundColor: '#000000',
   readingLine: true,
   readingLineY: 0.25,
+  readingLineColor: '#ff0000',
+  progressColor: '#ff0000',
   mirror: false,
 };
 
-/** The Reading line triangle is 32px tall on the 1080px stage; keep all of it inside. */
-export const READING_LINE_MIN_Y = 16 / 1080;
-export const READING_LINE_MAX_Y = 1 - 16 / 1080;
+/** The Reading line triangle's size in stage px: large enough to find at a glance from a distance. */
+export const READING_LINE_HEIGHT = 64;
+export const READING_LINE_WIDTH = 56;
+/** Keep all of the triangle inside the 1080px stage. */
+export const READING_LINE_MIN_Y = READING_LINE_HEIGHT / 2 / 1080;
+export const READING_LINE_MAX_Y = 1 - READING_LINE_HEIGHT / 2 / 1080;
 
 /** State comes out. Operator view and Output are thin renderers of this. */
 export interface CoreState {

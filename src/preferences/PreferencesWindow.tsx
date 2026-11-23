@@ -12,6 +12,7 @@ export function Preferences({ bridge }: { bridge: PreferencesBridge }) {
   const [selected, setSelected] = useState(CATEGORIES[0]!.id);
   const category = CATEGORIES.find((c) => c.id === selected)!;
   const Page = category.Page;
+  const Pinned = category.Pinned;
 
   return (
     <div className="pf-shell">
@@ -29,13 +30,18 @@ export function Preferences({ bridge }: { bridge: PreferencesBridge }) {
         ))}
       </nav>
       <main>
-        <h2>{category.label}</h2>
-        <p className="pf-sub">{category.subtitle}</p>
-        {Page ? (
-          state && <Page state={state} dispatch={bridge.dispatch} bridge={bridge} />
-        ) : (
-          <p className="pf-placeholder">Coming soon.</p>
-        )}
+        <header className="pf-head">
+          <h2>{category.label}</h2>
+          <p className="pf-sub">{category.subtitle}</p>
+          {Pinned && state && <Pinned state={state} />}
+        </header>
+        <div className="pf-scroll">
+          {Page ? (
+            state && <Page state={state} dispatch={bridge.dispatch} bridge={bridge} />
+          ) : (
+            <p className="pf-placeholder">Coming soon.</p>
+          )}
+        </div>
       </main>
     </div>
   );

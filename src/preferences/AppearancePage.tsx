@@ -8,8 +8,9 @@ import type { PageProps } from './categories';
 /** The sample scales the Output's text so a large font size still fits the window. */
 const SAMPLE_SCALE = 0.4;
 
-function Sample({ appearance }: { appearance: CoreState['appearance'] }) {
-  const a = appearance;
+/** The sample stays fixed above the settings (the window pins it), so every change is seen as made. */
+export function AppearanceSample({ state }: { state: CoreState }) {
+  const a = state.appearance;
   return (
     <div
       className="pf-sample"
@@ -28,9 +29,15 @@ function Sample({ appearance }: { appearance: CoreState['appearance'] }) {
           className="pf-reading-line"
           data-testid="sample-reading-line"
           aria-hidden="true"
-          style={{ top: `${a.readingLineY * 100}%` }}
+          style={{ top: `${a.readingLineY * 100}%`, borderLeftColor: a.readingLineColor }}
         />
       )}
+      <span
+        className="pf-sample-progress"
+        data-testid="sample-progress"
+        aria-hidden="true"
+        style={{ background: a.progressColor }}
+      />
       <div style={{ width: `${a.textWidth}%`, margin: '0 auto' }}>
         Notice what Boaz does. He does not make a speech. He simply stays at the edge of the field.
       </div>
@@ -51,7 +58,6 @@ export function AppearancePage({ state, dispatch }: PageProps) {
 
   return (
     <>
-      <Sample appearance={a} />
       <Row title="Preset" help="A saved set of these settings, such as one for each Talent.">
         <select
           aria-label="Preset"
@@ -164,6 +170,20 @@ export function AppearancePage({ state, dispatch }: PageProps) {
           step={1}
           unit="%"
           onChange={(percent) => change({ readingLineY: percent / 100 })}
+        />
+      </Row>
+      <Row title="Reading line color" help="Red unless you choose another.">
+        <ColorField
+          label="Reading line color"
+          value={a.readingLineColor}
+          onChange={(readingLineColor) => change({ readingLineColor })}
+        />
+      </Row>
+      <Row title="Progress bar color" help="The thin bar along the bottom of the Output.">
+        <ColorField
+          label="Progress bar color"
+          value={a.progressColor}
+          onChange={(progressColor) => change({ progressColor })}
         />
       </Row>
       <Row title="Mirror" help="Flips the Output for beam-splitter glass.">
