@@ -1,10 +1,10 @@
 import type { ComponentType } from 'react';
 import type { Command, CoreState } from '../core';
 import type { PreferencesBridge } from '../operator/useCoreState';
-import { AppearancePage, AppearanceSample } from './AppearancePage';
+import { AppearanceSample, ColorsTab, PresetsTab, ReadingLineTab, TextTab } from './AppearancePage';
 import { ControlsPage } from './ControlsPage';
 import { GeneralPage } from './GeneralPage';
-import { NetworkPage } from './NetworkPage';
+import { ConnectionTab, QuickMessagesTab } from './NetworkPage';
 import { NotificationsPage } from './NotificationsPage';
 import { OutputPage } from './OutputPage';
 
@@ -16,20 +16,32 @@ export interface PageProps {
   dispatch: (command: Command) => void;
 }
 
+/** One tab of a category: its label in the tab strip and the settings it shows. */
+export interface Tab {
+  id: string;
+  label: string;
+  Page: ComponentType<PageProps>;
+}
+
 export interface Category {
   id: string;
   label: string;
   /** Short line under the category's title. */
   subtitle: string;
-  /** The category's settings. Omitted until the category has some: a placeholder shows instead. */
+  /** The category's settings, when it has no tabs. Omitted until it has some: a placeholder shows. */
   Page?: ComponentType<PageProps>;
-  /** Stays fixed under the title while the settings scroll (Appearance pins its sample here). */
+  /**
+   * The category's settings split into tabs, so none of them needs scrolling. A category has
+   * either `tabs` or a single `Page`.
+   */
+  tabs?: Tab[];
+  /** Stays fixed under the title, above the tabs (Appearance pins its sample here). */
   Pinned?: ComponentType<{ state: CoreState }>;
 }
 
 /**
- * The Preferences categories, in navigation order. To fill a category, set its `Page`: that is
- * the only change needed.
+ * The Preferences categories, in navigation order. To fill a category, set its `Page` (or its
+ * `tabs`): that is the only change needed.
  */
 export const CATEGORIES: Category[] = [
   { id: 'general', label: 'General', subtitle: 'Theme and startup', Page: GeneralPage },
@@ -37,8 +49,13 @@ export const CATEGORIES: Category[] = [
     id: 'appearance',
     label: 'Appearance',
     subtitle: 'What the Talent sees',
-    Page: AppearancePage,
     Pinned: AppearanceSample,
+    tabs: [
+      { id: 'text', label: 'Text', Page: TextTab },
+      { id: 'colors', label: 'Colors', Page: ColorsTab },
+      { id: 'reading-line', label: 'Reading line', Page: ReadingLineTab },
+      { id: 'presets', label: 'Presets', Page: PresetsTab },
+    ],
   },
   { id: 'output', label: 'Output', subtitle: 'Where the Output appears', Page: OutputPage },
   {
@@ -57,6 +74,9 @@ export const CATEGORIES: Category[] = [
     id: 'network',
     label: 'Network',
     subtitle: 'The Producer page and Companion',
-    Page: NetworkPage,
+    tabs: [
+      { id: 'connection', label: 'Connection', Page: ConnectionTab },
+      { id: 'quick-messages', label: 'Quick messages', Page: QuickMessagesTab },
+    ],
   },
 ];

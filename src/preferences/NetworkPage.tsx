@@ -10,20 +10,15 @@ const MAX_PORT = 65535;
 const MAX_MESSAGE_LENGTH = 500;
 const MAX_MESSAGES = 30;
 
-/** Port, access token, the Producer page address and the Quick messages. */
-export function NetworkPage({ bridge }: PageProps) {
+/** Port, access token, the Producer page address and its status. */
+export function ConnectionTab({ bridge }: PageProps) {
   const polled = useApiView(bridge);
   // What the last save returned is newer than the poll, until the poll catches up.
   const [saved, setSaved] = useState<ApiView | null>(null);
   const view = saved ?? polled;
   useEffect(() => setSaved(null), [polled]);
   if (!view) return null;
-  return (
-    <>
-      <Settings view={view} onSaved={setSaved} bridge={bridge} />
-      <QuickMessages bridge={bridge} />
-    </>
-  );
+  return <Settings view={view} onSaved={setSaved} bridge={bridge} />;
 }
 
 function Settings({
@@ -110,7 +105,7 @@ function Settings({
 }
 
 /** The one list of Quick messages every Producer's browser shows. Each change is saved at once. */
-function QuickMessages({ bridge }: { bridge: PageProps['bridge'] }) {
+export function QuickMessagesTab({ bridge }: PageProps) {
   const [messages, setMessages] = useState<string[] | null>(null);
   const [draft, setDraft] = useState('');
   useEffect(() => {
@@ -130,8 +125,9 @@ function QuickMessages({ bridge }: { bridge: PageProps['bridge'] }) {
   };
 
   return (
-    <Row title="Quick messages" help="One tap on the Producer page sends one to the Operator.">
-      <div className="pf-messages">
+    <div className="pf-quick">
+      <p className="pf-quick-help">One tap on the Producer page sends one to the Operator.</p>
+      <div className="pf-messages pf-messages-list" data-scrolls="true">
         {messages.map((m, i) => (
           <div className="pf-inline" key={i}>
             <input
@@ -152,6 +148,8 @@ function QuickMessages({ bridge }: { bridge: PageProps['bridge'] }) {
             </Button>
           </div>
         ))}
+      </div>
+      <div className="pf-messages">
         <div className="pf-inline">
           <input
             type="text"
@@ -171,6 +169,6 @@ function QuickMessages({ bridge }: { bridge: PageProps['bridge'] }) {
           </Button>
         </div>
       </div>
-    </Row>
+    </div>
   );
 }
