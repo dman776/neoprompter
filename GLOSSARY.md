@@ -93,11 +93,11 @@ A setting that shows the Output in an ordinary window on the Operator's screen. 
 _Avoid_: Preview, debug mode
 
 **Import**:
-Bringing a Word file (`.doc` or `.docx`) in as a Script, keeping its structure, emphasis, and colors. Any color too hard to read on the Output, and in the editor, is replaced with a readable one when shown; the Script keeps the original color.
+Bringing a Word file (`.doc` or `.docx`), a text file (`.txt`) or a PDF (`.pdf`) in as a Script. A Word file keeps its structure, emphasis, and colors; a text file or PDF brings in its words only, with no headings, emphasis or color. A PDF with no readable text (scanned) or a password is refused with a plain message. Any color too hard to read on the Output, and in the editor, is replaced with a readable one when shown; the Script keeps the original color.
 _Avoid_: Open, upload, convert
 
 **Watched folder**:
-One folder the Operator picks in Preferences, off until chosen. A Word file (`.doc` or `.docx`) dropped into it is Imported as a Script, at startup for files that arrived while the app was closed and while the app is running. A file that Imports is moved into an `imported` subfolder; one that fails stays where it is and the Operator is told why. A Script with a name already in the library is added alongside it under a numbered name, never over it. In Run mode, dropped files wait and are Imported when the Operator returns to Edit mode.
+One folder the Operator picks in Preferences, off until chosen. A Word, text or PDF file (`.doc`, `.docx`, `.txt` or `.pdf`) dropped into it is Imported as a Script, at startup for files that arrived while the app was closed and while the app is running. A file that Imports is moved into an `imported` subfolder; one that fails stays where it is and the Operator is told why. A Script with a name already in the library is added alongside it under a numbered name, never over it. In Run mode, dropped files wait and are Imported when the Operator returns to Edit mode.
 _Avoid_: Hot folder, inbox, drop folder
 
 **Update notice**:
