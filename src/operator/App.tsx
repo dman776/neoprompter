@@ -82,6 +82,16 @@ export function App({ bridge }: { bridge: CoreBridge }) {
         theme={state.theme}
         onToggleTheme={toggleTheme}
         onImport={state.mode === 'edit' && bridge.importScript ? runImport : undefined}
+        update={
+          state.mode === 'edit' && update?.available
+            ? {
+                version: update.available.version,
+                current: update.current,
+                onView: () => bridge.openUpdatePage?.(),
+                onSkip: () => void bridge.skipUpdate?.(),
+              }
+            : undefined
+        }
       />
       {notice && (
         <div
@@ -93,19 +103,6 @@ export function App({ bridge }: { bridge: CoreBridge }) {
           <span>{notice.message}</span>
           <button type="button" onClick={() => setNotice(null)}>
             Dismiss
-          </button>
-        </div>
-      )}
-      {state.mode === 'edit' && update?.available && (
-        <div className="import-note update-note" data-testid="update-notice" role="status">
-          <span>
-            NeoPrompter {update.available.version} is available (you have {update.current}).
-          </span>
-          <button type="button" onClick={() => bridge.openUpdatePage?.()}>
-            View release
-          </button>
-          <button type="button" onClick={() => void bridge.skipUpdate?.()}>
-            Skip this version
           </button>
         </div>
       )}

@@ -51,14 +51,15 @@ const notice = () => host.querySelector<HTMLElement>('[data-testid="update-notic
 const click = (label: string) =>
   act(async () =>
     [...notice()!.querySelectorAll('button')]
-      .find((b) => b.textContent === label)!
+      .find((b) => b.textContent?.includes(label) || b.getAttribute('aria-label') === label)!
       .dispatchEvent(new MouseEvent('click', { bubbles: true })),
   );
 
 describe('Update notice', () => {
   it('says a newer version is available, in Edit mode', async () => {
     await mount();
-    expect(notice()!.textContent).toContain('NeoPrompter 0.3.0 is available (you have 0.2.0)');
+    expect(notice()!.textContent).toContain('Update 0.3.0 available');
+    expect(notice()!.closest('header')).not.toBeNull();
   });
 
   it('shows nothing when there is nothing to offer', async () => {
@@ -74,7 +75,7 @@ describe('Update notice', () => {
 
   it('opens the release page and skips the version', async () => {
     const { openUpdatePage, skipUpdate } = await mount();
-    await click('View release');
+    await click('Update 0.3.0');
     expect(openUpdatePage).toHaveBeenCalled();
     await click('Skip this version');
     expect(skipUpdate).toHaveBeenCalled();

@@ -19,6 +19,8 @@ interface HeaderProps {
   onToggleTheme: () => void;
   /** Edit mode's Import button; absent where Import does not belong. */
   onImport?: () => void;
+  /** Edit mode's Update notice: a newer published version; absent when there is none to offer. */
+  update?: { version: string; current: string; onView: () => void; onSkip: () => void };
 }
 
 export const BLOCKED_TEXT: Record<OutputBlocked, string> = {
@@ -40,6 +42,7 @@ export function Header({
   theme,
   onToggleTheme,
   onImport,
+  update,
 }: HeaderProps) {
   return (
     <header className="shell-header">
@@ -61,6 +64,27 @@ export function Header({
         {outputBlocked && (
           <span className="output-note" role="alert">
             {BLOCKED_TEXT[outputBlocked]}
+          </span>
+        )}
+        {update && (
+          <span className="update-pill" data-testid="update-notice" role="status">
+            <button
+              type="button"
+              className="update-pill-view"
+              title={`NeoPrompter ${update.version} is available (you have ${update.current})`}
+              onClick={update.onView}
+            >
+              Update {update.version} available
+            </button>
+            <button
+              type="button"
+              className="update-pill-skip"
+              aria-label="Skip this version"
+              title="Skip this version"
+              onClick={update.onSkip}
+            >
+              ×
+            </button>
           </span>
         )}
         {onImport && (
