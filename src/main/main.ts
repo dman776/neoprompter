@@ -177,6 +177,8 @@ app.whenReady().then(() => {
   );
   ipcMain.handle(IPC.apiGet, () => api.getView());
   ipcMain.handle(IPC.apiSet, (_e, settings) => api.apply(settings));
+  ipcMain.handle(IPC.quickMessagesGet, () => api.getQuickMessages());
+  ipcMain.handle(IPC.quickMessagesSet, (_e, messages) => api.setQuickMessages(messages));
   void api.startup();
   app.on('will-quit', () => void api.stop());
 

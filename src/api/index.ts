@@ -35,6 +35,8 @@ export interface ApiView extends ApiSettings {
   running: boolean;
   /** Clear failure message (e.g. port taken) when it could not start; null otherwise. */
   error: string | null;
+  /** Where a phone on this network can open the Producer page (the token is never in them). */
+  producerUrls: string[];
 }
 
 export interface ApiRequest {

@@ -34,7 +34,7 @@ const shownView: OutputWindowView = {
   monitors: [],
 };
 
-const apiView: ApiView = { port: 4780, token: '', running: true, error: null };
+const apiView: ApiView = { port: 4780, token: '', running: true, error: null, producerUrls: [] };
 
 async function mount(
   outputView: OutputWindowView = shownView,

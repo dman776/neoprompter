@@ -1,8 +1,10 @@
 import type { ComponentType } from 'react';
 import type { Command, CoreState } from '../core';
-import type { CoreBridge } from '../operator/useCoreState';
+import type { PreferencesBridge } from '../operator/useCoreState';
 import { AppearancePage } from './AppearancePage';
+import { ControlsPage } from './ControlsPage';
 import { GeneralPage } from './GeneralPage';
+import { NetworkPage } from './NetworkPage';
 import { NotificationsPage } from './NotificationsPage';
 import { OutputPage } from './OutputPage';
 
@@ -10,7 +12,7 @@ import { OutputPage } from './OutputPage';
 export interface PageProps {
   state: CoreState;
   /** For what only the main process knows (the displays); most pages just dispatch. */
-  bridge: CoreBridge;
+  bridge: PreferencesBridge;
   dispatch: (command: Command) => void;
 }
 
@@ -36,12 +38,22 @@ export const CATEGORIES: Category[] = [
     Page: AppearancePage,
   },
   { id: 'output', label: 'Output', subtitle: 'Where the Output appears', Page: OutputPage },
-  { id: 'controls', label: 'Controls', subtitle: 'ShuttleXPress buttons' },
+  {
+    id: 'controls',
+    label: 'Controls',
+    subtitle: 'ShuttleXPress buttons',
+    Page: ControlsPage,
+  },
   {
     id: 'notifications',
     label: 'Notifications',
     subtitle: 'How long a Notification shows',
     Page: NotificationsPage,
   },
-  { id: 'network', label: 'Network', subtitle: 'The Producer page and Companion' },
+  {
+    id: 'network',
+    label: 'Network',
+    subtitle: 'The Producer page and Companion',
+    Page: NetworkPage,
+  },
 ];

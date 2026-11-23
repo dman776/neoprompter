@@ -54,7 +54,13 @@ async function mountRun() {
       missingMonitorId: null,
       monitors: [],
     }),
-    getApiView: async () => ({ port: 4780, token: '', running: true, error: null }),
+    getApiView: async () => ({
+      port: 4780,
+      token: '',
+      running: true,
+      error: null,
+      producerUrls: [],
+    }),
   };
   root = createRoot(host);
   await act(async () => root.render(<App bridge={bridge} />));

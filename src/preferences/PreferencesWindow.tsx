@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
-import { useCoreState, type CoreBridge } from '../operator/useCoreState';
+import { useCoreState, type PreferencesBridge } from '../operator/useCoreState';
 import { CATEGORIES } from './categories';
 
 /** The Preferences window: category navigation and the chosen category's settings. */
-export function Preferences({ bridge }: { bridge: CoreBridge }) {
+export function Preferences({ bridge }: { bridge: PreferencesBridge }) {
   const state = useCoreState(bridge);
   const theme = state?.theme;
   useEffect(() => {

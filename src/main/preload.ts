@@ -20,6 +20,9 @@ const api = {
   getApiView: (): Promise<ApiView> => ipcRenderer.invoke(IPC.apiGet),
   setApiSettings: (settings: ApiSettings): Promise<ApiView> =>
     ipcRenderer.invoke(IPC.apiSet, settings),
+  getQuickMessages: (): Promise<string[]> => ipcRenderer.invoke(IPC.quickMessagesGet),
+  setQuickMessages: (messages: string[]): Promise<string[]> =>
+    ipcRenderer.invoke(IPC.quickMessagesSet, messages),
   /** The same events the real device sends; the main process maps them to core commands. */
   sendDeviceEvent: (event: DeviceEvent): void => ipcRenderer.send(IPC.deviceEvent, event),
   getButtonMapping: (): Promise<ButtonMappingView> => ipcRenderer.invoke(IPC.inputGetMapping),

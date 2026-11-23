@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Command, CoreState } from '../core';
 import type { OutputBlocked, OutputWindowView } from '../output-window';
-import type { ApiView } from '../api';
+import type { ApiSettings, ApiView } from '../api';
+import type { ActionId, ButtonId, ButtonMappingView } from '../input';
 import type { UiAction } from '../window-host';
 
 /** The slice of `window.neoprompter` the Operator view uses; a test passes a fake. */
@@ -15,6 +16,16 @@ export interface CoreBridge {
   onMenuAction?(listener: (action: UiAction) => void): void;
   chooseOutputMonitor(id: string): Promise<OutputWindowView>;
   setWindowedOutput(windowed: boolean): Promise<OutputWindowView>;
+}
+
+/** What the Preferences window uses beyond the Operator view's slice: Controls and Network. */
+export interface PreferencesBridge extends CoreBridge {
+  getButtonMapping(): Promise<ButtonMappingView>;
+  setButton(button: ButtonId, action: ActionId): Promise<ButtonMappingView>;
+  onButtonMapping(listener: (view: ButtonMappingView) => void): void;
+  setApiSettings(settings: ApiSettings): Promise<ApiView>;
+  getQuickMessages(): Promise<string[]>;
+  setQuickMessages(messages: string[]): Promise<string[]>;
 }
 
 /** The latest core state (null until the first one arrives). Components render it and dispatch. */

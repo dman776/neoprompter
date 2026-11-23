@@ -18,6 +18,10 @@ export const IPC = {
   apiGet: 'api:get',
   /** renderer -> main (invoke): save Companion API settings (port, token), returns the new view */
   apiSet: 'api:set',
+  /** renderer -> main (invoke): the Producer page's Quick messages */
+  quickMessagesGet: 'api:quick-messages-get',
+  /** renderer -> main (invoke): save the Quick messages, returns the list as saved */
+  quickMessagesSet: 'api:quick-messages-set',
   /** renderer -> main: a device event (Virtual shuttle now, the real ShuttleXPress later) */
   deviceEvent: 'input:event',
   /** renderer -> main (invoke): the button mapping and the actions that can be chosen */

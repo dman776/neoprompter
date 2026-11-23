@@ -5,7 +5,9 @@ import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createCore, createFakeClock, createMemoryPresetStore, type Command } from '../core';
-import type { CoreBridge } from '../operator/useCoreState';
+import type { PreferencesBridge } from '../operator/useCoreState';
+import type { ApiView } from '../api';
+import { defaultButtonMapping, type ButtonMappingView } from '../input';
 import type { OutputWindowView } from '../output-window';
 import { Preferences } from './PreferencesWindow';
 
@@ -34,7 +36,25 @@ const baseView: OutputWindowView = {
   ],
 };
 
-async function mount(initialView: Partial<OutputWindowView> = {}) {
+const baseApi: ApiView = {
+  port: 4780,
+  token: 'sekret',
+  running: true,
+  error: null,
+  producerUrls: ['http://192.168.1.20:4780/'],
+};
+const ACTIONS = ['none', 'playPause', 'jumpBack', 'jumpForward', 'returnToPlayStart'];
+
+async function mount(
+  initialView: Partial<OutputWindowView> = {},
+  options: { api?: Partial<ApiView>; applyError?: string } = {},
+) {
+  let api: ApiView = { ...baseApi, ...options.api };
+  let mapping: ButtonMappingView = { mapping: { ...defaultButtonMapping }, actions: ACTIONS };
+  const mappingListeners: Array<(v: ButtonMappingView) => void> = [];
+  const apiSaved: Array<{ port: number; token: string }> = [];
+  let quick = ['Slow down', 'Wrap up'];
+  const quickSaved: string[][] = [];
   let view: OutputWindowView = { ...baseView, ...initialView };
   const chosen: string[] = [];
   const windowedCalls: boolean[] = [];
@@ -42,7 +62,7 @@ async function mount(initialView: Partial<OutputWindowView> = {}) {
   const dispatched: Command[] = [];
   const listeners: Array<(s: ReturnType<typeof core.getState>) => void> = [];
   core.subscribe((s) => listeners.forEach((l) => act(() => l(s))));
-  const bridge: CoreBridge = {
+  const bridge: PreferencesBridge = {
     getState: async () => core.getState(),
     dispatch: (c) => {
       dispatched.push(c);
@@ -60,13 +80,39 @@ async function mount(initialView: Partial<OutputWindowView> = {}) {
       view = { ...view, windowed: w };
       return view;
     },
-    getApiView: async () => {
-      throw new Error('not used by Preferences yet');
+    getApiView: async () => api,
+    getButtonMapping: async () => mapping,
+    setButton: async (button, action) => {
+      mapping = { ...mapping, mapping: { ...mapping.mapping, [button]: action } };
+      mappingListeners.forEach((l) => l(mapping));
+      return mapping;
+    },
+    onButtonMapping: (l) => mappingListeners.push(l),
+    setApiSettings: async (settings) => {
+      apiSaved.push(settings);
+      api = options.applyError
+        ? { ...api, running: false, error: options.applyError }
+        : { ...api, ...settings, running: true, error: null };
+      return api;
+    },
+    getQuickMessages: async () => quick,
+    setQuickMessages: async (messages) => {
+      quickSaved.push(messages);
+      quick = messages.map((m) => m.trim()).filter(Boolean);
+      return quick;
     },
   };
   root = createRoot(host);
   await act(async () => root.render(<Preferences bridge={bridge} />));
-  return { core, dispatched, chosen, windowedCalls };
+  return {
+    core,
+    dispatched,
+    chosen,
+    windowedCalls,
+    apiSaved,
+    quickSaved,
+    getMapping: () => mapping,
+  };
 }
 
 const nav = (name: string) =>
@@ -101,13 +147,6 @@ describe('Preferences categories', () => {
       'Network',
     ]);
     expect(host.querySelector('main h2')!.textContent).toBe('General');
-  });
-
-  it('shows a placeholder for a category that has no settings yet', async () => {
-    await mount();
-    await act(async () => (nav('Network') as HTMLElement).click());
-    expect(host.querySelector('main h2')!.textContent).toBe('Network');
-    expect(host.querySelector('main')!.textContent).toContain('Coming soon');
   });
 });
 
@@ -287,5 +326,140 @@ describe('Notifications', () => {
     await setValue(field('Notification time'), '15');
     expect(core.getState().notificationDurationMs).toBe(15000);
     expect(host.querySelector('.pf-value')!.textContent).toBe('15 s');
+  });
+});
+
+/** Commit a text field the way a person does: type, then leave the field. */
+async function typeAndLeave(el: HTMLInputElement, value: string) {
+  await setValue(el, value);
+  await act(async () => {
+    el.dispatchEvent(new FocusEvent('focusout', { bubbles: true }));
+  });
+}
+
+describe('Controls', () => {
+  async function openControls() {
+    const m = await mount();
+    await act(async () => (nav('Controls') as HTMLElement).click());
+    return m;
+  }
+
+  it('shows the action of each of the five buttons by name', async () => {
+    await openControls();
+    expect(field('Button 1').value).toBe('playPause');
+    expect(field('Button 4').value).toBe('none');
+    const first = Array.from(field('Button 1').querySelectorAll('option'), (o) =>
+      o.textContent?.trim(),
+    );
+    expect(first).toEqual([
+      'Unassigned',
+      'Play / Pause',
+      'Back a Screen',
+      'Forward a Screen',
+      'Play start',
+    ]);
+  });
+
+  it('remaps a button, which the main process saves', async () => {
+    const { getMapping } = await openControls();
+    await setValue(field('Button 4'), 'returnToPlayStart');
+    expect(getMapping().mapping[4]).toBe('returnToPlayStart');
+    expect(field('Button 4').value).toBe('returnToPlayStart');
+  });
+
+  it('follows a mapping changed in another window', async () => {
+    const { getMapping } = await openControls();
+    await setValue(field('Button 2'), 'none'); // another window would call the same thing
+    expect(field('Button 2').value).toBe('none');
+    expect(getMapping().mapping[2]).toBe('none');
+  });
+
+  it('cannot assign the mirror: it is not among the choices', async () => {
+    await openControls();
+    const values = Array.from(field('Button 1').querySelectorAll('option'), (o) => o.value);
+    expect(values.some((v) => /mirror/i.test(v))).toBe(false);
+  });
+
+  it('shows the ring and the jog wheel as fixed', async () => {
+    await openControls();
+    const text = host.querySelector('main')!.textContent!;
+    expect(text).toContain('Ring and jog wheel');
+    expect(host.querySelectorAll('main select')).toHaveLength(5);
+  });
+});
+
+describe('Network', () => {
+  async function openNetwork(...args: Parameters<typeof mount>) {
+    const m = await mount(...args);
+    await act(async () => (nav('Network') as HTMLElement).click());
+    return m;
+  }
+
+  it('shows the port, the token and the Producer page address', async () => {
+    await openNetwork();
+    expect(field('Port').value).toBe('4780');
+    expect(field('Access token').value).toBe('sekret');
+    expect(field('Access token').type).toBe('password');
+    expect(host.querySelector('main')!.textContent).toContain('http://192.168.1.20:4780/');
+  });
+
+  it('changes the port when the field is left, with no Save button', async () => {
+    const { apiSaved } = await openNetwork();
+    await typeAndLeave(field('Port'), '4900');
+    expect(apiSaved).toEqual([{ port: 4900, token: 'sekret' }]);
+    expect(button('Save')).toBeUndefined();
+  });
+
+  it('changes the token and keeps requiring one', async () => {
+    const { apiSaved } = await openNetwork();
+    await typeAndLeave(field('Access token'), 'newer');
+    expect(apiSaved).toEqual([{ port: 4780, token: 'newer' }]);
+    expect(host.querySelector('main')!.textContent).toContain('Needed to open the Producer page');
+  });
+
+  it('does nothing for a port that is not allowed', async () => {
+    const { apiSaved } = await openNetwork();
+    await typeAndLeave(field('Port'), '80');
+    expect(apiSaved).toEqual([]);
+    expect(host.querySelector('main')!.textContent).toContain('1024');
+    expect(field('Port').value).toBe('4780');
+  });
+
+  it('says plainly when the Producer page could not start', async () => {
+    await openNetwork({}, { api: { running: false, error: 'Port 4780 is in use.' } });
+    expect(host.querySelector('[role="status"]')!.textContent).toContain('Port 4780 is in use');
+  });
+
+  it('lists the Quick messages', async () => {
+    await openNetwork();
+    expect(field('Quick message 1').value).toBe('Slow down');
+    expect(field('Quick message 2').value).toBe('Wrap up');
+  });
+
+  it('adds a Quick message', async () => {
+    const { quickSaved } = await openNetwork();
+    await setValue(field('New Quick message'), 'Look at camera');
+    await act(async () => button('Add').click());
+    expect(quickSaved.at(-1)).toEqual(['Slow down', 'Wrap up', 'Look at camera']);
+    expect(field('Quick message 3').value).toBe('Look at camera');
+    expect(field('New Quick message').value).toBe('');
+  });
+
+  it('edits a Quick message when the field is left', async () => {
+    const { quickSaved } = await openNetwork();
+    await typeAndLeave(field('Quick message 2'), 'Wrap up now');
+    expect(quickSaved.at(-1)).toEqual(['Slow down', 'Wrap up now']);
+  });
+
+  it('removes a Quick message', async () => {
+    const { quickSaved } = await openNetwork();
+    await act(async () => field('Remove Quick message 1').click());
+    expect(quickSaved.at(-1)).toEqual(['Wrap up']);
+    expect(field('Quick message 1').value).toBe('Wrap up');
+  });
+
+  it('does not add an empty Quick message', async () => {
+    await openNetwork();
+    expect((button('Add') as HTMLButtonElement).disabled).toBe(true);
   });
 });

@@ -158,6 +158,32 @@ describe('the running app', () => {
     await expect.poll(() => prefs.locator('.pf-value').textContent()).toBe('20 s');
     await prefs.screenshot({ path: join(artifacts, 'preferences-notifications.png') });
     await dispatch({ type: 'setNotificationDuration', ms: 8000 });
+
+    // Controls: a remap is saved by the main process, which every window reads.
+    const mapping = () =>
+      operator.evaluate(() => (window as any).neoprompter.getButtonMapping()) as Promise<{
+        mapping: Record<string, string>;
+      }>;
+    await prefs.getByRole('button', { name: 'Controls' }).click();
+    await prefs.getByLabel('Button 5').waitFor();
+    await prefs.screenshot({ path: join(artifacts, 'preferences-controls.png') });
+    await prefs.getByLabel('Button 4').selectOption('returnToPlayStart');
+    await expect.poll(async () => (await mapping()).mapping['4']).toBe('returnToPlayStart');
+    await prefs.getByLabel('Button 4').selectOption('none');
+    await expect.poll(async () => (await mapping()).mapping['4']).toBe('none');
+
+    // Network: a Quick message added here is on the Producer page's list.
+    await prefs.getByRole('button', { name: 'Network' }).click();
+    await expect.poll(() => prefs.locator('.pf-address code').count()).toBeGreaterThan(0);
+    await prefs.getByLabel('New Quick message').fill('Eyes up');
+    await prefs.getByRole('button', { name: 'Add', exact: true }).click();
+    const quick = async () =>
+      (await operator.evaluate(() => (window as any).neoprompter.getQuickMessages())) as string[];
+    await expect.poll(quick).toContain('Eyes up');
+    await prefs.locator('main').evaluate((el) => (el.scrollTop = 0));
+    await prefs.screenshot({ path: join(artifacts, 'preferences-network.png') });
+    await prefs.getByLabel('Remove Quick message 6').click();
+    await expect.poll(quick).not.toContain('Eyes up');
     await prefs.close();
   });
 

@@ -45,7 +45,13 @@ async function mount(mode: 'edit' | 'run') {
     dispatch: (c) => core.dispatch(c),
     onState: (l) => listeners.push(l),
     getOutputView: async () => view,
-    getApiView: async () => ({ port: 4780, token: '', running: true, error: null }),
+    getApiView: async () => ({
+      port: 4780,
+      token: '',
+      running: true,
+      error: null,
+      producerUrls: [],
+    }),
     chooseOutputMonitor: async () => view,
     setWindowedOutput: async () => view,
   };
