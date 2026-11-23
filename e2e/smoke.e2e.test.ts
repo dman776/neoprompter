@@ -1080,83 +1080,87 @@ describe('the running app', () => {
 
 describe('a full screen Output', () => {
   // The test pretends a second display exists (on top of the real one), so a genuine full screen
-  // Output opens on a machine with one display.
-  let second: ElectronApplication;
-  let secondData: string;
-  let secondOperator: Page;
+  // Output opens on a machine with one display. Each attempt launches its own app: opening and
+  // closing full screen windows is heavy, and macOS sometimes refuses a new helper process, which
+  // ends that app; a fresh one makes a retry meaningful.
+  it(
+    'goes full screen on the chosen monitor, Esc makes it an ordinary window, and Off then On goes full screen again',
+    { retry: 3, timeout: 120_000 },
+    async () => {
+      const data = mkdtempSync(join(tmpdir(), 'neoprompter-e2e-fs-'));
+      const second = await electron.launch({
+        args: [root],
+        env: { ...process.env, NEOPROMPTER_USER_DATA: data, NEOPROMPTER_FAKE_SECOND_DISPLAY: '1' },
+      });
+      try {
+        let operatorPage: Page | undefined;
+        await vi.waitFor(async () => {
+          for (const w of second.windows()) {
+            if ((await w.title()).includes('Operator view')) operatorPage = w;
+          }
+          expect(operatorPage).toBeDefined();
+        });
+        const operatorView = operatorPage!;
+        const outputWindow = () =>
+          second.evaluate(({ BrowserWindow }) => {
+            const win = BrowserWindow.getAllWindows().find((w) =>
+              w.webContents.getURL().includes('/output/'),
+            );
+            return win
+              ? { fullScreen: win.isFullScreen(), width: win.getContentBounds().width }
+              : null;
+          });
+        const send = (command: object) =>
+          operatorView.evaluate((c) => (window as any).neoprompter.dispatch(c), command);
+        const width = await second.evaluate(
+          ({ screen }) => screen.getPrimaryDisplay().bounds.width,
+        );
 
-  beforeAll(async () => {
-    secondData = mkdtempSync(join(tmpdir(), 'neoprompter-e2e-fs-'));
-    second = await electron.launch({
-      args: [root],
-      env: {
-        ...process.env,
-        NEOPROMPTER_USER_DATA: secondData,
-        NEOPROMPTER_FAKE_SECOND_DISPLAY: '1',
-      },
-    });
-    for (let i = 0; i < 100 && !secondOperator; i++) {
-      for (const w of second.windows()) {
-        if ((await w.title()).includes('Operator view')) secondOperator = w;
+        await operatorView.evaluate(() =>
+          (window as any).neoprompter.chooseOutputMonitor('fake-second'),
+        );
+        await send({ type: 'setOutput', on: true });
+        await vi.waitFor(async () => expect((await outputWindow())?.fullScreen).toBe(true), {
+          timeout: 15_000,
+        });
+
+        // Esc, pressed in the Output window itself, once its page is up. (The page is replaced,
+        // so the key press may end early.)
+        let page: Page | undefined;
+        await vi.waitFor(() => {
+          page = second.windows().find((w) => w.url().includes('/output/'));
+          expect(page).toBeDefined();
+        });
+        await page!.waitForFunction(() => document.querySelectorAll('#text > div').length > 0);
+        await page!.keyboard.press('Escape').catch(() => undefined);
+        await vi.waitFor(
+          async () => {
+            const out = await outputWindow();
+            expect(out).not.toBeNull();
+            expect(out!.fullScreen).toBe(false);
+            expect(out!.width).toBeLessThan(width);
+          },
+          { timeout: 20_000, interval: 250 },
+        );
+        // Still on: Esc changes how it shows, not whether it is on.
+        expect(
+          (await operatorView.evaluate(() => (window as any).neoprompter.getState())).outputOn,
+        ).toBe(true);
+
+        // Off, then On: back to full screen on the chosen monitor.
+        await send({ type: 'setOutput', on: false });
+        await vi.waitFor(async () => expect(await outputWindow()).toBeNull(), {
+          timeout: 15_000,
+        });
+        await send({ type: 'setOutput', on: true });
+        await vi.waitFor(async () => expect((await outputWindow())?.fullScreen).toBe(true), {
+          timeout: 20_000,
+          interval: 250,
+        });
+      } finally {
+        await second.close().catch(() => undefined);
+        rmSync(data, { recursive: true, force: true });
       }
-      await new Promise((r) => setTimeout(r, 100));
-    }
-  });
-  afterAll(async () => {
-    await second?.close();
-    rmSync(secondData, { recursive: true, force: true });
-  });
-
-  const outputWindow = () =>
-    second.evaluate(({ BrowserWindow }) => {
-      const win = BrowserWindow.getAllWindows().find((w) =>
-        w.webContents.getURL().includes('/output/'),
-      );
-      return win ? { fullScreen: win.isFullScreen(), width: win.getContentBounds().width } : null;
-    });
-  const displayWidth = () =>
-    second.evaluate(({ screen }) => screen.getPrimaryDisplay().bounds.width);
-  const send = (command: object) =>
-    secondOperator.evaluate((c) => (window as any).neoprompter.dispatch(c), command);
-
-  it('goes full screen on the chosen monitor, Esc makes it an ordinary window, and Off then On goes full screen again', async () => {
-    const width = await displayWidth();
-    await secondOperator.evaluate(() =>
-      (window as any).neoprompter.chooseOutputMonitor('fake-second'),
-    );
-    await send({ type: 'setOutput', on: true });
-    await vi.waitFor(async () => expect((await outputWindow())?.fullScreen).toBe(true), {
-      timeout: 10_000,
-    });
-
-    // Esc, pressed in the Output window itself. (The page is replaced, so the press may end early.)
-    let page: Page | undefined;
-    await vi.waitFor(() => {
-      page = second.windows().find((w) => w.url().includes('/output/'));
-      expect(page).toBeDefined();
-    });
-    await page!.keyboard.press('Escape').catch(() => undefined);
-    await vi.waitFor(
-      async () => {
-        const out = await outputWindow();
-        expect(out).not.toBeNull();
-        expect(out!.fullScreen).toBe(false);
-        expect(out!.width).toBeLessThan(width);
-      },
-      { timeout: 15_000, interval: 250 },
-    );
-    // Still on: Esc changes how it shows, not whether it is on.
-    expect(
-      (await secondOperator.evaluate(() => (window as any).neoprompter.getState())).outputOn,
-    ).toBe(true);
-
-    // Off, then On: back to full screen on the chosen monitor.
-    await send({ type: 'setOutput', on: false });
-    await vi.waitFor(async () => expect(await outputWindow()).toBeNull(), { timeout: 10_000 });
-    await send({ type: 'setOutput', on: true });
-    await vi.waitFor(async () => expect((await outputWindow())?.fullScreen).toBe(true), {
-      timeout: 15_000,
-      interval: 250,
-    });
-  });
+    },
+  );
 });
