@@ -783,7 +783,7 @@ describe('the running app', () => {
       ['General', []],
       ['Appearance', ['Text', 'Colors', 'Reading line', 'Presets']],
       ['Output', []],
-      ['Controls', []],
+      ['Controls', ['Buttons', 'Keyboard']],
       ['Notifications', []],
       ['Network', ['Connection', 'Quick messages']],
     ];
@@ -1004,11 +1004,14 @@ describe('the running app', () => {
     const moving = (await state()).position;
     await vi.waitFor(async () => expect((await state()).position).toBeLessThan(moving - 0.3));
     await operator.screenshot({ path: join(artifacts, 'operator-run-reverse.png') });
-    // Space turns it round to forward, and then pauses.
+    // Space is Play / Pause: it pauses the backward play (which puts the direction back to
+    // forward), then plays forward, then pauses.
     await operator.keyboard.press('Space');
-    await vi.waitFor(async () => expect((await state()).direction).toBe('forward'));
-    expect((await state()).playing).toBe(true);
+    await vi.waitFor(async () => expect((await state()).playing).toBe(false));
     await vi.waitFor(async () => expect(await direction()).toBe('forward'));
+    await operator.keyboard.press('Space');
+    await vi.waitFor(async () => expect((await state()).playing).toBe(true));
+    expect((await state()).direction).toBe('forward');
     await shows('Pause');
     await operator.keyboard.press('Space');
     await vi.waitFor(async () => expect((await state()).playing).toBe(false));

@@ -302,3 +302,49 @@
 .pf-row:has(.pf-messages) {
   align-items: start;
 }
+
+.pf-note {
+  margin: 12px 0 4px;
+  color: var(--muted);
+}
+.pf-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+}
+.pf-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 26px;
+  padding: 0 4px 0 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  white-space: nowrap;
+}
+.pf-chip button {
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  cursor: pointer;
+}
+.pf-chip button:hover {
+  color: var(--text);
+}
+.pf-chip button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.pf-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding: 10px 0 0;
+}

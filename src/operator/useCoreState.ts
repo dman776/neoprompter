@@ -53,6 +53,8 @@ export interface PreferencesBridge extends CoreBridge {
   getButtonMapping(): Promise<ButtonMappingView>;
   setButton(button: ButtonId, action: ActionId): Promise<ButtonMappingView>;
   onButtonMapping(listener: (view: ButtonMappingView) => void): void;
+  getKeyBindings(): Promise<KeyBindingsView>;
+  onKeyBindings(listener: (view: KeyBindingsView) => void): void;
   addKey(action: ActionId, key: KeyChord): Promise<{ result: AddKeyResult; view: KeyBindingsView }>;
   moveKey(
     action: ActionId,

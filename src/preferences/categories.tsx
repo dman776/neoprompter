@@ -2,7 +2,7 @@ import type { ComponentType } from 'react';
 import type { Command, CoreState } from '../core';
 import type { PreferencesBridge } from '../operator/useCoreState';
 import { AppearanceSample, ColorsTab, PresetsTab, ReadingLineTab, TextTab } from './AppearancePage';
-import { ControlsPage } from './ControlsPage';
+import { ButtonsTab, KeyboardTab } from './ControlsPage';
 import { GeneralPage } from './GeneralPage';
 import { ConnectionTab, QuickMessagesTab } from './NetworkPage';
 import { NotificationsPage } from './NotificationsPage';
@@ -61,8 +61,11 @@ export const CATEGORIES: Category[] = [
   {
     id: 'controls',
     label: 'Controls',
-    subtitle: 'ShuttleXPress buttons',
-    Page: ControlsPage,
+    subtitle: 'Buttons and keys',
+    tabs: [
+      { id: 'buttons', label: 'Buttons', Page: ButtonsTab },
+      { id: 'keyboard', label: 'Keyboard', Page: KeyboardTab },
+    ],
   },
   {
     id: 'notifications',

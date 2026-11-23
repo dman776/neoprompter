@@ -8,7 +8,7 @@ import { createCore, createFakeClock, createMemoryPresetStore } from '../core';
 import { createFakeBridge } from '../operator/fakeBridge';
 import type { ApiView } from '../api';
 import type { QuickMessage } from '../api/producer';
-import { defaultButtonMapping, type ButtonMappingView } from '../input';
+import { createInputService, defaultButtonMapping, type ButtonMappingView } from '../input';
 import type { OutputWindowView } from '../output-window';
 import { Preferences } from './PreferencesWindow';
 
@@ -69,7 +69,19 @@ async function mount(
   const chosen: string[] = [];
   const windowedCalls: boolean[] = [];
   const core = createCore({ clock: createFakeClock(), presetStore: createMemoryPresetStore() });
+  // The real Key binding rules behind the fake bridge, as the main process has them.
+  const keys = createInputService(core, { load: () => null, save: () => {} });
   const { bridge, dispatched } = createFakeBridge(core, {
+    getKeyBindings: async () => keys.getKeyView(),
+    onKeyBindings: (l) => keys.subscribeKeys(l),
+    removeKey: async (action, key) => {
+      keys.removeKey(action, key);
+      return keys.getKeyView();
+    },
+    resetKeys: async () => {
+      keys.resetKeys();
+      return keys.getKeyView();
+    },
     getOutputView: async () => view,
     chooseOutputMonitor: async (id) => {
       chosen.push(id);
@@ -123,6 +135,7 @@ async function mount(
     apiSaved,
     quickSaved,
     getMapping: () => mapping,
+    keys,
   };
 }
 
@@ -563,6 +576,13 @@ describe('Controls', () => {
     return m;
   }
 
+  it('has a Buttons tab and a Keyboard tab, and opens on Buttons', async () => {
+    await openControls();
+    expect(tabNames()).toEqual(['Buttons', 'Keyboard']);
+    expect(tab('Buttons').getAttribute('aria-selected')).toBe('true');
+    expect(host.querySelector('main')!.textContent).toContain('Virtual shuttle');
+  });
+
   it('shows the action of each of the five buttons by name', async () => {
     await openControls();
     expect(field('Button 1').value).toBe('playPause');
@@ -603,6 +623,90 @@ describe('Controls', () => {
     await openControls();
     const text = host.querySelector('main')!.textContent!;
     expect(text).toContain('Ring and jog wheel');
+    expect(host.querySelectorAll('main select')).toHaveLength(5);
+  });
+});
+
+describe('Controls: Keyboard', () => {
+  async function openKeyboard() {
+    const m = await mount();
+    await act(async () => (nav('Controls') as HTMLElement).click());
+    await openTab('Keyboard');
+    return m;
+  }
+  const chips = (action: string) =>
+    Array.from(
+      host.querySelectorAll(`[aria-label="Keys for ${action}"] .pf-chip`),
+      (c) => c.firstChild!.textContent,
+    );
+  const click = (el: Element | null) => act(async () => (el as HTMLElement).click());
+
+  it('lists every bindable action with its keys', async () => {
+    await openKeyboard();
+    const titles = Array.from(host.querySelectorAll('.pf-row b'), (b) => b.textContent);
+    expect(titles).toEqual([
+      'Play / Pause',
+      'Play backward',
+      'Back a Screen',
+      'Forward a Screen',
+      'Play start',
+      'Speed up',
+      'Speed down',
+      'Dismiss Notification',
+    ]);
+    expect(chips('Play / Pause')).toEqual(['Space']);
+    expect(chips('Play backward')).toEqual(['Shift + Space']);
+    expect(chips('Back a Screen')).toEqual(['Left arrow', 'Page Up']);
+    expect(chips('Speed up')).toEqual(['Up arrow']);
+  });
+
+  it('says plainly when an action has no keys', async () => {
+    await openKeyboard();
+    const row = host.querySelector('[aria-label="Keys for Play start"]')!;
+    expect(row.textContent).toBe('No keys');
+  });
+
+  it('removing a key removes that one key, which the main process saves', async () => {
+    const { keys } = await openKeyboard();
+    await click(host.querySelector('button[aria-label="Remove Page Up from Back a Screen"]'));
+    expect(chips('Back a Screen')).toEqual(['Left arrow']);
+    expect(keys.getKeyView().table.jumpBack).toHaveLength(1);
+    await click(host.querySelector('button[aria-label="Remove Left arrow from Back a Screen"]'));
+    expect(host.querySelector('[aria-label="Keys for Back a Screen"]')!.textContent).toBe(
+      'No keys',
+    );
+  });
+
+  it('Reset to defaults brings the default keys back', async () => {
+    await openKeyboard();
+    await click(host.querySelector('button[aria-label="Remove Space from Play / Pause"]'));
+    expect(chips('Play / Pause')).toEqual([]);
+    const reset = Array.from(host.querySelectorAll('button')).find(
+      (b) => b.textContent === 'Reset to defaults',
+    );
+    await click(reset!);
+    expect(chips('Play / Pause')).toEqual(['Space']);
+  });
+
+  it('follows keys changed in another window', async () => {
+    const { keys } = await openKeyboard();
+    await act(
+      async () =>
+        void keys.addKey('returnToPlayStart', {
+          code: 'F6',
+          shift: false,
+          ctrl: false,
+          alt: false,
+          meta: false,
+        }),
+    );
+    expect(chips('Play start')).toEqual(['F6']);
+  });
+
+  it('leaves the Button mapping on its own tab', async () => {
+    await openKeyboard();
+    expect(host.querySelectorAll('main select')).toHaveLength(0);
+    await openTab('Buttons');
     expect(host.querySelectorAll('main select')).toHaveLength(5);
   });
 });
