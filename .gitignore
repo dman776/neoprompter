@@ -2,6 +2,7 @@ node_modules/
 dist/
 release/
 .scratch/
-.claude/worktrees/
+.agents/
+.claude/
 e2e/artifacts/
 watched_folder/
