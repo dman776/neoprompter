@@ -4,6 +4,7 @@ import {
   BUTTON_IDS,
   chordFromEvent,
   chordLabel,
+  resolveKey,
   type ActionId,
   type ButtonMappingView,
   type KeyBindingsView,
@@ -82,6 +83,7 @@ export function KeyboardTab({ bridge }: PageProps) {
   // A key's release must not press the button that was focused when it went down (Space does).
   const swallowUp = useRef<string | null>(null);
   const busy = useRef(false);
+  const [lastKey, setLastKey] = useState<KeyChord | null>(null);
   useEffect(() => {
     let live = true;
     bridge.onKeyBindings((v) => live && setView(v));
@@ -130,6 +132,17 @@ export function KeyboardTab({ bridge }: PageProps) {
       window.removeEventListener('pointerdown', onPointerDown, true);
     };
   }, [bridge, capturing, pending]);
+
+  // The readout of the last key pressed in this window, for testing a driver's keys. It only
+  // shows; it never runs the action, and it leaves the key to whatever else wants it.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const key = e.repeat ? null : chordFromEvent(e);
+      if (key) setLastKey(key);
+    };
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
+  }, []);
 
   useEffect(() => {
     const onKeyUp = (e: KeyboardEvent) => {
@@ -223,8 +236,24 @@ export function KeyboardTab({ bridge }: PageProps) {
         );
       })}
       <div className="pf-footer">
+        <p className="pf-lastkey" role="status" aria-label="Last key pressed">
+          {lastKey ? <LastKey chord={lastKey} view={view} /> : 'Press a key to see what it does.'}
+        </p>
         <Button onClick={() => void bridge.resetKeys().then(setView)}>Reset to defaults</Button>
       </div>
+    </>
+  );
+}
+
+/** "Last key pressed: Numpad 1, Play / Pause." or "…, not bound." */
+function LastKey({ chord, view }: { chord: KeyChord; view: KeyBindingsView }) {
+  const found = resolveKey(view.table, chord);
+  const what = found
+    ? `${ACTION_LABELS[found.action] ?? found.action}${found.big ? ' (bigger step)' : ''}`
+    : 'not bound';
+  return (
+    <>
+      Last key pressed: <b>{chordLabel(chord)}</b>, {what}.
     </>
   );
 }

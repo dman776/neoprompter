@@ -108,6 +108,15 @@ describe('Key bindings in the running app', () => {
     await prefs.keyboard.press('F7');
     await expect.poll(() => prefs.getByText('Press a key…').count()).toBe(0);
     await prefs.getByRole('list', { name: 'Keys for Play start' }).getByText('F7').waitFor();
+    // The last key pressed is named, bound or not, and nothing runs.
+    await expect
+      .poll(() => prefs.getByRole('status', { name: 'Last key pressed' }).textContent())
+      .toBe('Last key pressed: F7, Play start.');
+    await prefs.keyboard.press('Numpad1');
+    await expect
+      .poll(() => prefs.getByRole('status', { name: 'Last key pressed' }).textContent())
+      .toBe('Last key pressed: Numpad 1, not bound.');
+    await prefs.screenshot({ path: join(root, 'e2e', 'artifacts', 'key-last-pressed.png') });
     // A key another action has asks before it moves.
     await prefs.getByRole('button', { name: 'Add key to Speed up' }).click();
     await prefs.keyboard.press('ArrowDown');

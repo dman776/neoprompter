@@ -2,9 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import type { Command, CoreState } from '../core';
 import {
   actionCommand,
-  actionForChord,
   chordFromEvent,
   defaultKeyBindings,
+  resolveKey,
   type KeyBindingTable,
   type KeyChord,
 } from '../input';
@@ -24,19 +24,12 @@ export function commandForKey(
   chord: KeyChord,
   state: Pick<CoreState, 'playing' | 'direction'>,
 ): { action: string; command: Command } | null {
-  let action = actionForChord(table, chord);
-  let big = false;
-  if (!action && chord.shift) {
-    const plain = actionForChord(table, { ...chord, shift: false });
-    if (plain && SPEED_ACTIONS.includes(plain)) {
-      action = plain;
-      big = true;
-    }
-  }
-  if (!action) return null;
-  const command = actionCommand(action, state);
+  const found = resolveKey(table, chord);
+  if (!found) return null;
+  const command = actionCommand(found.action, state);
   if (!command) return null;
-  return { action, command: big && command.type === 'nudgeSpeed' ? { ...command, big } : command };
+  const big = found.big && command.type === 'nudgeSpeed';
+  return { action: found.action, command: big ? { ...command, big: true } : command };
 }
 
 /**

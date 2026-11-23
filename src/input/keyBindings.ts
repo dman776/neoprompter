@@ -241,6 +241,24 @@ export function actionForChord(table: KeyBindingTable, c: KeyChord): ActionId | 
   return null;
 }
 
+/**
+ * What a key press means in Run mode: the action it is bound to, or, when Shift is held with a
+ * Speed up or Speed down key that has no binding of its own, that action with `big` set (a
+ * bigger step). Null when the key is not bound.
+ */
+export function resolveKey(
+  table: KeyBindingTable,
+  c: KeyChord,
+): { action: ActionId; big: boolean } | null {
+  const action = actionForChord(table, c);
+  if (action) return { action, big: false };
+  if (c.shift) {
+    const plain = actionForChord(table, { ...c, shift: false });
+    if (plain === 'speedUp' || plain === 'speedDown') return { action: plain, big: true };
+  }
+  return null;
+}
+
 export type AddKeyResult =
   | { status: 'added' | 'unchanged' }
   | { status: 'refused'; reason: string }

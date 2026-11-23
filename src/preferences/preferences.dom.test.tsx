@@ -842,6 +842,65 @@ describe('Controls: Keyboard', () => {
     });
   });
 
+  describe('the last key pressed', () => {
+    const readout = () => host.querySelector('[aria-label="Last key pressed"]')!.textContent;
+
+    it('asks for a key before one is pressed', async () => {
+      await openKeyboard();
+      expect(readout()).toBe('Press a key to see what it does.');
+    });
+
+    it('names a bound key and its action, without running the action', async () => {
+      const { core } = await openKeyboard();
+      await capture('Space');
+      expect(readout()).toBe('Last key pressed: Space, Play / Pause.');
+      expect(core.getState().playing).toBe(false);
+      await capture('Space', { shiftKey: true });
+      expect(readout()).toBe('Last key pressed: Shift + Space, Play backward.');
+    });
+
+    it('says when a key is not bound, using the friendly name of a numpad key', async () => {
+      await openKeyboard();
+      await capture('Numpad1');
+      expect(readout()).toBe('Last key pressed: Numpad 1, not bound.');
+    });
+
+    it('says when Shift makes a bigger step of a Speed key', async () => {
+      await openKeyboard();
+      await capture('ArrowUp', { shiftKey: true });
+      expect(readout()).toBe('Last key pressed: Shift + Up arrow, Speed up (bigger step).');
+    });
+
+    it('ignores a modifier on its own', async () => {
+      await openKeyboard();
+      await capture('Numpad1');
+      await capture('ShiftLeft', { shiftKey: true });
+      expect(readout()).toBe('Last key pressed: Numpad 1, not bound.');
+    });
+
+    it('follows a change to the bindings', async () => {
+      await openKeyboard();
+      await capture('Space');
+      await click(host.querySelector('button[aria-label="Remove Space from Play / Pause"]'));
+      expect(readout()).toBe('Last key pressed: Space, not bound.');
+    });
+
+    it('shows a key captured for a binding as well as saving it', async () => {
+      await openKeyboard();
+      await addKeyTo('Play start');
+      await capture('F9');
+      expect(chips('Play start')).toEqual(['F9']);
+      expect(readout()).toBe('Last key pressed: F9, Play start.');
+    });
+
+    it('leaves the key alone: it is not stopped or prevented', async () => {
+      await openKeyboard();
+      const event = new KeyboardEvent('keydown', { code: 'Tab', bubbles: true, cancelable: true });
+      await act(async () => void document.body.dispatchEvent(event));
+      expect(event.defaultPrevented).toBe(false);
+    });
+  });
+
   it('leaves the Button mapping on its own tab', async () => {
     await openKeyboard();
     expect(host.querySelectorAll('main select')).toHaveLength(0);

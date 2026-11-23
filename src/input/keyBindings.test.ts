@@ -11,6 +11,7 @@ import {
   defaultKeyBindings,
   normalizeKeyBindings,
   refusalReason,
+  resolveKey,
   type KeyBindingTable,
   type KeyChord,
 } from './index';
@@ -152,6 +153,35 @@ describe('key presses and labels', () => {
     expect(chordLabel(key('ArrowLeft', { ctrl: true, alt: true, shift: true, meta: true }))).toBe(
       'Ctrl + Alt + Shift + Cmd + Left arrow',
     );
+  });
+});
+
+describe('what a key press means', () => {
+  const table = defaultKeyBindings();
+  it('is the bound action, not big', () => {
+    expect(resolveKey(table, key('Space'))).toEqual({ action: 'playPause', big: false });
+  });
+  it('is a bigger Speed step when Shift is added to a Speed key', () => {
+    expect(resolveKey(table, key('ArrowUp', { shift: true }))).toEqual({
+      action: 'speedUp',
+      big: true,
+    });
+    expect(resolveKey(table, key('ArrowDown', { shift: true }))).toEqual({
+      action: 'speedDown',
+      big: true,
+    });
+  });
+  it('does not make Shift a bigger step for other actions, or for a key with its own binding', () => {
+    expect(resolveKey(table, key('ArrowLeft', { shift: true }))).toBeNull();
+    const own = createKeyBindings();
+    own.add('returnToPlayStart', key('ArrowUp', { shift: true }));
+    expect(resolveKey(own.getTable(), key('ArrowUp', { shift: true }))).toEqual({
+      action: 'returnToPlayStart',
+      big: false,
+    });
+  });
+  it('is null for a key that is not bound', () => {
+    expect(resolveKey(table, key('KeyQ'))).toBeNull();
   });
 });
 
