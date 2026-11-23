@@ -1,8 +1,10 @@
 // The Import button in the running app. The native open dialog cannot be driven, so the test
 // replaces it in the main process: it records the options and answers with a real file.
+import { spawn } from 'node:child_process';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import electronPath from 'electron';
 import { _electron as electron, type ElectronApplication, type Page } from 'playwright-core';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { makePdf } from '../src/import/pdfFixtures';
@@ -14,6 +16,7 @@ let app: ElectronApplication;
 let operator: Page;
 let userData: string;
 let files: string;
+let appLog = '';
 
 async function windowTitled(part: string): Promise<Page> {
   for (let i = 0; i < 100; i++) {
@@ -52,6 +55,8 @@ beforeAll(async () => {
       NEOPROMPTER_NO_AUTO_WINDOWED: '1',
     },
   });
+  app.process().stdout?.on('data', (d) => (appLog += d));
+  app.process().stderr?.on('data', (d) => (appLog += d));
   operator = await windowTitled('Operator view');
 });
 
@@ -126,10 +131,28 @@ describe('the Import button in the running app', () => {
       return (await api.getState()).script.lines as string[];
     });
     expect(lines).toEqual(['Welcome to the service and thank you for coming', 'Please stand']);
+    expect(appLog).not.toMatch(/Warning: Cannot/);
     await operator.screenshot({ path: join(artifacts, 'import-pdf.png') });
 
     await operator.getByRole('button', { name: 'Dismiss' }).click();
     await pick('Scan.pdf');
     expect(await notice()).toContain('"Scan.pdf" has no text to import');
+  });
+
+  it('starts without pdf.js warnings in the log', async () => {
+    // Playwright attaches to the output late, so run Electron directly to see the first line.
+    const dir = mkdtempSync(join(tmpdir(), 'neoprompter-log-'));
+    const child = spawn(electronPath as unknown as string, [root], {
+      env: { ...process.env, NEOPROMPTER_USER_DATA: dir, NEOPROMPTER_NO_UPDATE_CHECK: '1' },
+    });
+    let log = '';
+    child.stdout.on('data', (d) => (log += d));
+    child.stderr.on('data', (d) => (log += d));
+    await new Promise((resolve) => setTimeout(resolve, 4000));
+    const exited = new Promise((resolve) => child.on('exit', resolve));
+    child.kill();
+    await exited;
+    rmSync(dir, { recursive: true, force: true });
+    expect(log).not.toMatch(/Warning: Cannot/);
   });
 });
