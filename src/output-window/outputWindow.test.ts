@@ -77,17 +77,39 @@ describe('Output monitor selection', () => {
   });
 
   it('closes the Output when the chosen monitor goes missing', () => {
-    const t = setup([laptop, prompter]);
+    const third: Display = { id: 'third', bounds: { x: 3360, y: 0, width: 800, height: 600 } };
+    const t = setup([laptop, prompter, third]);
     t.manager.chooseMonitor('prompter');
-    t.setDisplays([laptop]);
+    t.setDisplays([laptop, third]);
     t.manager.refresh();
     expect(t.isOpen()).toBe(false);
   });
 
   it('never goes full screen on the Operator view display', () => {
-    const t = setup([laptop]);
+    const t = setup([laptop, prompter]);
     t.manager.chooseMonitor('laptop');
     expect(t.isOpen()).toBe(false);
+  });
+
+  it('turns Windowed Output on with one display and off with more', () => {
+    const t = setup([laptop]);
+    expect(t.settings().windowed).toBe(true);
+    expect(t.log.at(-1)).toEqual({ mode: 'windowed' });
+    t.setDisplays([laptop, prompter]);
+    t.manager.refresh();
+    expect(t.settings().windowed).toBe(false);
+    expect(t.isOpen()).toBe(false);
+    t.setDisplays([laptop]);
+    t.manager.refresh();
+    expect(t.settings().windowed).toBe(true);
+    expect(t.log.at(-1)).toEqual({ mode: 'windowed' });
+  });
+
+  it('lets the Operator toggle Windowed Output until the display count changes', () => {
+    const t = setup([laptop, prompter]);
+    t.manager.setWindowed(true);
+    t.manager.refresh();
+    expect(t.settings().windowed).toBe(true);
   });
 
   it('Windowed Output works on a single display', () => {
@@ -133,10 +155,11 @@ describe('Output monitor selection', () => {
 
 describe('remembered monitor missing', () => {
   it('reports the remembered monitor when it was unplugged, and keeps the Output closed', () => {
-    const t = setup([laptop, prompter]);
+    const third: Display = { id: 'third', bounds: { x: 3360, y: 0, width: 800, height: 600 } };
+    const t = setup([laptop, prompter, third]);
     t.manager.chooseMonitor('prompter');
     expect(t.manager.getView().missingMonitorId).toBeNull();
-    t.setDisplays([laptop]);
+    t.setDisplays([laptop, third]);
     t.manager.refresh();
     expect(t.isOpen()).toBe(false);
     expect(t.manager.getView().chosenMonitorId).toBeNull();

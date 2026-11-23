@@ -89,7 +89,7 @@ An on-screen copy of the ShuttleXPress (ring, jog wheel, and five buttons) in it
 _Avoid_: Simulator, emulator, mock shuttle
 
 **Windowed Output**:
-A test setting that shows the Output in an ordinary window on the Operator's screen, so the app can be tried on a single-display machine.
+A setting that shows the Output in an ordinary window on the Operator's screen. It turns itself on when only one display is connected and off when more are (at start and whenever the number of displays changes); the Operator can still toggle it by hand in between.
 _Avoid_: Preview, debug mode
 
 **Import**:

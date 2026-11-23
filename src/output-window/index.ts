@@ -122,13 +122,32 @@ export function createOutputWindowManager(deps: {
     return display ? { mode: 'fullscreen', bounds: display.bounds } : { mode: 'closed' };
   }
 
+  /**
+   * Windowed Output follows the display count: on with a single display, off with more. It only
+   * changes when the count does (and once at start), so the Operator can still toggle it by hand.
+   */
+  let lastDisplayCount: number | null = null;
+  function followDisplayCount(): void {
+    const count = displays.list().length;
+    if (count === lastDisplayCount) return;
+    lastDisplayCount = count;
+    const windowed = count <= 1;
+    if (settings.windowed === windowed) return;
+    leftFullscreen = false;
+    settings = { ...settings, windowed };
+    store.save(settings);
+  }
+
   function refresh(): void {
+    followDisplayCount();
     const next = decide();
     if (JSON.stringify(next) === JSON.stringify(current)) return;
     current = next;
     if (next.mode === 'closed') host.hide();
     else host.show(next);
   }
+
+  followDisplayCount();
 
   function blockedReason(): OutputBlocked | null {
     if (!outputOn || settings.windowed || leftFullscreen) return null;
