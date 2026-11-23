@@ -90,6 +90,31 @@ describe('the running app', () => {
     await shuttle.close();
   });
 
+  it('opens Preferences as its own window and applies an Appearance change at once', async () => {
+    const choose = () =>
+      app.evaluate(({ Menu }) => {
+        Menu.getApplicationMenu()!
+          .items.find((i) => i.label === 'File')!
+          .submenu!.items.find((i) => i.label === 'Preferences')!
+          .click();
+      });
+    await choose();
+    const prefs = await windowTitled('Preferences');
+    await choose();
+    expect(
+      (await Promise.all(app.windows().map((w) => w.title()))).filter((t) =>
+        t.includes('Preferences'),
+      ),
+    ).toHaveLength(1);
+    await prefs.getByRole('button', { name: 'Appearance' }).click();
+    await prefs.screenshot({ path: join(artifacts, 'preferences-appearance.png') });
+    const before = (await state()).appearance.fontSize;
+    await prefs.getByLabel('Font size').fill(String(before + 20));
+    await expect.poll(async () => (await state()).appearance.fontSize).toBe(before + 20);
+    await dispatch({ type: 'setAppearance', changes: { fontSize: before } });
+    await prefs.close();
+  });
+
   it('shows the loaded Script on the Output', async () => {
     await expect.poll(outputLines).toEqual(['First line', LONG, 'Closing line']);
     await output.screenshot({ path: join(artifacts, 'output-loaded.png') });

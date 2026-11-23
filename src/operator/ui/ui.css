@@ -144,3 +144,7 @@
   height: 18px;
   flex: none;
 }
+
+.np-switch[data-compact='true'] {
+  padding: 0 11px;
+}
