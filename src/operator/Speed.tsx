@@ -129,7 +129,7 @@ export function SpeedDial({
 }
 
 /** True when the key press is going to a place where arrow keys mean something else. */
-function isTyping(target: EventTarget | null): boolean {
+export function isTyping(target: EventTarget | null): boolean {
   const el = target as HTMLElement | null;
   if (!el || !el.tagName) return false;
   if (el.isContentEditable || /^(TEXTAREA|SELECT)$/.test(el.tagName)) return true;

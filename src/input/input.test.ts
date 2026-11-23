@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { createCore, createFakeClock } from '../core';
 import {
   createInputMapper,
+  createInputService,
+  normalizeButtonMapping,
   defaultButtonMapping,
   keyToAction,
   wheelToLines,
@@ -148,5 +150,70 @@ describe('keyboard and mouse', () => {
     const { core, mapper } = setup();
     mapper.handle({ kind: 'scroll', lines: 5 });
     expect(core.getState().position).toBe(-core.getState().leadIn + 5);
+  });
+});
+
+describe('jog wheel continuity', () => {
+  it('fractional positions give fractional speed and a rebase sets a new baseline without a jump', () => {
+    const { core, mapper } = setup();
+    mapper.handle({ kind: 'jog', position: 0 });
+    const base = core.getState().speedLevel;
+    mapper.handle({ kind: 'jog', position: 0.25 });
+    expect(core.getState().speedLevel).toBeCloseTo(base + 0.25, 3);
+    mapper.handle({ kind: 'jog', position: 100, rebase: true });
+    expect(core.getState().speedLevel).toBeCloseTo(base + 0.25, 3);
+    mapper.handle({ kind: 'jog', position: 100.5 });
+    expect(core.getState().speedLevel).toBeCloseTo(base + 0.75, 3);
+  });
+});
+
+describe('the input service', () => {
+  function service(saved: Partial<Record<number, string>> | null = null) {
+    const { core } = setup();
+    const writes: Array<Record<number, string>> = [];
+    const svc = createInputService(core, {
+      load: () => saved as never,
+      save: (m) => writes.push(m),
+    });
+    return { core, svc, writes };
+  }
+
+  it('starts from the saved mapping and falls back to the defaults', () => {
+    expect(service().svc.getMapping()).toEqual(defaultButtonMapping);
+    const { svc } = service({ 4: 'speedUp' });
+    expect(svc.getMapping()[4]).toBe('speedUp');
+    expect(svc.getMapping()[1]).toBe('playPause');
+  });
+
+  it('persists a remap, tells listeners, and refuses mirror', () => {
+    const { svc, writes } = service();
+    const seen: string[] = [];
+    svc.subscribe((view) => seen.push(view.mapping[4]));
+    expect(svc.setButton(4, 'returnToPlayStart')).toBe(true);
+    expect(writes).toHaveLength(1);
+    expect(writes[0][4]).toBe('returnToPlayStart');
+    expect(seen).toEqual(['returnToPlayStart']);
+    expect(svc.setButton(4, 'mirror')).toBe(false);
+    expect(writes).toHaveLength(1);
+  });
+
+  it('turns device events into core commands', () => {
+    const { core, svc } = service();
+    svc.handle({ kind: 'button', button: 1, pressed: true });
+    expect(core.getState().playing).toBe(true);
+  });
+
+  it('the view lists the actions that can be chosen, without mirror', () => {
+    const { svc } = service();
+    expect(svc.getView().actions).toContain('dismissNotification');
+    expect(svc.getView().actions).not.toContain('mirror');
+  });
+});
+
+describe('normalizeButtonMapping', () => {
+  it('keeps known buttons with string actions and drops the rest', () => {
+    expect(normalizeButtonMapping({ 1: 'speedUp', 9: 'x', 2: 5 })).toEqual({ 1: 'speedUp' });
+    expect(normalizeButtonMapping('nope')).toBeNull();
+    expect(normalizeButtonMapping(null)).toBeNull();
   });
 });

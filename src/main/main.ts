@@ -11,6 +11,8 @@ import { createJsonFile, libraryFileIo } from './jsonFile';
 import { createApiController } from './apiController';
 import { createFileQuickMessageStore } from './fileQuickMessageStore';
 import { createFileApiSettingsStore } from './fileApiSettingsStore';
+import { createFileButtonMappingStore } from './fileButtonMappingStore';
+import { createInputService, type ActionId, type ButtonId, type DeviceEvent } from '../input';
 import {
   buildMenuTemplate,
   createWindowHost,
@@ -139,6 +141,20 @@ app.whenReady().then(() => {
     return { ok: true, message: `Imported "${script.name}" into the library.` };
   });
 
+  // Input: every device (the Virtual shuttle now, the real ShuttleXPress later) sends DeviceEvents
+  // here; one mapper and one saved button mapping serve them all.
+  const input = createInputService(
+    core,
+    createFileButtonMappingStore(path.join(app.getPath('userData'), 'button-mapping.json')),
+  );
+  ipcMain.on(IPC.deviceEvent, (_e, event: DeviceEvent) => input.handle(event));
+  ipcMain.handle(IPC.inputGetMapping, () => input.getView());
+  ipcMain.handle(IPC.inputSetButton, (_e, button: ButtonId, action: ActionId) => {
+    input.setButton(button, action);
+    return input.getView();
+  });
+  input.subscribe((view) => windows.forEach((w) => w.webContents.send(IPC.inputMapping, view)));
+
   // Broadcast on command changes, plus a steady tick so scrolling is visible.
   const broadcast = () => {
     const state = core.getState();
@@ -179,8 +195,8 @@ app.whenReady().then(() => {
         kind === 'preferences'
           ? openWindow('preferences', 'Neoprompter - Preferences', 120, { width: 720, height: 520 })
           : openWindow('shuttle', 'Neoprompter - Virtual shuttle', 200, {
-              width: 360,
-              height: 420,
+              width: 400,
+              height: 600,
             });
       return { focus: () => win.focus(), onClosed: (l) => win.on('closed', l) };
     },

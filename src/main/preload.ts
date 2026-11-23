@@ -4,6 +4,7 @@ import type { Command, CoreState } from '../core';
 import type { OutputWindowView } from '../output-window';
 import type { UiAction } from '../window-host';
 import type { ApiSettings, ApiView } from '../api';
+import type { ActionId, ButtonId, ButtonMappingView, DeviceEvent } from '../input';
 
 const api = {
   getState: (): Promise<CoreState> => ipcRenderer.invoke(IPC.getState),
@@ -19,6 +20,14 @@ const api = {
   getApiView: (): Promise<ApiView> => ipcRenderer.invoke(IPC.apiGet),
   setApiSettings: (settings: ApiSettings): Promise<ApiView> =>
     ipcRenderer.invoke(IPC.apiSet, settings),
+  /** The same events the real device sends; the main process maps them to core commands. */
+  sendDeviceEvent: (event: DeviceEvent): void => ipcRenderer.send(IPC.deviceEvent, event),
+  getButtonMapping: (): Promise<ButtonMappingView> => ipcRenderer.invoke(IPC.inputGetMapping),
+  setButton: (button: ButtonId, action: ActionId): Promise<ButtonMappingView> =>
+    ipcRenderer.invoke(IPC.inputSetButton, button, action),
+  onButtonMapping: (listener: (view: ButtonMappingView) => void): void => {
+    ipcRenderer.on(IPC.inputMapping, (_e, view: ButtonMappingView) => listener(view));
+  },
   /** Native menu items for the Operator view (New, Import, theme, right column, find). */
   onMenuAction: (listener: (action: UiAction) => void): void => {
     ipcRenderer.on(IPC.menuAction, (_e, action: UiAction) => listener(action));

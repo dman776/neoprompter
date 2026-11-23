@@ -1,5 +1,7 @@
+import { useEffect } from 'react';
 import type { Command, CoreState } from '../core';
-import { SpeedDial } from './Speed';
+import { keyToAction } from '../input';
+import { SpeedDial, isTyping } from './Speed';
 import { Key } from './ui/Key';
 import { BackScreenIcon, ForwardScreenIcon, PauseIcon, PlayIcon, PlayStartIcon } from './ui/icons';
 
@@ -8,6 +10,34 @@ export function formatTimeLeft(remainingLines: number, linesPerSecond: number): 
   if (linesPerSecond <= 0) return '--:--';
   const seconds = Math.round(remainingLines / linesPerSecond);
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
+}
+
+/**
+ * Space plays and pauses; Page Up and Page Down go back and forward a Screen (the key table is
+ * `keyToAction` in src/input, the same actions the Virtual shuttle's buttons run). The arrow keys
+ * are `useSpeedKeys`. A focused button or text field keeps its own keys.
+ */
+export function useTransportKeys(state: CoreState, dispatch: (command: Command) => void) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey || e.altKey || isTyping(e.target)) return;
+      if ((e.target as HTMLElement | null)?.tagName === 'BUTTON') return;
+      const action = keyToAction(e.key);
+      const command: Command | null =
+        action === 'playPause'
+          ? { type: state.playing ? 'pause' : 'play' }
+          : action === 'jumpBack'
+            ? { type: 'jumpBack' }
+            : action === 'jumpForward'
+              ? { type: 'jumpForward' }
+              : null;
+      if (!command) return;
+      e.preventDefault();
+      dispatch(command);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [state.playing, dispatch]);
 }
 
 /**
