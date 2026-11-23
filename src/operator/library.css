@@ -203,8 +203,37 @@
   font: inherit;
   font-size: 12px;
 }
-.update-note {
-  top: auto;
-  bottom: 44px;
-  border-color: var(--border);
+/* The Update notice: a pill in the header, beside Import. */
+.update-pill {
+  display: inline-flex;
+  align-items: center;
+  height: 30px;
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 14%, var(--surface));
+  color: var(--text);
+  font-size: 12px;
+  overflow: hidden;
+}
+.update-pill button {
+  height: 100%;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.update-pill-view {
+  padding: 0 8px 0 12px;
+}
+.update-pill-skip {
+  padding: 0 10px 0 6px;
+  color: var(--muted);
+}
+.update-pill button:hover {
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+}
+.update-pill button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
 }

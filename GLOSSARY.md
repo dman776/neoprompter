@@ -101,5 +101,5 @@ One folder the Operator picks in Preferences, off until chosen. A Word file (`.d
 _Avoid_: Hot folder, inbox, drop folder
 
 **Update notice**:
-A quiet, non-modal note in Edit mode and Preferences that a newer published version exists. It links to the release page; the Operator installs by hand. It never appears in Run mode or on the Output, and the Operator can skip a version to silence it until a newer one appears.
+A quiet, non-modal note that a newer published version exists: a pill in the Operator view's header beside Import in Edit mode, and a note in Preferences. It links to the release page; the Operator installs by hand. It never appears in Run mode or on the Output, and the Operator can skip a version to silence it until a newer one appears.
 _Avoid_: Auto-update, update prompt, upgrade dialog
