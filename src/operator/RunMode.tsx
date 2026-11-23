@@ -3,7 +3,7 @@ import { LiveView } from './LiveView';
 import { ScriptLock } from './ScriptLock';
 import { SpeedMeter, useSpeedKeys } from './Speed';
 import { StatusPanel } from './StatusPanel';
-import { Transport } from './Transport';
+import { Transport, useTransportKeys } from './Transport';
 import { useApiView, useOutputView, type CoreBridge } from './useCoreState';
 
 /**
@@ -26,6 +26,7 @@ export function RunMode({
   const outputView = useOutputView(bridge);
   const apiView = useApiView(bridge);
   useSpeedKeys(bridge.dispatch);
+  useTransportKeys(state, bridge.dispatch);
   const dispatch = (command: Command) => bridge.dispatch(command);
   return (
     <div className="run" data-collapsed={columnCollapsed ? 'true' : undefined}>

@@ -5,7 +5,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { _electron as electron, type ElectronApplication, type Page } from 'playwright-core';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
 const root = process.cwd();
 const artifacts = join(root, 'e2e', 'artifacts');
@@ -87,6 +87,31 @@ describe('the running app', () => {
     await shuttle.screenshot({ path: join(artifacts, 'virtual-shuttle.png') });
     await choose();
     expect(await titles()).toHaveLength(1);
+
+    // Its buttons, ring and jog wheel drive the real core through the main-process mapper.
+    await shuttle.getByRole('button', { name: /^Button 1,/ }).click();
+    await vi.waitFor(async () => expect((await state()).playing).toBe(true));
+    await shuttle.getByRole('button', { name: /^Button 1,/ }).click();
+    await vi.waitFor(async () => expect((await state()).playing).toBe(false));
+    const speedBefore = (await state()).speedLevel;
+    const jog = (await shuttle.getByTestId('jog').boundingBox())!;
+    const cx = jog.x + jog.width / 2;
+    const cy = jog.y + jog.height / 2;
+    await shuttle.mouse.move(cx, cy - 40);
+    await shuttle.mouse.down();
+    await shuttle.mouse.move(cx + 20, cy - 35, { steps: 4 });
+    await shuttle.mouse.up();
+    await vi.waitFor(async () => expect((await state()).speedLevel).toBeGreaterThan(speedBefore));
+    expect(Number.isInteger((await state()).speedLevel * 4)).toBe(false);
+    const ring = (await shuttle.getByTestId('ring').boundingBox())!;
+    await shuttle.mouse.move(ring.x + ring.width / 2, ring.y + 12);
+    await shuttle.mouse.down();
+    await shuttle.mouse.move(ring.x + ring.width / 2 + 60, ring.y + 30, { steps: 4 });
+    await vi.waitFor(async () => expect((await state()).ringDeflection).toBeGreaterThan(0));
+    await shuttle.screenshot({ path: join(artifacts, 'virtual-shuttle-active.png') });
+    await shuttle.mouse.up();
+    await vi.waitFor(async () => expect((await state()).ringDeflection).toBe(0));
+    await dispatch({ type: 'setSpeed', level: speedBefore });
     await shuttle.close();
   });
 

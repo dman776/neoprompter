@@ -18,6 +18,14 @@ export const IPC = {
   apiGet: 'api:get',
   /** renderer -> main (invoke): save Companion API settings (port, token), returns the new view */
   apiSet: 'api:set',
+  /** renderer -> main: a device event (Virtual shuttle now, the real ShuttleXPress later) */
+  deviceEvent: 'input:event',
+  /** renderer -> main (invoke): the button mapping and the actions that can be chosen */
+  inputGetMapping: 'input:get-mapping',
+  /** renderer -> main (invoke): remap one button, returns the new mapping view */
+  inputSetButton: 'input:set-button',
+  /** main -> renderers: the button mapping changed */
+  inputMapping: 'input:mapping',
   /** main -> Operator view: a native menu item that only the Operator view can handle */
   menuAction: 'menu:action',
 } as const;
