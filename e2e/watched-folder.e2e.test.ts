@@ -37,7 +37,7 @@ beforeAll(async () => {
     makeDocx(para([run('Welcome everyone')]) + para([run('Let us pray')])),
   );
   writeFileSync(join(drop, 'Broken.doc'), 'this is not a Word file');
-  writeFileSync(join(drop, 'notes.txt'), 'not a Word file');
+  writeFileSync(join(drop, 'photo.png'), 'not a script');
   app = await electron.launch({
     args: [root],
     env: {
@@ -78,7 +78,7 @@ describe('the Watched folder in the running app', () => {
 
   it('leaves a file that cannot be Imported, and other file types, where they are', () => {
     expect(existsSync(join(drop, 'Broken.doc'))).toBe(true);
-    expect(existsSync(join(drop, 'notes.txt'))).toBe(true);
+    expect(existsSync(join(drop, 'photo.png'))).toBe(true);
   });
 
   it('tells the Operator about the startup Import in the notice banner', async () => {

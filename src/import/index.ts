@@ -2,14 +2,19 @@ import { strFromU8, unzipSync } from 'fflate';
 import { XMLParser } from 'fast-xml-parser';
 import type { RichLine, Run, Script } from '../core';
 import { importDoc } from './doc';
+import { importText } from './text';
 
 export { importDoc };
 
-/** Imports a Word file, choosing the reader by extension (`.docx` or legacy `.doc`). */
+/** Imports a Word or text file, choosing the reader by extension (`.docx` or legacy `.doc`). */
 export function importDocument(bytes: Uint8Array, fileName: string): ImportResult {
   if (/\.docx$/i.test(fileName)) return importDocx(bytes, fileName);
   if (/\.doc$/i.test(fileName)) return importDoc(bytes, fileName);
-  return { ok: false, message: `"${fileName}" is not a Word file; choose a .doc or .docx file.` };
+  if (/\.txt$/i.test(fileName)) return importText(bytes, fileName);
+  return {
+    ok: false,
+    message: `"${fileName}" is not a file Neoprompter can import; choose a .doc, .docx or .txt file.`,
+  };
 }
 
 export type ImportResult = { ok: true; script: Script } | { ok: false; message: string };

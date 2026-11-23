@@ -37,7 +37,7 @@ const fakeImport = (bytes: Uint8Array, fileName: string): ImportResult => {
   if (text === 'BAD') return { ok: false, message: `"${fileName}" is not readable.` };
   return {
     ok: true,
-    script: { name: fileName.replace(/\.docx?$/i, ''), lines: [text] },
+    script: { name: fileName.replace(/\.(docx?|txt)$/i, ''), lines: [text] },
   };
 };
 
@@ -55,19 +55,21 @@ const names = (core: ReturnType<typeof setup>['core']) =>
   core.getState().library.map((s) => s.name);
 
 describe('importWatchedFolder', () => {
-  it('Imports the Word files and ignores everything else', () => {
+  it('Imports the Word and text files and ignores everything else', () => {
     const { core, fs, run } = setup({
       '/Drop/Sunday.docx': 'sunday',
       '/Drop/Old.doc': 'old',
       '/Drop/notes.txt': 'text',
+      '/Drop/photo.png': 'png',
       '/Drop/~$Sunday.docx': 'lock',
       '/Drop/.hidden.docx': 'hidden',
       '/Drop/imported/Done.docx': 'done',
     });
     const result = run();
-    expect(result.imported).toEqual(['Old', 'Sunday']);
-    expect(names(core).sort()).toEqual(['Old', 'Sunday']);
-    expect(fs.disk.has('/Drop/notes.txt')).toBe(true);
+    expect(result.imported).toEqual(['Old', 'Sunday', 'notes']);
+    expect(names(core).sort()).toEqual(['Old', 'Sunday', 'notes']);
+    expect(fs.disk.has('/Drop/imported/notes.txt')).toBe(true);
+    expect(fs.disk.has('/Drop/photo.png')).toBe(true);
     expect(fs.disk.has('/Drop/~$Sunday.docx')).toBe(true);
     expect(fs.disk.has('/Drop/.hidden.docx')).toBe(true);
   });
