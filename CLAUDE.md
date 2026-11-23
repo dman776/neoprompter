@@ -20,8 +20,8 @@ Layout:
 
 - `src/core/`: headless. Renderers and `src/main/` import it; it imports neither (`npm run check` enforces no Electron, DOM, or upward imports). `createCore({ clock })` gives `dispatch(command)`, `getState()`, `subscribe()`. Add commands to `Command` in `types.ts`, handle them in `core.ts`, and test through this seam with `createFakeClock()`.
 - `src/main/`: Electron main process and preload. Owns the core and bridges IPC (`src/shared/ipc.ts`); renderers use `window.neoprompter`.
-- `src/operator/`, `src/output/`: thin renderers of core state (`index.html` + `<name>.ts`). `scripts/build.mjs` bundles every `src/*/index.html` page.
-- `src/import/`, `api/`, `input/`, `library/`, `output-window/`: headless modules with an `index.ts` and colocated tests; collaborators (stores, display lists, window hosts) are injected. New modules follow suit.
+- `src/operator/` (the Operator view: Edit mode and Run mode), `src/preferences/` (Preferences window), `src/shuttle/` (Virtual shuttle window): thin React renderers of core state, with `src/editor/` the headless Script editor logic. `src/output/` is the plain TypeScript Output renderer. Each page is `index.html` + `<name>.ts(x)`; `scripts/build.mjs` bundles every `src/*/index.html` page.
+- `src/import/`, `api/`, `input/`, `library/`, `output-window/`, `window-host/` (Preferences and Virtual shuttle windows, native menu): headless modules with an `index.ts` and colocated tests; collaborators (stores, display lists, window hosts) are injected. New modules follow suit.
 
 Read the matching doc before touching:
 

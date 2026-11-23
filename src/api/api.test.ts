@@ -95,6 +95,15 @@ describe('GET /api/status', () => {
     expect((await (await call('/api/status')).json()).state).toBe('playing');
   });
 
+  it('reports the mode and whether the Output is on', async () => {
+    const { core, call } = await setup();
+    const first = await (await call('/api/status')).json();
+    expect(first).toMatchObject({ mode: 'edit', outputOn: false });
+    core.dispatch({ type: 'setMode', mode: 'run' });
+    core.dispatch({ type: 'setOutput', on: true });
+    expect(await (await call('/api/status')).json()).toMatchObject({ mode: 'run', outputOn: true });
+  });
+
   it('rejects POST with 405', async () => {
     const { post } = await setup();
     expect((await post({}, {}, '/api/status')).status).toBe(405);

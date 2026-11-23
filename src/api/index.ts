@@ -163,6 +163,8 @@ export function createApiServer(options: ApiServerOptions): ApiServer {
         playing: s.playing,
         position: s.position,
         progress: s.progress,
+        mode: s.mode,
+        outputOn: s.outputOn,
       });
     },
   };

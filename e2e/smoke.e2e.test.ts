@@ -348,6 +348,16 @@ describe('the running app', () => {
     await expect.poll(async () => (await outputLines())[0]).toBe(before[0]);
   });
 
+  it('reports the mode and the Output state over the HTTP API status', async () => {
+    const status = async () => (await fetch('http://127.0.0.1:4780/api/status')).json();
+    expect(await status()).toMatchObject({ mode: (await state()).mode, outputOn: true });
+    await operator.getByRole('switch', { name: 'Output' }).click();
+    await expect.poll(async () => (await status()).outputOn).toBe(false);
+    await operator.getByRole('switch', { name: 'Output' }).click();
+    await expect.poll(async () => (await status()).outputOn).toBe(true);
+    output = await windowTitled('Output');
+  });
+
   it('switches the Output Off and On from the lamp, keeping the reading position', async () => {
     const before = (await state()).position;
     const lamp = operator.getByRole('switch', { name: 'Output' });

@@ -4,9 +4,9 @@ The reviewer reads this file; implementers need not. It holds judgement calls on
 
 ## The Operator stays in control
 
-Nothing the Talent sees changes without an Operator action. A new input, endpoint, startup path, or background task must not start scrolling, change the Output's text, or reveal a blank Output by itself. Surfaces for other people (the Producer page, the Companion API) carry Notifications and status only.
+Nothing the Talent sees changes without an Operator action. A new input, endpoint, startup path, or background task must not start scrolling, change the Output's text, or switch the Output on by itself. Surfaces for other people (the Producer page, the Companion API) carry Notifications and status only.
 
-_Why:_ this runs live, in front of a congregation. Restore starts paused, the Output stays blank until confirmed, and the API has no transport control for this reason.
+_Why:_ this runs live, in front of a congregation. Restore starts paused, the Output starts Off until the Operator switches it on, and the API has no transport control for this reason.
 
 ## Decisions live in the core; renderers render
 
