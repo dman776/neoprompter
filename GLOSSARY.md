@@ -88,6 +88,10 @@ _Avoid_: Page
 An on-screen copy of the ShuttleXPress (ring, jog wheel, and five buttons) in its own small window, opened from the Window menu and closed by default, so the prompter can be controlled and tested without the hardware.
 _Avoid_: Simulator, emulator, mock shuttle
 
+**Key binding**:
+A key (or key with modifiers) the Operator assigns to an action, such as Play / Pause or Back a Screen, in Preferences. One action can have several Key bindings. Key bindings work only in Run mode with the Script locked, and only in the Operator view; a ShuttleXPress used through its own driver software reaches the prompter as Key bindings.
+_Avoid_: Shortcut, hotkey, keymap
+
 **Windowed Output**:
 A setting that shows the Output in an ordinary window on the Operator's screen. It turns itself on when only one display is connected and off when more are (at start and whenever the number of displays changes); the Operator can still toggle it by hand in between.
 _Avoid_: Preview, debug mode
