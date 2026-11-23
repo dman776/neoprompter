@@ -20,7 +20,12 @@ import {
 } from './types';
 import { createMemoryLibraryStorage, type LibraryStorage, type StoredScript } from './library';
 import { createMemoryPresetStore, type PresetStore } from './presets';
-import { defaultAppearance, type Appearance } from './types';
+import {
+  defaultAppearance,
+  READING_LINE_MAX_Y,
+  READING_LINE_MIN_Y,
+  type Appearance,
+} from './types';
 import { colorLineRange, editLineText, remapPosition } from './editing';
 import { MAX_RECENT_COLORS, DEFAULT_RECENT_COLORS, isHexColor, moveColorToFront } from './palette';
 import { changedSpan, sanitizeLines } from './scriptLines';
@@ -49,7 +54,15 @@ export interface Core {
 }
 
 /** An appearance whose text is unreadable on its background gets black or white text instead. */
-function readable(a: Appearance): Appearance {
+function readable(input: Appearance): Appearance {
+  // Older files lack newer fields; a bad Reading line position falls back to the default.
+  const y = Number(input.readingLineY);
+  const a = {
+    ...input,
+    readingLineY: Number.isFinite(y)
+      ? Math.max(READING_LINE_MIN_Y, Math.min(READING_LINE_MAX_Y, y))
+      : defaultAppearance.readingLineY,
+  };
   return contrastRatio(a.textColor, a.backgroundColor) >= MIN_CONTRAST
     ? a
     : { ...a, textColor: readableTextOn(a.backgroundColor) };
@@ -449,7 +462,7 @@ export function createCore(options: CoreOptions = {}): Core {
         }
         case 'loadPreset':
           if (!presets[command.name]) return;
-          appearance = readable({ ...presets[command.name] });
+          appearance = readable({ ...defaultAppearance, ...presets[command.name] });
           activePreset = command.name;
           break;
         case 'setOutput':

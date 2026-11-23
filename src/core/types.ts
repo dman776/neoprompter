@@ -154,6 +154,11 @@ export interface Appearance {
   backgroundColor: string;
   /** Show the triangle Reading line. */
   readingLine: boolean;
+  /**
+   * The Reading line's vertical center as a fraction (0 to 1) of the Output stage's height. The
+   * Operator drags it in the Live view; it never changes how the text scrolls.
+   */
+  readingLineY: number;
   /** Flip the Output horizontally for beam-splitter glass. */
   mirror: boolean;
 }
@@ -166,8 +171,13 @@ export const defaultAppearance: Appearance = {
   textColor: '#ffffff',
   backgroundColor: '#000000',
   readingLine: true,
+  readingLineY: 0.25,
   mirror: false,
 };
+
+/** The Reading line triangle is 32px tall on the 1080px stage; keep all of it inside. */
+export const READING_LINE_MIN_Y = 16 / 1080;
+export const READING_LINE_MAX_Y = 1 - 16 / 1080;
 
 /** State comes out. Operator view and Output are thin renderers of this. */
 export interface CoreState {

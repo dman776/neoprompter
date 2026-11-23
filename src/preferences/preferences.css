@@ -146,7 +146,7 @@
 .pf-reading-line {
   position: absolute;
   left: 0;
-  top: 0.7em;
+  translate: 0 -50%;
   border-left: 0.7em solid var(--accent);
   border-block: 0.4em solid transparent;
 }

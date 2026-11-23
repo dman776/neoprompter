@@ -87,6 +87,30 @@
   border-top: 16px solid transparent;
   border-bottom: 16px solid transparent;
   border-left: 28px solid #f5a623;
+  cursor: ns-resize;
+  touch-action: none;
+}
+/* A comfortable hit area: the stage is scaled down, so the triangle itself is tiny. */
+.live-line::before {
+  content: '';
+  position: absolute;
+  left: -20px;
+  top: -64px;
+  width: 140px;
+  height: 160px;
+  border-radius: 16px;
+}
+.live-line:hover::before,
+.live-line:focus-visible::before,
+.live-line[data-dragging='true']::before {
+  background: rgba(245, 166, 35, 0.22);
+  outline: 3px solid rgba(245, 166, 35, 0.8);
+}
+.live-line:focus-visible {
+  outline: none;
+}
+.live-line[data-dragging='true'] {
+  filter: brightness(1.25);
 }
 .live-progress {
   position: absolute;

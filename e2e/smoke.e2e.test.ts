@@ -269,7 +269,7 @@ describe('the running app', () => {
     await expect.poll(async () => (await state()).speedLevel).toBe(3.1);
     await operator.keyboard.press('Shift+ArrowDown');
     await expect.poll(async () => (await state()).speedLevel).toBe(2.6);
-    const dial = await operator.locator('[role="slider"]').boundingBox();
+    const dial = await operator.locator('[role="slider"][aria-label="Speed"]').boundingBox();
     await operator.mouse.move(dial!.x + dial!.width / 2, dial!.y + dial!.height / 2);
     await operator.mouse.down();
     await operator.mouse.move(dial!.x + dial!.width / 2, dial!.y + dial!.height / 2 - 28);
@@ -637,6 +637,83 @@ describe('the running app', () => {
     }
     await output.screenshot({ path: join(artifacts, 'output-scaled.png') });
     await setOutputSize(1920, 1080);
+  });
+
+  it('drags the Reading line in the Live view and the Output shows it in the same place', async () => {
+    await dispatch({ type: 'setMode', mode: 'run' });
+    await dispatch({ type: 'setAppearance', changes: { readingLine: true, readingLineY: 0.25 } });
+    const handle = operator.locator('[data-live="reading-line"]');
+    await handle.waitFor();
+    // Where a page puts the triangle, in 1920x1080 stage px, whatever the window or scale.
+    const stagePosition = (page: Page, sel: { line: string; stage: string }) =>
+      page.evaluate((sel) => {
+        const stage = document.querySelector(sel.stage)!.getBoundingClientRect();
+        const r = document.querySelector(sel.line)!.getBoundingClientRect();
+        const scale = stage.width / 1920;
+        return { centerY: (r.top + r.height / 2 - stage.top) / scale, height: r.height / scale };
+      }, sel);
+    const both = async () => ({
+      talent: await stagePosition(output, { line: '#reading-line', stage: '#stage' }),
+      operatorView: await stagePosition(operator, {
+        line: '[data-live="reading-line"]',
+        stage: '[data-live="surface"]',
+      }),
+    });
+    const positionBefore = (await state()).position;
+    const before = await both();
+    expect(before.talent.centerY).toBeCloseTo(270, 0);
+    expect(before.operatorView.centerY).toBeCloseTo(270, 0);
+
+    const box = (await handle.boundingBox())!;
+    const x = box.x + box.width / 2;
+    const y = box.y + box.height / 2;
+    const view = (await operator.getByTestId('live-view').boundingBox())!;
+    await operator.mouse.move(x, y);
+    await operator.mouse.down();
+    await operator.mouse.move(x, y + view.height * 0.3, { steps: 8 });
+    await operator.screenshot({ path: join(artifacts, 'live-view-dragging-reading-line.png') });
+    await operator.mouse.up();
+
+    await expect.poll(async () => (await state()).appearance.readingLineY).toBeCloseTo(0.55, 1);
+    const after = await both();
+    expect(after.operatorView.centerY).toBeGreaterThan(before.operatorView.centerY + 250);
+    expect(Math.abs(after.talent.centerY - after.operatorView.centerY)).toBeLessThan(1.5);
+    expect(after.talent.height).toBeCloseTo(32, 0);
+    // The text did not scroll with it.
+    expect((await state()).position).toBe(positionBefore);
+    await operator.screenshot({ path: join(artifacts, 'live-view-reading-line-moved.png') });
+    await output.screenshot({ path: join(artifacts, 'output-reading-line-moved.png') });
+
+    // The same at another window size, and mirrored (flips sideways only).
+    await dispatch({ type: 'setAppearance', changes: { mirror: true } });
+    await app.evaluate(({ BrowserWindow }) => {
+      BrowserWindow.getAllWindows()
+        .find((w) => w.getTitle().includes('Output'))!
+        .setContentSize(1000, 900);
+    });
+    await expect
+      .poll(async () => {
+        const { talent, operatorView } = await both();
+        return Math.abs(talent.centerY - operatorView.centerY) < 1.5;
+      })
+      .toBe(true);
+    await dispatch({ type: 'setAppearance', changes: { mirror: false } });
+    await app.evaluate(({ BrowserWindow }) => {
+      BrowserWindow.getAllWindows()
+        .find((w) => w.getTitle().includes('Output'))!
+        .setContentSize(1920, 1080);
+    });
+
+    // The keyboard nudges it, and the switch hides it.
+    await handle.focus();
+    const keyed = (await state()).appearance.readingLineY;
+    await operator.keyboard.press('ArrowUp');
+    await expect
+      .poll(async () => (await state()).appearance.readingLineY)
+      .toBeCloseTo(keyed - 0.01, 3);
+    await dispatch({ type: 'setAppearance', changes: { readingLine: false } });
+    await expect.poll(() => handle.isHidden()).toBe(true);
+    await dispatch({ type: 'setAppearance', changes: { readingLine: true } });
   });
 
   describe('the Producer page with a token set', () => {

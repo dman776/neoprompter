@@ -92,3 +92,17 @@ describe('restore on launch', () => {
     expect(b.script.lines.length).toBeGreaterThan(0);
   });
 });
+
+describe('old session files', () => {
+  it('load with the default Reading line position', () => {
+    const e = env();
+    const a = createCore(e);
+    a.dispatch({ type: 'setAppearance', changes: { readingLineY: 0.8 } });
+    const b = createCore(e);
+    expect(b.getState().appearance.readingLineY).toBe(0.8);
+    const saved = e.sessionStore.load()!;
+    const { readingLineY: _drop, ...oldAppearance } = saved.appearance;
+    e.sessionStore.save({ ...saved, appearance: oldAppearance as typeof saved.appearance });
+    expect(createCore(e).getState().appearance.readingLineY).toBe(0.25);
+  });
+});

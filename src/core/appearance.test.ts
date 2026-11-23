@@ -3,7 +3,7 @@ import { createCore } from './core';
 import { createFakeClock } from './clock';
 import { createMemoryPresetStore, type PresetStore } from './presets';
 import { contrastRatio, MIN_CONTRAST } from './readableColor';
-import { defaultAppearance } from './types';
+import { defaultAppearance, READING_LINE_MAX_Y, READING_LINE_MIN_Y } from './types';
 
 function setup(store: PresetStore = createMemoryPresetStore()) {
   const core = createCore({ clock: createFakeClock(), presetStore: store });
@@ -125,5 +125,47 @@ describe('readable appearance', () => {
     core.dispatch({ type: 'loadPreset', name: 'bad' });
     const a = core.getState().appearance;
     expect(contrastRatio(a.textColor, a.backgroundColor)).toBeGreaterThanOrEqual(MIN_CONTRAST);
+  });
+});
+
+describe('reading line position', () => {
+  it('defaults to a quarter of the way down the stage', () => {
+    expect(setup().core.getState().appearance.readingLineY).toBe(0.25);
+  });
+
+  it('moves, and stays whole inside the stage', () => {
+    const { core } = setup();
+    core.dispatch({ type: 'setAppearance', changes: { readingLineY: 0.6 } });
+    expect(core.getState().appearance.readingLineY).toBe(0.6);
+    core.dispatch({ type: 'setAppearance', changes: { readingLineY: -3 } });
+    expect(core.getState().appearance.readingLineY).toBe(READING_LINE_MIN_Y);
+    core.dispatch({ type: 'setAppearance', changes: { readingLineY: 9 } });
+    expect(core.getState().appearance.readingLineY).toBe(READING_LINE_MAX_Y);
+    // A 32px triangle centered on the limits stays inside a 1080px stage.
+    expect(READING_LINE_MIN_Y * 1080).toBeGreaterThanOrEqual(16);
+    expect(READING_LINE_MAX_Y * 1080).toBeLessThanOrEqual(1080 - 16);
+    core.dispatch({ type: 'setAppearance', changes: { readingLineY: Number.NaN } });
+    expect(core.getState().appearance.readingLineY).toBe(defaultAppearance.readingLineY);
+  });
+
+  it('is saved in a Preset and comes back with it', () => {
+    const { core, store } = setup();
+    core.dispatch({ type: 'setAppearance', changes: { readingLineY: 0.7 } });
+    core.dispatch({ type: 'savePreset', name: 'Tall' });
+    core.dispatch({ type: 'setAppearance', changes: { readingLineY: 0.1 } });
+    core.dispatch({ type: 'loadPreset', name: 'Tall' });
+    expect(core.getState().appearance.readingLineY).toBe(0.7);
+    const core2 = setup(store).core;
+    core2.dispatch({ type: 'loadPreset', name: 'Tall' });
+    expect(core2.getState().appearance.readingLineY).toBe(0.7);
+  });
+
+  it('loads a Preset saved before the position existed with the default', () => {
+    const { readingLineY: _drop, ...old } = defaultAppearance;
+    const store = createMemoryPresetStore();
+    store.save({ Old: old as typeof defaultAppearance });
+    const { core } = setup(store);
+    core.dispatch({ type: 'loadPreset', name: 'Old' });
+    expect(core.getState().appearance.readingLineY).toBe(0.25);
   });
 });

@@ -1,6 +1,17 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import type { MouseEvent as ReactMouseEvent } from 'react';
-import { lineText, outputState, type Command, type CoreState } from '../core';
+import type {
+  KeyboardEvent as ReactKeyboardEvent,
+  MouseEvent as ReactMouseEvent,
+  PointerEvent as ReactPointerEvent,
+} from 'react';
+import {
+  lineText,
+  outputState,
+  READING_LINE_MAX_Y,
+  READING_LINE_MIN_Y,
+  type Command,
+  type CoreState,
+} from '../core';
 import { createOutputRenderer } from '../output/renderer';
 import { STAGE_HEIGHT, STAGE_WIDTH } from '../output/stage';
 
@@ -33,6 +44,67 @@ export function LiveView({ state, dispatch, outputShowing, badge = true }: LiveV
   const view = useRef<HTMLDivElement>(null);
   const [fixing, setFixing] = useState<{ line: number; top: number } | null>(null);
   const [fixText, setFixText] = useState('');
+  const [dragging, setDragging] = useState(false);
+
+  // Dragging the Reading line: the grab keeps its offset from the pointer, so it does not jump,
+  // and the pointer's px become stage fractions through the Live view's scale.
+  const drag = useRef<{ offset: number; pending: number | null; frame: number | null } | null>(
+    null,
+  );
+  const moveLine = (readingLineY: number) =>
+    dispatch({
+      type: 'setAppearance',
+      changes: {
+        readingLineY: Math.max(READING_LINE_MIN_Y, Math.min(READING_LINE_MAX_Y, readingLineY)),
+      },
+    });
+  const flushDrag = () => {
+    const d = drag.current;
+    if (!d) return;
+    if (d.frame !== null) cancelAnimationFrame(d.frame);
+    d.frame = null;
+    if (d.pending !== null) moveLine(d.pending);
+    d.pending = null;
+  };
+  const stageFraction = (clientY: number) => clientY / (STAGE_HEIGHT * scale);
+  const startLineDrag = (event: ReactPointerEvent) => {
+    if (event.button !== 0) return;
+    event.preventDefault();
+    try {
+      event.currentTarget.setPointerCapture(event.pointerId);
+    } catch {
+      // No capture (a test, an old pointer): the drag still follows the move events it gets.
+    }
+    drag.current = {
+      offset: state.appearance.readingLineY - stageFraction(event.clientY),
+      pending: null,
+      frame: null,
+    };
+    setDragging(true);
+  };
+  const dragLine = (event: ReactPointerEvent) => {
+    const d = drag.current;
+    if (!d) return;
+    d.pending = stageFraction(event.clientY) + d.offset;
+    // Keep up with the pointer without flooding the core: at most one change per animation frame.
+    d.frame ??= requestAnimationFrame(() => {
+      d.frame = null;
+      flushDrag();
+    });
+  };
+  const endLineDrag = () => {
+    flushDrag();
+    drag.current = null;
+    setDragging(false);
+  };
+  const nudgeLine = (event: ReactKeyboardEvent) => {
+    const step = event.shiftKey ? 0.05 : 0.01;
+    const direction = event.key === 'ArrowDown' ? 1 : event.key === 'ArrowUp' ? -1 : 0;
+    if (!direction) return;
+    event.preventDefault();
+    event.stopPropagation();
+    moveLine(state.appearance.readingLineY + direction * step);
+  };
 
   // Locking again (a mode change) closes any open fix.
   useEffect(() => {
@@ -111,7 +183,26 @@ export function LiveView({ state, dispatch, outputShowing, badge = true }: LiveV
         >
           <div className="live-surface" data-live="surface" ref={surface}>
             <div className="live-text" data-live="text" ref={text} />
-            <div className="live-line" data-live="reading-line" ref={line} />
+            <div
+              className="live-line"
+              data-live="reading-line"
+              data-dragging={dragging ? 'true' : undefined}
+              ref={line}
+              role="slider"
+              tabIndex={0}
+              aria-label="Reading line position"
+              aria-orientation="vertical"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={Math.round(state.appearance.readingLineY * 100)}
+              aria-valuetext={`${Math.round(state.appearance.readingLineY * 100)}% down the Output`}
+              onPointerDown={startLineDrag}
+              onPointerMove={dragLine}
+              onPointerUp={endLineDrag}
+              onPointerCancel={endLineDrag}
+              onKeyDown={nudgeLine}
+              onDoubleClick={(e) => e.stopPropagation()}
+            />
             <div className="live-progress" data-live="progress" ref={progress} />
           </div>
         </div>

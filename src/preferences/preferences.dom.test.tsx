@@ -176,6 +176,15 @@ describe('Appearance', () => {
     expect(core.getState().appearance.textColor).toBe('#ffcc00');
   });
 
+  it('sets the Reading line position with a slider, and the sample shows it', async () => {
+    const m = await openAppearance();
+    expect(field('Reading line position').value).toBe('25');
+    await setValue(field('Reading line position'), '60');
+    expect(m.core.getState().appearance.readingLineY).toBeCloseTo(0.6, 5);
+    const triangle = host.querySelector<HTMLElement>('[data-testid="sample-reading-line"]')!;
+    expect(triangle.style.top).toBe('60%');
+  });
+
   it('switches the Reading line and the mirror through the core', async () => {
     const { core, dispatched } = await openAppearance();
     await act(async () => field('Reading line').click());

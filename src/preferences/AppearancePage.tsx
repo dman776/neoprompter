@@ -23,8 +23,15 @@ function Sample({ appearance }: { appearance: CoreState['appearance'] }) {
         transform: a.mirror ? 'scaleX(-1)' : undefined,
       }}
     >
+      {a.readingLine && (
+        <span
+          className="pf-reading-line"
+          data-testid="sample-reading-line"
+          aria-hidden="true"
+          style={{ top: `${a.readingLineY * 100}%` }}
+        />
+      )}
       <div style={{ width: `${a.textWidth}%`, margin: '0 auto' }}>
-        {a.readingLine && <span className="pf-reading-line" aria-hidden="true" />}
         Notice what Boaz does. He does not make a speech. He simply stays at the edge of the field.
       </div>
     </div>
@@ -143,6 +150,20 @@ export function AppearancePage({ state, dispatch }: PageProps) {
           label="Reading line"
           checked={a.readingLine}
           onCheckedChange={(readingLine) => change({ readingLine })}
+        />
+      </Row>
+      <Row
+        title="Reading line position"
+        help="How far down the Output the triangle sits. Drag it in the Live view, or set it here."
+      >
+        <Slider
+          label="Reading line position"
+          value={Math.round(a.readingLineY * 100)}
+          min={2}
+          max={98}
+          step={1}
+          unit="%"
+          onChange={(percent) => change({ readingLineY: percent / 100 })}
         />
       </Row>
       <Row title="Mirror" help="Flips the Output for beam-splitter glass.">

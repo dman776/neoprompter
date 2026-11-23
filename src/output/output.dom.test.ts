@@ -193,3 +193,30 @@ describe('Output renderer', () => {
     expect(fill).toBeCloseTo(m.core.getState().progress, 4);
   });
 });
+
+describe('Output Reading line', () => {
+  const marker = () => document.getElementById('reading-line')!;
+
+  it('is centered on its position in the Appearance, at the default a quarter down', async () => {
+    const m = await mountOutput(script('one', 'two'));
+    // 0.25 of 1080px, less half of the 32px triangle.
+    expect(marker().style.top).toBe('254px');
+    m.core.dispatch({ type: 'setAppearance', changes: { readingLineY: 0.5 } });
+    expect(marker().style.top).toBe('524px');
+  });
+
+  it('does not move the text, and hides with the switch', async () => {
+    const m = await mountOutput(script('one', 'two'));
+    const before = m.text.style.transform;
+    m.core.dispatch({ type: 'setAppearance', changes: { readingLineY: 0.8 } });
+    expect(m.text.style.transform).toBe(before);
+    m.core.dispatch({ type: 'setAppearance', changes: { readingLine: false } });
+    expect(marker().style.display).toBe('none');
+  });
+
+  it('stays at the same height when mirrored', async () => {
+    const m = await mountOutput(script('one', 'two'));
+    m.core.dispatch({ type: 'setAppearance', changes: { mirror: true, readingLineY: 0.5 } });
+    expect(marker().style.top).toBe('524px');
+  });
+});

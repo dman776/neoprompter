@@ -247,6 +247,73 @@ describe('Run mode: the Live view', () => {
     expect(live().querySelector('[data-live="progress"]')).not.toBeNull();
   });
 
+  describe('the Reading line handle', () => {
+    const handle = () => live().querySelector('[data-live="reading-line"]') as HTMLElement;
+    const pointer = (type: string, clientY: number) =>
+      act(async () => {
+        handle().dispatchEvent(
+          new MouseEvent(type, { bubbles: true, clientX: 0, clientY, button: 0 }),
+        );
+      });
+    const key = (name: string) =>
+      act(async () => {
+        handle().dispatchEvent(new KeyboardEvent('keydown', { key: name, bubbles: true }));
+      });
+
+    it('sits where the setting says and offers itself as a slider', async () => {
+      const { core } = await runMode();
+      expect(handle().style.top).toBe('254px');
+      expect(handle().getAttribute('role')).toBe('slider');
+      expect(handle().getAttribute('aria-valuenow')).toBe('25');
+      await act(async () =>
+        core.dispatch({ type: 'setAppearance', changes: { readingLineY: 0.6 } }),
+      );
+      expect(handle().style.top).toBe('632px');
+      expect(handle().getAttribute('aria-valuenow')).toBe('60');
+    });
+
+    it('drags to a new position through the Live view scale', async () => {
+      const { core, dispatched } = await runMode();
+      // Without layout the scale is its starting 0.3: 0.1 of the stage is 1080 * 0.1 * 0.3 px.
+      await pointer('pointerdown', 100);
+      await pointer('pointermove', 100 + 32.4);
+      await pointer('pointerup', 100 + 32.4);
+      expect(core.getState().appearance.readingLineY).toBeCloseTo(0.35, 5);
+      expect(dispatched.at(-1)).toMatchObject({ type: 'setAppearance' });
+      await pointer('pointerdown', 100);
+      await pointer('pointermove', -5000);
+      await pointer('pointerup', -5000);
+      expect(core.getState().appearance.readingLineY).toBeLessThan(0.02);
+    });
+
+    it('drags the same when the Script is unlocked and when the Output is mirrored', async () => {
+      const { core } = await runMode();
+      await act(async () => core.dispatch({ type: 'setUnlocked', unlocked: true }));
+      await act(async () => core.dispatch({ type: 'setAppearance', changes: { mirror: true } }));
+      await pointer('pointerdown', 100);
+      await pointer('pointermove', 100 - 32.4);
+      await pointer('pointerup', 100 - 32.4);
+      expect(core.getState().appearance.readingLineY).toBeCloseTo(0.15, 5);
+    });
+
+    it('nudges with the arrow keys', async () => {
+      const { core } = await runMode();
+      await key('ArrowDown');
+      expect(core.getState().appearance.readingLineY).toBeCloseTo(0.26, 5);
+      await key('ArrowUp');
+      await key('ArrowUp');
+      expect(core.getState().appearance.readingLineY).toBeCloseTo(0.24, 5);
+    });
+
+    it('is gone, and cannot be dragged, when the Reading line is off', async () => {
+      const { core } = await runMode();
+      await act(async () =>
+        core.dispatch({ type: 'setAppearance', changes: { readingLine: false } }),
+      );
+      expect(handle().style.display).toBe('none');
+    });
+  });
+
   it('stays in step with the Output after a Script edit and a Preset change', async () => {
     const { core } = await runMode();
     await act(async () => core.dispatch({ type: 'setUnlocked', unlocked: true }));
@@ -404,7 +471,7 @@ describe('Run mode: speed meter, dial and arrow keys', () => {
     Array.from(host.querySelectorAll('[data-slot="speed-meter"] [data-fill]'), (s) =>
       Number(s.getAttribute('data-fill')),
     );
-  const dial = () => host.querySelector('[role="slider"]')!;
+  const dial = () => host.querySelector('[role="slider"][aria-label="Speed"]')!;
   const pointer = (el: Element, type: string, clientY: number) =>
     act(async () => {
       el.dispatchEvent(new MouseEvent(type, { bubbles: true, clientY, button: 0 }));
