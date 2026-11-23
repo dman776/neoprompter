@@ -40,6 +40,11 @@ async function mount(mode: 'edit' | 'run', overrides: Partial<PreferencesBridge>
   root = createRoot(host);
   await act(async () => root.render(<App bridge={bridge} />));
   await act(async () => core.dispatch({ type: 'setMode', mode }));
+  // Run mode asks the bridge for the Key bindings when it opens; wait for the answer, so a key
+  // pressed next sees the table the test set up and not the defaults.
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
   return core;
 }
 

@@ -26,6 +26,10 @@ To check a new behavior, add a test there: dispatch the commands, then assert on
 
 The full `npm run test:e2e` also opens a real full screen Output, and on macOS Electron can crash (a crash report in `~/Library/Logs/DiagnosticReports`, and a popup) as that window leaves full screen. If you do not need that part, run a single file.
 
+## Trying the Key bindings
+
+`e2e/key-bindings.e2e.test.ts` is its own file, with its own launch: it writes `key-bindings.json` (Play / Pause moved to F5), then presses real keys in the Operator window, and adds a key in Preferences. Run it alone with `npm run build && npx vitest run --config e2e/vitest.config.ts e2e/key-bindings`. To try it by hand, open Preferences, Controls, Keyboard, press Add key on an action and then a key, and switch to Run mode. The line under the keys names the last key pressed in Preferences, which is how to see what a driver sends. It uses synthetic key presses, not a ShuttleXPress; see [shuttlexpress.md](shuttlexpress.md).
+
 ## Launching by hand
 
 `npm start` builds and launches the app.

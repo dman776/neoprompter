@@ -32,9 +32,13 @@ own: the only thing it serves is a small page and API on your local network, for
 
 ### Run mode controls
 
+The keys below are the defaults. Each is a Key binding you can change in Preferences, Controls,
+Keyboard, and a ShuttleXPress used through its driver software works by sending those keys (see
+[docs/shuttlexpress.md](docs/shuttlexpress.md)).
+
 | Control                         | What it does                                                         |
 | ------------------------------- | -------------------------------------------------------------------- |
-| `Space` / `Shift+Space`         | Play forward / play back; the same key again pauses                  |
+| `Space` / `Shift+Space`         | Play / pause; play back (the same key again pauses)                  |
 | `Up` / `Down` arrows            | Faster / slower (hold `Shift` for a bigger step)                     |
 | `Left` / `Right`, `PgUp`/`PgDn` | Back / forward a Screen                                              |
 | Left click on the Live view     | Toggle stop and play (not while the Script is unlocked)              |
@@ -45,8 +49,8 @@ own: the only thing it serves is a small page and API on your local network, for
 | Drag the Reading line           | Place it up or down the Output                                       |
 
 The **Virtual shuttle** (Window menu) is an on-screen copy of a Contour ShuttleXPress, so the
-controls can be used and tested without the hardware. Support for the physical device is planned and
-is not wired in yet.
+controls can be used and tested without the hardware. The app does not talk to the physical device
+yet; use the device's own driver software to send keys instead.
 
 ## Getting started
 
@@ -98,7 +102,8 @@ the one place behaviour lives; the windows are thin renderers of its state.
 - [GLOSSARY.md](GLOSSARY.md): the project's vocabulary (Operator, Talent, Script, Output, ...). Use
   these terms in code and docs.
 - [docs/run-and-test.md](docs/run-and-test.md): the three test seams and how to try the running app
-- [docs/scroll-model.md](docs/scroll-model.md): position, speed, Screen jumps, the mouse controls
+- [docs/scroll-model.md](docs/scroll-model.md): position, speed, Screen jumps, the mouse controls, Key bindings
+- [docs/shuttlexpress.md](docs/shuttlexpress.md): using a ShuttleXPress through its driver software
 - [docs/script-model-and-import.md](docs/script-model-and-import.md): Script storage, Import, the
   Watched folder, colors
 - [docs/api-design.md](docs/api-design.md) and [docs/companion.md](docs/companion.md): the HTTP API,
