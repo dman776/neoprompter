@@ -11,6 +11,7 @@ import { lineText, sameLine, type CoreState, type ScriptLine } from '../core';
 import { cleanPastedHtml, docToLines, formatReadTime, linesToDoc, scriptStats } from '../editor';
 import type { CoreBridge } from './useCoreState';
 import { ColorMark } from './colorMark';
+import { ReadableColors, REFRESH_READABLE_COLORS } from './readableColors';
 import { FindBar } from './FindBar';
 import { Search } from './search';
 import { ColorTool } from './ColorTool';
@@ -30,6 +31,7 @@ const extensions = [
   Bold,
   Italic,
   ColorMark,
+  ReadableColors,
   UndoRedo,
   Search,
 ];
@@ -57,6 +59,8 @@ interface ScriptEditorProps {
   editable: boolean;
   /** The core's recent colors, newest first. */
   recentColors: readonly string[];
+  /** The theme; the editor looks at its colors again when it changes. */
+  theme: CoreState['theme'];
   /** Filled with the editor's controls while it is mounted. */
   handle?: MutableRefObject<EditorHandle | null>;
   /** Called with a plain message when the core did not keep what the editor sent. */
@@ -69,6 +73,7 @@ export function ScriptEditor({
   script,
   editable,
   recentColors,
+  theme,
   handle,
   onSaveRejected,
 }: ScriptEditorProps) {
@@ -123,6 +128,17 @@ export function ScriptEditor({
     },
     onBlur: () => flush(),
   });
+
+  // The theme's tokens change after this renders, so look at the colors again a moment later.
+  useEffect(() => {
+    if (!editor) return;
+    const refresh = setTimeout(() => {
+      if (!editor.isDestroyed) {
+        editor.view.dispatch(editor.state.tr.setMeta(REFRESH_READABLE_COLORS, true));
+      }
+    }, 0);
+    return () => clearTimeout(refresh);
+  }, [editor, theme]);
 
   useEffect(() => {
     if (!handle) return;

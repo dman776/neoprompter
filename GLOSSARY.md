@@ -89,5 +89,5 @@ A test setting that shows the Output in an ordinary window on the Operator's scr
 _Avoid_: Preview, debug mode
 
 **Import**:
-Bringing a Word file (`.doc` or `.docx`) in as a Script, keeping its structure, emphasis, and colors. Any color too hard to read on the Output is replaced with the theme's text color.
+Bringing a Word file (`.doc` or `.docx`) in as a Script, keeping its structure, emphasis, and colors. Any color too hard to read on the Output, and in the editor, is replaced with a readable one when shown; the Script keeps the original color.
 _Avoid_: Open, upload, convert

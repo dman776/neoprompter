@@ -4,7 +4,7 @@ import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { Editor } from '@tiptap/core';
-import { createCore, createFakeClock, lineText, type Command } from '../core';
+import { createCore, createFakeClock, lineText, type Command, type ScriptLine } from '../core';
 import { App } from './App';
 import { SAVE_DELAY_MS } from './ScriptEditor';
 import { createFakeBridge } from './fakeBridge';
@@ -29,7 +29,7 @@ afterEach(() => {
   host.remove();
 });
 
-async function mount(lines: string[] = ['Hello there.', 'Second line.']) {
+async function mount(lines: ScriptLine[] = ['Hello there.', 'Second line.']) {
   const core = createCore({ clock: createFakeClock(), script: { name: 'T', lines } });
   const { bridge, dispatched, menu, pushState } = createFakeBridge(core);
   root = createRoot(host);
@@ -342,5 +342,92 @@ describe('the Color button', () => {
     expect(core.getState().script.lines[0]).toMatchObject({
       runs: [{ text: 'Hello', color: '#123456' }, { text: ' there.' }],
     });
+  });
+});
+
+describe('readable colors in the editor', () => {
+  const rich: ScriptLine[] = [
+    {
+      runs: [
+        { text: 'black', color: '#000000' },
+        { text: ' dim', color: '#111111' },
+        { text: ' red', color: '#ff0000' },
+        { text: ' white', color: '#ffffff' },
+      ],
+    },
+  ];
+  // jsdom loads no stylesheet, so the theme tokens the editor reads are set here.
+  const tokens = (surface: string, text: string) => {
+    document.documentElement.style.setProperty('--surface', surface);
+    document.documentElement.style.setProperty('--text', text);
+  };
+  afterEach(() => {
+    document.documentElement.style.removeProperty('--surface');
+    document.documentElement.style.removeProperty('--text');
+  });
+  const shown = (word: string) => {
+    const leaf = Array.from(host.querySelectorAll<HTMLElement>('.ProseMirror span')).filter(
+      (el) => el.textContent?.trim() === word && el.children.length === 0,
+    );
+    return getComputedStyle(leaf[0]!).color;
+  };
+  const shownByStyle = (word: string) => {
+    const leaves = Array.from(host.querySelectorAll<HTMLElement>('.ProseMirror span')).filter(
+      (el) => el.textContent?.includes(word),
+    );
+    // The innermost span carries the color that wins.
+    return leaves.at(-1)!.style.color;
+  };
+
+  it('shows black text in the editor text color on the dark theme, never black', async () => {
+    tokens('#11161c', '#dfe5ee');
+    await mount(rich);
+    expect(shownByStyle('black')).toBe('rgb(223, 229, 238)');
+    expect(shownByStyle('dim')).toBe('rgb(223, 229, 238)');
+    expect(shown('black')).not.toBe('rgb(0, 0, 0)');
+  });
+
+  it('leaves a readable color alone', async () => {
+    tokens('#11161c', '#dfe5ee');
+    await mount(rich);
+    expect(shownByStyle('red')).toBe('rgb(255, 0, 0)');
+    expect(shownByStyle('white')).toBe('rgb(255, 255, 255)');
+  });
+
+  it('does not change the Script: the stored color stays black, and so does what is copied', async () => {
+    tokens('#11161c', '#dfe5ee');
+    const { core } = await mount(rich);
+    const run = (core.getState().script.lines[0] as { runs: { text: string; color?: string }[] })
+      .runs[0]!;
+    expect(run.color).toBe('#000000');
+    const json = JSON.stringify(tiptap().getJSON());
+    expect(json).toContain('#000000');
+    // What is copied is the document's own HTML: the source black, not the shown color.
+    expect(tiptap().getHTML()).toContain('color: rgb(0, 0, 0)');
+  });
+
+  it('checks again against the light theme, where white is the unreadable one', async () => {
+    tokens('#f4f6f9', '#19202a');
+    await mount(rich);
+    expect(shownByStyle('white')).toBe('rgb(25, 32, 42)');
+    expect(shownByStyle('black')).toBe('rgb(0, 0, 0)');
+  });
+
+  it('follows a theme change without reloading the Script', async () => {
+    tokens('#11161c', '#dfe5ee');
+    const { core } = await mount(rich);
+    expect(shownByStyle('black')).toBe('rgb(223, 229, 238)');
+    tokens('#f4f6f9', '#19202a');
+    await act(async () => core.dispatch({ type: 'setTheme', theme: 'light' }));
+    await act(async () => void (await new Promise((r) => setTimeout(r, 60))));
+    expect(shownByStyle('black')).toBe('rgb(0, 0, 0)');
+    expect(shownByStyle('white')).toBe('rgb(25, 32, 42)');
+  });
+
+  it('keeps showing it right after the Operator types', async () => {
+    tokens('#11161c', '#dfe5ee');
+    await mount(rich);
+    await act(async () => void tiptap().commands.insertContentAt(1, 'x'));
+    expect(shownByStyle('black')).not.toBe('rgb(0, 0, 0)');
   });
 });

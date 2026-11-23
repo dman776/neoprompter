@@ -29,6 +29,7 @@ export function EditMode({
         script={state.script}
         editable={state.mode === 'edit'}
         recentColors={state.recentColors}
+        theme={state.theme}
         handle={editorHandle}
         onSaveRejected={onSaveRejected}
       />

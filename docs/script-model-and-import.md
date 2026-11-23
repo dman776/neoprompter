@@ -17,3 +17,7 @@ The core enforces it, whatever sends the command (editor, API, shuttle, menu). I
 ## Readable-color guard
 
 `src/core/readableColor.ts`: `displayColor(source, background, themeColor)` is a pure function the Output calls on every render for each colored run, so a background change re-evaluates every color. It keeps the source color if its WCAG contrast ratio against the Output background is at least `MIN_CONTRAST` = 3 (the WCAG large-text bar; prompter text is far larger, and 3:1 rejects Word's stray black, near-black and dark blue/red on black while keeping red and green), else returns the theme text color. Missing or invalid colors (anything but `#rgb`/`#rrggbb`) also use the theme color. The Operator view does not show Script text in color, so only the Output uses it.
+
+## The readable-color rule in the editor
+
+The rule applies wherever the Script is drawn, not only on the Output. The editor (Edit mode) shows a color that is too hard to read on its own background (3:1 contrast, the same `displayColor` as the Output) in the editor's text color instead, so black text from Word is never shown black on the dark look. It is a view-only ProseMirror decoration (`src/operator/readableColors.ts`): the document, the saved Script and the copied HTML keep the source color. The editor reads its background and text colors from the current look's tokens (`--surface`, `--text`) and checks again when the look changes.
