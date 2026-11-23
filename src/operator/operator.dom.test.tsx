@@ -54,6 +54,8 @@ async function mount(
     onState: (l) => listeners.push(l),
     getOutputView: async () => outputView,
     getApiView: async () => api,
+    chooseOutputMonitor: async () => outputView,
+    setWindowedOutput: async () => outputView,
   };
   root = createRoot(host);
   await act(async () => root.render(<App bridge={bridge} />));

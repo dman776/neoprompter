@@ -25,6 +25,12 @@ export interface Script {
 /** The Operator view's two modes: preparing Scripts, and a live production. */
 export type Mode = 'edit' | 'run';
 
+/** The Operator view's color theme. */
+export type Theme = 'dark' | 'light';
+
+/** Which mode the app opens in: the one last used, or always Edit mode or Run mode. */
+export type OpenInMode = 'last' | Mode;
+
 /** Commands go in. Every input and surface (Operator view, shuttle, keyboard, API) uses these. */
 export type Command =
   | { type: 'play' }
@@ -81,6 +87,10 @@ export type Command =
    * Output at once and never moves the reading position. Newlines become spaces.
    */
   | { type: 'liveFix'; line: number; text: string }
+  /** Choose the theme (persisted). */
+  | { type: 'setTheme'; theme: Theme }
+  /** Choose which mode the app opens in (persisted). */
+  | { type: 'setOpenInMode'; openIn: OpenInMode }
   /**
    * Show a plain-text Notification banner in the Operator view (never the Output). Called by
    * the HTTP API from the main process. `durationMs` overrides the display time.
@@ -182,6 +192,9 @@ export interface CoreState {
   mode: Mode;
   /** Run mode only: whether the Script is unlocked for a live fix. Resets on every mode change. */
   unlocked: boolean;
+  theme: Theme;
+  /** Which mode the app opens in; `mode` above is the current one. */
+  openInMode: OpenInMode;
   /** Visible Notifications, newest first. Operator view only; see `outputState`. */
   notifications: Notification[];
   /** Default Notification display time in ms. */

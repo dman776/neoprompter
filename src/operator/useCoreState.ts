@@ -10,6 +10,8 @@ export interface CoreBridge {
   onState(listener: (state: CoreState) => void): void;
   getOutputView(): Promise<OutputWindowView>;
   getApiView(): Promise<ApiView>;
+  chooseOutputMonitor(id: string): Promise<OutputWindowView>;
+  setWindowedOutput(windowed: boolean): Promise<OutputWindowView>;
 }
 
 /** The latest core state (null until the first one arrives). Components render it and dispatch. */

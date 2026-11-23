@@ -29,7 +29,17 @@ async function mountRun() {
   const dispatched: Command[] = [];
   const listeners: Array<(s: ReturnType<typeof core.getState>) => void> = [];
   core.subscribe((s) => listeners.forEach((l) => act(() => l(s))));
+  const view = {
+    windowed: false,
+    outputOn: false,
+    blocked: null,
+    chosenMonitorId: null,
+    missingMonitorId: null,
+    monitors: [],
+  };
   const bridge: CoreBridge = {
+    chooseOutputMonitor: async () => view,
+    setWindowedOutput: async () => view,
     getState: async () => core.getState(),
     dispatch: (c) => {
       dispatched.push(c);

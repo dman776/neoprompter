@@ -12,6 +12,8 @@ import {
   type Command,
   type CoreState,
   type Mode,
+  type OpenInMode,
+  type Theme,
   type Script,
 } from './types';
 import { createMemoryLibraryStorage, type LibraryStorage } from './library';
@@ -113,6 +115,8 @@ export function createCore(options: CoreOptions = {}): Core {
   let unlocked = false;
   /** The Script is locked against editing in Run mode (ADR 0003); a live fix has its own rule. */
   const locked = () => mode === 'run';
+  let theme: Theme = 'dark';
+  let openInMode: OpenInMode = 'last';
   let notificationDurationMs = DEFAULT_NOTIFICATION_MS;
   const clampDuration = (ms: number) =>
     Math.max(MIN_NOTIFICATION_MS, Math.min(MAX_NOTIFICATION_MS, Math.round(ms)));
@@ -140,6 +144,11 @@ export function createCore(options: CoreOptions = {}): Core {
       restored.activePreset && presets[restored.activePreset] ? restored.activePreset : null;
   }
   if (restored?.mode === 'edit' || restored?.mode === 'run') mode = restored.mode;
+  if (restored?.theme === 'light') theme = 'light';
+  if (restored?.openInMode === 'edit' || restored?.openInMode === 'run') {
+    openInMode = restored.openInMode;
+    mode = openInMode;
+  }
   if (restored?.notificationDurationMs !== undefined) {
     notificationDurationMs = clampDuration(restored.notificationDurationMs);
   }
@@ -161,6 +170,8 @@ export function createCore(options: CoreOptions = {}): Core {
       appearance,
       activePreset,
       mode,
+      theme,
+      openInMode,
       notificationDurationMs,
       recentColors,
     });
@@ -236,6 +247,8 @@ export function createCore(options: CoreOptions = {}): Core {
       outputOn,
       mode,
       unlocked,
+      theme,
+      openInMode,
       notifications: notifications.map(({ id, text }) => ({ id, text })).reverse(),
       notificationDurationMs,
       recentColors: [...recentColors],
@@ -400,6 +413,14 @@ export function createCore(options: CoreOptions = {}): Core {
           spliceLines(command.line, 1, [fixed], true);
           break;
         }
+        case 'setTheme':
+          if (command.theme !== 'dark' && command.theme !== 'light') return;
+          theme = command.theme;
+          break;
+        case 'setOpenInMode':
+          if (!['last', 'edit', 'run'].includes(command.openIn)) return;
+          openInMode = command.openIn;
+          break;
         case 'notify': {
           const text = command.text.trim();
           if (!text) return;
