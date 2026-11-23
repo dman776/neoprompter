@@ -6,7 +6,7 @@
 
 ## Releasing
 
-Pushing a version tag builds the installers on GitHub and drafts a release (`.github/workflows/release.yml`):
+Pushing a version tag builds the installers on GitHub and drafts a release (`.github/workflows/release.yml`). The Windows build is commented out of the workflow's matrix for now, so releases are macOS only; uncomment it there to bring it back:
 
 1. Set the version and commit it: `npm version 0.2.0 --no-git-tag-version`, commit, push. A pre-release is `0.3.0-beta.1`.
 2. Tag that commit `v0.2.0` and push the tag (`git tag v0.2.0 && git push origin v0.2.0`), or use "Draft a new release" on GitHub and choose a new `v0.2.0` tag. Either way, the tag push starts the build.
