@@ -18,4 +18,6 @@ export const IPC = {
   apiGet: 'api:get',
   /** renderer -> main (invoke): save Companion API settings (port, token), returns the new view */
   apiSet: 'api:set',
+  /** main -> Operator view: a native menu item that only the Operator view can handle */
+  menuAction: 'menu:action',
 } as const;

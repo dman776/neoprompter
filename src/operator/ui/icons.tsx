@@ -78,3 +78,9 @@ export const CloseIcon = () => (
     <path d="M6 6l12 12M18 6L6 18" />
   </svg>
 );
+
+export const ColorIcon = () => (
+  <svg {...base}>
+    <path d="M6 16L12 4l6 12M8.2 12h7.6" />
+  </svg>
+);
