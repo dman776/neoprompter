@@ -1,10 +1,42 @@
-import * as worker from 'pdfjs-dist/legacy/build/pdf.worker.mjs';
-import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
 import type { ImportResult } from './index';
 
-// pdf.js runs its parser in a worker; handing it the worker module keeps it in this process
-// (in Node it would otherwise look for the worker file on disk, which a bundle does not have).
-(globalThis as { pdfjsWorker?: unknown }).pdfjsWorker = worker;
+type Pdfjs = typeof import('pdfjs-dist/legacy/build/pdf.mjs');
+
+let loaded: Promise<Pdfjs> | undefined;
+
+/**
+ * Loads pdf.js the first time a PDF is Imported, so the app starts without it. At load it tries
+ * to polyfill canvas classes it only needs for drawing, which we never do, and prints three
+ * warnings about it; those exact notices are dropped, and anything else still shows.
+ */
+function loadPdfjs(): Promise<Pdfjs> {
+  loaded ??= (async () => {
+    const { log, warn } = console;
+    const known = /^Warning: Cannot (access the `require` function|polyfill)/;
+    const quiet =
+      (original: typeof console.log) =>
+      (...args: unknown[]) => {
+        if (typeof args[0] !== 'string' || !known.test(args[0])) original(...args);
+      };
+    console.log = quiet(log);
+    console.warn = quiet(warn);
+    try {
+      const [worker, pdfjs] = await Promise.all([
+        import('pdfjs-dist/legacy/build/pdf.worker.mjs'),
+        import('pdfjs-dist/legacy/build/pdf.mjs'),
+      ]);
+      // pdf.js runs its parser in a worker; handing it the worker module keeps it in this
+      // process (in Node it would otherwise look for the worker file on disk, which a bundle
+      // does not have).
+      (globalThis as { pdfjsWorker?: unknown }).pdfjsWorker = worker;
+      return pdfjs;
+    } finally {
+      console.log = log;
+      console.warn = warn;
+    }
+  })();
+  return loaded;
+}
 
 /**
  * A gap between two lines, in line heights, above which the next line starts a new paragraph.
@@ -20,6 +52,7 @@ interface Line {
 
 /** Imports a `.pdf` as a Script: its text only, with wrapped lines joined into paragraphs. */
 export async function importPdf(bytes: Uint8Array, fileName: string): Promise<ImportResult> {
+  const { getDocument } = await loadPdfjs();
   // A plain Uint8Array copy: pdf.js refuses a Node Buffer and takes ownership of what it is given.
   const task = getDocument({ data: new Uint8Array(bytes), verbosity: 0 });
   let doc: Awaited<typeof task.promise>;
