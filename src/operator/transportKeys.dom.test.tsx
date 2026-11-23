@@ -121,17 +121,55 @@ describe('Run mode keyboard shortcuts', () => {
     expect(core.getState().speedLevel).toBe(speed);
   });
 
-  it('keys do nothing while typing, on a focused button, or in Edit mode', async () => {
+  it('keys do nothing while typing in a text field, or in Edit mode', async () => {
     const core = await mount('run');
     const input = document.createElement('input');
     host.append(input);
     await press(' ', input);
-    const btn = document.createElement('button');
-    host.append(btn);
-    await press(' ', btn);
     expect(core.getState().playing).toBe(false);
     await act(async () => core.dispatch({ type: 'setMode', mode: 'edit' }));
     await press(' ');
+    expect(core.getState().playing).toBe(false);
+  });
+
+  it('Space always plays, even when a button still has the focus, and the button is not pressed', async () => {
+    const core = await mount('run');
+    const btn = document.createElement('button');
+    let pressed = 0;
+    btn.addEventListener('click', () => pressed++);
+    host.append(btn);
+    btn.focus();
+    const event = new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true });
+    await act(async () => void btn.dispatchEvent(event));
+    expect(event.defaultPrevented).toBe(true);
+    expect(core.getState().playing).toBe(true);
+    // The button's own activation on key release is stopped too.
+    const up = new KeyboardEvent('keyup', { key: ' ', bubbles: true, cancelable: true });
+    await act(async () => void btn.dispatchEvent(up));
+    expect(up.defaultPrevented).toBe(true);
+    expect(pressed).toBe(0);
+    await press(' ', btn);
+    expect(core.getState().playing).toBe(false);
+  });
+
+  it('Space plays and does not flip the Output switch or the unlock that was just clicked', async () => {
+    const core = await mount('run');
+    const lamp = host.querySelector('button[role="switch"]') as HTMLButtonElement;
+    expect(lamp).not.toBeNull();
+    lamp.focus();
+    const before = JSON.stringify([core.getState().outputOn, core.getState().unlocked]);
+    await press(' ', lamp);
+    expect(core.getState().playing).toBe(true);
+    expect(JSON.stringify([core.getState().outputOn, core.getState().unlocked])).toBe(before);
+  });
+
+  it('Space still works for a button in Edit mode, where it is not the prompter key', async () => {
+    const core = await mount('edit');
+    const btn = document.createElement('button');
+    host.append(btn);
+    const event = new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true });
+    await act(async () => void btn.dispatchEvent(event));
+    expect(event.defaultPrevented).toBe(false);
     expect(core.getState().playing).toBe(false);
   });
 });

@@ -960,6 +960,37 @@ describe('the running app', () => {
     await dispatch({ type: 'setAppearance', changes: { fontSize: font } });
   });
 
+  it('Space plays even right after a button was clicked, and does not press that button again', async () => {
+    await dispatch({ type: 'setMode', mode: 'run' });
+    await dispatch({ type: 'pause' });
+    await dispatch({ type: 'scrollBy', lines: -10_000 });
+    await dispatch({ type: 'setSpeed', level: 3 });
+    const font = (await state()).appearance.fontSize;
+    // Click A+: the button keeps the focus, as a click leaves it.
+    await operator.getByRole('button', { name: 'Larger text' }).click();
+    await vi.waitFor(async () => expect((await state()).appearance.fontSize).toBe(font + 4));
+    await operator.keyboard.press('Space');
+    await vi.waitFor(async () => expect((await state()).playing).toBe(true));
+    // The focused A+ was not pressed a second time.
+    expect((await state()).appearance.fontSize).toBe(font + 4);
+    await operator.keyboard.press('Space');
+    await vi.waitFor(async () => expect((await state()).playing).toBe(false));
+    expect((await state()).appearance.fontSize).toBe(font + 4);
+    // The Output lamp, clicked, is not flipped by Space either.
+    const outputBefore = (await state()).outputOn;
+    await operator.getByRole('switch', { name: 'Output' }).click();
+    await vi.waitFor(async () => expect((await state()).outputOn).toBe(!outputBefore));
+    await operator.keyboard.press('Space');
+    await vi.waitFor(async () => expect((await state()).playing).toBe(true));
+    expect((await state()).outputOn).toBe(!outputBefore);
+    await operator.keyboard.press('Space');
+    await vi.waitFor(async () => expect((await state()).playing).toBe(false));
+    // Put things back.
+    await operator.getByRole('switch', { name: 'Output' }).click();
+    await vi.waitFor(async () => expect((await state()).outputOn).toBe(outputBefore));
+    await dispatch({ type: 'setAppearance', changes: { fontSize: font } });
+  });
+
   describe('the Producer page with a token set', () => {
     const port = 47811;
     const TOKEN = 'e2e-token';

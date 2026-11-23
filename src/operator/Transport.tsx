@@ -9,14 +9,13 @@ import { BackScreenIcon, ForwardScreenIcon, PauseIcon, PlayIcon, PlayStartIcon }
  * Space plays forward and Shift+Space plays back (the same key again pauses; the other turns the
  * playing round). The Left arrow and Page Up go back a Screen, the Right arrow and Page Down go
  * forward a Screen (`keyToAction` in src/input). The Up and Down arrows set the speed
- * (`useSpeedKeys`). A focused text field keeps its own keys, and a focused button keeps Space.
+ * (`useSpeedKeys`). A focused text field keeps its own keys. Space is the prompter's key whatever
+ * else has the focus: a button the Operator just clicked is not pressed again by it.
  */
 export function useTransportKeys(state: CoreState, dispatch: (command: Command) => void) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey || e.altKey || isTyping(e.target)) return;
-      // A focused button keeps Space (it presses it); the other keys still reach the prompter.
-      if ((e.target as HTMLElement | null)?.tagName === 'BUTTON' && e.key === ' ') return;
       let command: Command | null = null;
       if (e.key === ' ') {
         // Space plays forward, Shift+Space plays back. The same key again pauses; the other one
@@ -39,8 +38,19 @@ export function useTransportKeys(state: CoreState, dispatch: (command: Command) 
       e.preventDefault();
       dispatch(command);
     };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    // A button is pressed by Space when the key goes up, so that is stopped as well.
+    const onKeyUp = (e: KeyboardEvent) => {
+      if (e.key === ' ' && !e.metaKey && !e.ctrlKey && !e.altKey && !isTyping(e.target)) {
+        e.preventDefault();
+      }
+    };
+    // In the capture phase, so a focused control never sees the key first.
+    window.addEventListener('keydown', onKey, true);
+    window.addEventListener('keyup', onKeyUp, true);
+    return () => {
+      window.removeEventListener('keydown', onKey, true);
+      window.removeEventListener('keyup', onKeyUp, true);
+    };
   }, [state.playing, state.direction, dispatch]);
 }
 
