@@ -19,6 +19,8 @@ const html = readFileSync(join(process.cwd(), 'src/output/index.html'), 'utf8');
 const bodyHtml = html.slice(html.indexOf('<body>') + 6, html.indexOf('<script'));
 
 interface Mount {
+  /** Called when the Output page asks the main process to leave full screen (Esc). */
+  exitFullscreen: ReturnType<typeof vi.fn>;
   core: ReturnType<typeof createCore>;
   dispatched: Command[];
   text: HTMLElement;
@@ -46,6 +48,7 @@ async function mountOutput(
     },
   });
   const dispatched: Command[] = [];
+  const exitFullscreen = vi.fn();
   let listener: (state: OutputState) => void = () => {};
   const push = () => listener(outputState(core.getState()));
   // Like main.ts: every core change is broadcast to the Output.
@@ -59,11 +62,12 @@ async function mountOutput(
     onState: (l: (state: OutputState) => void) => {
       listener = l;
     },
+    exitOutputFullscreen: exitFullscreen,
   } as unknown as typeof window.neoprompter;
   await import('./output');
   await Promise.resolve();
   push();
-  return { core, dispatched, text: document.getElementById('text')!, lineHeight };
+  return { core, dispatched, exitFullscreen, text: document.getElementById('text')!, lineHeight };
 }
 
 const lines = (m: Mount) => Array.from(m.text.children, (el) => el.textContent?.trim());
@@ -248,5 +252,25 @@ describe('Output Progress bar color', () => {
     const m = await mountOutput(script('one', 'two'));
     m.core.dispatch({ type: 'setAppearance', changes: { progressColor: '#0000ff' } });
     expect(bar().style.background).toContain('rgb(0, 0, 255)');
+  });
+});
+
+describe('Output window keys', () => {
+  const press = (key: string, init: KeyboardEventInit = {}) =>
+    window.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, ...init }));
+
+  it('Esc asks to leave full screen', async () => {
+    const m = await mountOutput(script('one', 'two'));
+    press('Escape');
+    // (Each test re-imports the page, so the window also holds listeners from earlier tests.)
+    expect(m.exitFullscreen).toHaveBeenCalled();
+  });
+
+  it('no other key does, and the Output sends no commands for keys', async () => {
+    const m = await mountOutput(script('one', 'two'));
+    const sent = m.dispatched.length;
+    for (const key of [' ', 'Enter', 'a', 'ArrowDown', 'F11', 'Tab']) press(key);
+    expect(m.exitFullscreen).not.toHaveBeenCalled();
+    expect(m.dispatched).toHaveLength(sent);
   });
 });

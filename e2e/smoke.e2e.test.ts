@@ -988,6 +988,21 @@ describe('the running app', () => {
     await dispatch({ type: 'setAppearance', changes: { fontSize: font } });
   });
 
+  it('Esc on an Output that is already a window leaves it where it is', async () => {
+    // (Full screen needs a second monitor; the module's tests cover Esc taking it out of full
+    // screen. This checks the message is safe on the windowed Output this test uses.)
+    const before = await outputWindows();
+    expect(before).toBe(1);
+    await output.keyboard.press('Escape');
+    await output.waitForTimeout(400);
+    expect(await outputWindows()).toBe(1);
+    expect((await state()).outputOn).toBe(true);
+    // Esc in the Operator view is not the Output's key.
+    await operator.keyboard.press('Escape');
+    await operator.waitForTimeout(200);
+    expect(await outputWindows()).toBe(1);
+  });
+
   describe('the Producer page with a token set', () => {
     const port = 47811;
     const TOKEN = 'e2e-token';

@@ -68,6 +68,12 @@ export interface OutputWindowManager {
   setOutputOn(on: boolean): void;
   chooseMonitor(id: string): void;
   setWindowed(windowed: boolean): void;
+  /**
+   * Esc on the Output: a full screen Output becomes an ordinary window (so it can be moved and
+   * closed) for now. The saved settings do not change, and switching the Output Off and On
+   * again, or choosing a monitor, puts it back to full screen. Does nothing otherwise.
+   */
+  exitFullscreen(): void;
   /** Re-evaluate placement, e.g. after displays are added or removed. */
   refresh(): void;
   getView(): OutputWindowView;
@@ -89,6 +95,8 @@ export function createOutputWindowManager(deps: {
   let settings = store.load();
   let current: OutputPlacement = { mode: 'closed' };
   let outputOn = false;
+  /** Esc was pressed on the full screen Output: an ordinary window until it is switched Off. */
+  let leftFullscreen = false;
 
   const chosenId = (): string | null =>
     settings.monitorBySetup[displaySetupKey(displays.list())] ?? null;
@@ -107,7 +115,7 @@ export function createOutputWindowManager(deps: {
 
   function decide(): OutputPlacement {
     if (!outputOn) return { mode: 'closed' };
-    if (settings.windowed) return { mode: 'windowed' };
+    if (settings.windowed || leftFullscreen) return { mode: 'windowed' };
     const id = chosenId();
     if (id === null || id === displays.operatorDisplayId()) return { mode: 'closed' };
     const display = displays.list().find((d) => d.id === id);
@@ -123,7 +131,7 @@ export function createOutputWindowManager(deps: {
   }
 
   function blockedReason(): OutputBlocked | null {
-    if (!outputOn || settings.windowed) return null;
+    if (!outputOn || settings.windowed || leftFullscreen) return null;
     const id = chosenId();
     if (id === null) return missingMonitor() !== null ? 'missing-monitor' : 'no-monitor';
     return id === displays.operatorDisplayId() ? 'operator-display' : null;
@@ -138,13 +146,21 @@ export function createOutputWindowManager(deps: {
   return {
     setOutputOn(on) {
       outputOn = on;
+      if (!on) leftFullscreen = false;
+      refresh();
+    },
+    exitFullscreen() {
+      if (current.mode !== 'fullscreen') return;
+      leftFullscreen = true;
       refresh();
     },
     chooseMonitor(id) {
+      leftFullscreen = false;
       const key = displaySetupKey(displays.list());
       update({ ...settings, monitorBySetup: { ...settings.monitorBySetup, [key]: id } });
     },
     setWindowed(windowed) {
+      leftFullscreen = false;
       update({ ...settings, windowed });
     },
     refresh,

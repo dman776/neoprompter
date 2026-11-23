@@ -24,5 +24,9 @@ const draw = (state: OutputState) => render((lastState = state));
 
 fit();
 window.addEventListener('resize', fit);
+// Esc takes the Output out of full screen (the main process decides whether it is full screen).
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') window.neoprompter.exitOutputFullscreen();
+});
 window.neoprompter.onState(draw);
 window.neoprompter.getState().then(draw);

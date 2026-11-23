@@ -202,3 +202,86 @@ describe('the Output switch', () => {
     expect(t.manager.getView().blocked).toBeNull();
   });
 });
+
+describe('leaving full screen (Esc on the Output)', () => {
+  it('turns the full screen Output into an ordinary window', () => {
+    const t = setup([laptop, prompter]);
+    t.manager.chooseMonitor('prompter');
+    expect(t.log.at(-1)).toEqual({ mode: 'fullscreen', bounds: prompter.bounds });
+    t.manager.exitFullscreen();
+    expect(t.log.at(-1)).toEqual({ mode: 'windowed' });
+    expect(t.isOpen()).toBe(true);
+  });
+
+  it('is only for this time: the saved settings do not change', () => {
+    const t = setup([laptop, prompter]);
+    t.manager.chooseMonitor('prompter');
+    const saved = JSON.stringify(t.settings());
+    t.manager.exitFullscreen();
+    expect(JSON.stringify(t.settings())).toBe(saved);
+    expect(t.manager.getView().windowed).toBe(false);
+  });
+
+  it('goes back to full screen when the Output is switched Off and On again', () => {
+    const t = setup([laptop, prompter]);
+    t.manager.chooseMonitor('prompter');
+    t.manager.exitFullscreen();
+    t.manager.setOutputOn(false);
+    expect(t.log.at(-1)).toEqual({ mode: 'closed' });
+    t.manager.setOutputOn(true);
+    expect(t.log.at(-1)).toEqual({ mode: 'fullscreen', bounds: prompter.bounds });
+  });
+
+  it('stays an ordinary window when the displays change, until the Output is switched Off', () => {
+    const t = setup([laptop, prompter]);
+    t.manager.chooseMonitor('prompter');
+    t.manager.exitFullscreen();
+    t.setDisplays([laptop, projector]);
+    t.manager.refresh();
+    expect(t.log.at(-1)).toEqual({ mode: 'windowed' });
+  });
+
+  it('does nothing when the Output is not full screen: windowed, Off, or not showing', () => {
+    const windowed = setup([laptop], { windowed: true, monitorBySetup: {} });
+    const before = windowed.log.length;
+    windowed.manager.exitFullscreen();
+    expect(windowed.log).toHaveLength(before);
+
+    const off = setup([laptop, prompter]);
+    off.manager.chooseMonitor('prompter');
+    off.manager.setOutputOn(false);
+    const offLog = off.log.length;
+    off.manager.exitFullscreen();
+    expect(off.log).toHaveLength(offLog);
+    expect(off.isOpen()).toBe(false);
+
+    const blocked = setup([laptop, prompter]);
+    const blockedLog = blocked.log.length;
+    blocked.manager.exitFullscreen();
+    expect(blocked.log).toHaveLength(blockedLog);
+    expect(blocked.isOpen()).toBe(false);
+  });
+
+  it('does not make a blocked Output show: the reason stays', () => {
+    const t = setup([laptop, prompter]);
+    t.manager.exitFullscreen();
+    expect(t.manager.getView().blocked).toBe('no-monitor');
+  });
+
+  it('does not report a missing-monitor problem, nor block, while it is an ordinary window', () => {
+    const t = setup([laptop, prompter]);
+    t.manager.chooseMonitor('prompter');
+    t.manager.exitFullscreen();
+    expect(t.manager.getView().blocked).toBeNull();
+  });
+});
+
+describe('choosing again after Esc', () => {
+  it('choosing a monitor puts the Output back to full screen there', () => {
+    const t = setup([laptop, prompter]);
+    t.manager.chooseMonitor('prompter');
+    t.manager.exitFullscreen();
+    t.manager.chooseMonitor('prompter');
+    expect(t.log.at(-1)).toEqual({ mode: 'fullscreen', bounds: prompter.bounds });
+  });
+});

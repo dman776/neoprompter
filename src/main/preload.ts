@@ -15,6 +15,8 @@ const api = {
   getOutputView: (): Promise<OutputWindowView> => ipcRenderer.invoke(IPC.outputGetView),
   chooseOutputMonitor: (id: string): Promise<OutputWindowView> =>
     ipcRenderer.invoke(IPC.outputChooseMonitor, id),
+  /** Esc on the Output page: take the Output out of full screen. */
+  exitOutputFullscreen: (): void => ipcRenderer.send(IPC.outputExitFullscreen),
   setWindowedOutput: (windowed: boolean): Promise<OutputWindowView> =>
     ipcRenderer.invoke(IPC.outputSetWindowed, windowed),
   getApiView: (): Promise<ApiView> => ipcRenderer.invoke(IPC.apiGet),

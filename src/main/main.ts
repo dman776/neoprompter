@@ -298,6 +298,12 @@ app.whenReady().then(() => {
     output.setWindowed(windowed);
     return output.getView();
   });
+  // Esc on the Output takes it out of full screen. Only the Output window's own page may ask.
+  ipcMain.on(IPC.outputExitFullscreen, (e) => {
+    if (outputWin && !outputWin.isDestroyed() && e.sender === outputWin.webContents) {
+      output.exitFullscreen();
+    }
+  });
   // The Output window follows the core's Output switch, which is Off at every launch.
   core.subscribe((state) => output.setOutputOn(state.outputOn));
   screen.on('display-added', () => output.refresh());

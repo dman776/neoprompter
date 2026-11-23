@@ -12,6 +12,8 @@ export const IPC = {
   outputGetView: 'output:get-view',
   /** renderer -> main (invoke): choose Output monitor, returns the new view */
   outputChooseMonitor: 'output:choose-monitor',
+  /** Output renderer -> main: Esc was pressed; leave full screen (only the Output window's own message counts) */
+  outputExitFullscreen: 'output:exit-fullscreen',
   /** renderer -> main (invoke): toggle Windowed Output, returns the new view */
   outputSetWindowed: 'output:set-windowed',
   /** renderer -> main (invoke): Companion API settings and status */
