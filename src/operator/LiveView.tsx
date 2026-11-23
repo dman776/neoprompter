@@ -70,6 +70,7 @@ export function LiveView({ state, dispatch, outputShowing, badge = true }: LiveV
   const startLineDrag = (event: ReactPointerEvent) => {
     if (event.button !== 0) return;
     event.preventDefault();
+    event.stopPropagation();
     try {
       event.currentTarget.setPointerCapture(event.pointerId);
     } catch {
@@ -105,6 +106,94 @@ export function LiveView({ state, dispatch, outputShowing, badge = true }: LiveV
     event.stopPropagation();
     moveLine(state.appearance.readingLineY + direction * step);
   };
+
+  // Scrolling the Script by hand: the mouse wheel and dragging the text with the pointer. Screen
+  // px become visual lines through the Live view's scale and the Output's line height.
+  const scaleRef = useRef(scale);
+  scaleRef.current = scale;
+  const linesPerPx = () =>
+    1 /
+    (scaleRef.current * latest.current.appearance.fontSize * latest.current.appearance.lineSpacing);
+  const handDrag = useRef<{
+    startY: number;
+    lastY: number;
+    moved: boolean;
+    wasPlaying: boolean;
+    pending: number;
+    frame: number | null;
+  } | null>(null);
+  const [handling, setHandling] = useState(false);
+  const flushHand = () => {
+    const d = handDrag.current;
+    if (!d) return;
+    if (d.frame !== null) cancelAnimationFrame(d.frame);
+    d.frame = null;
+    if (d.pending !== 0) dispatch({ type: 'scrollBy', lines: d.pending });
+    d.pending = 0;
+  };
+  const startHandDrag = (event: ReactPointerEvent) => {
+    if (event.button !== 0 || (event.target as HTMLElement).closest('.live-fix')) return;
+    handDrag.current = {
+      startY: event.clientY,
+      lastY: event.clientY,
+      moved: false,
+      wasPlaying: false,
+      pending: 0,
+      frame: null,
+    };
+  };
+  const moveHandDrag = (event: ReactPointerEvent) => {
+    const d = handDrag.current;
+    if (!d) return;
+    if (!d.moved) {
+      // A click, or a double-click that opens a live fix, is not a drag.
+      if (Math.abs(event.clientY - d.startY) < 4) return;
+      d.moved = true;
+      d.lastY = d.startY;
+      setHandling(true);
+      // Hold a playing Script still under the pointer; it carries on when the drag ends.
+      d.wasPlaying = latest.current.playing;
+      if (d.wasPlaying) dispatch({ type: 'pause' });
+      try {
+        event.currentTarget.setPointerCapture(event.pointerId);
+      } catch {
+        // No capture (a test): the drag still follows the move events it gets.
+      }
+    }
+    // The text follows the pointer: dragging up moves forward, dragging down moves back.
+    d.pending += (d.lastY - event.clientY) * linesPerPx();
+    d.lastY = event.clientY;
+    d.frame ??= requestAnimationFrame(() => {
+      d.frame = null;
+      flushHand();
+    });
+  };
+  const endHandDrag = () => {
+    const d = handDrag.current;
+    if (!d) return;
+    flushHand();
+    handDrag.current = null;
+    setHandling(false);
+    if (d.moved && d.wasPlaying) dispatch({ type: 'play' });
+  };
+
+  useEffect(() => {
+    const box = view.current;
+    if (!box) return;
+    const onWheel = (event: WheelEvent) => {
+      // Not passive, so the page behind never scrolls with it.
+      event.preventDefault();
+      const px =
+        event.deltaMode === 1
+          ? event.deltaY * 16
+          : event.deltaMode === 2
+            ? event.deltaY * box.clientHeight
+            : event.deltaY;
+      dispatch({ type: 'scrollBy', lines: px * linesPerPx() });
+    };
+    box.addEventListener('wheel', onWheel, { passive: false });
+    return () => box.removeEventListener('wheel', onWheel);
+  }, [dispatch]);
 
   // Locking again (a mode change) closes any open fix.
   useEffect(() => {
@@ -173,8 +262,13 @@ export function LiveView({ state, dispatch, outputShowing, badge = true }: LiveV
         data-testid="live-view"
         data-output={state.outputOn ? 'on' : 'off'}
         data-unlocked={state.unlocked ? 'true' : undefined}
+        data-handling={handling ? 'true' : undefined}
         ref={view}
         onDoubleClick={startFix}
+        onPointerDown={startHandDrag}
+        onPointerMove={moveHandDrag}
+        onPointerUp={endHandDrag}
+        onPointerCancel={endHandDrag}
         style={{ width: STAGE_WIDTH * scale, height: STAGE_HEIGHT * scale }}
       >
         <div

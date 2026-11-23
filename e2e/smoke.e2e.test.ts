@@ -788,6 +788,50 @@ describe('the running app', () => {
     await shuttle.close();
   });
 
+  it('scrolls the Script with the mouse wheel and by dragging it, and the Output follows', async () => {
+    await dispatch({ type: 'setMode', mode: 'run' });
+    await dispatch({ type: 'scrollBy', lines: -10_000 });
+    const box = (await operator.getByTestId('live-view').boundingBox())!;
+    const cx = box.x + box.width / 2;
+    const cy = box.y + box.height / 2;
+    const position = async () => (await state()).position;
+    const outputOffset = () =>
+      output.evaluate(() => {
+        const t = document.getElementById('text')!;
+        const lineHeight = parseFloat(getComputedStyle(t).lineHeight);
+        return -new DOMMatrix(getComputedStyle(t).transform).m42 / lineHeight;
+      });
+    expect(await position()).toBeCloseTo(await outputOffset(), 1);
+
+    // Wheel down moves forward, wheel up moves back.
+    await operator.mouse.move(cx, cy);
+    await operator.mouse.wheel(0, 240);
+    await vi.waitFor(async () => expect(await position()).toBeGreaterThan(1));
+    const afterWheel = await position();
+    await operator.mouse.wheel(0, -120);
+    await vi.waitFor(async () => expect(await position()).toBeLessThan(afterWheel));
+
+    // Dragging the text up moves forward; the Output shows the same place.
+    const beforeDrag = await position();
+    await operator.mouse.move(cx, cy + 80);
+    await operator.mouse.down();
+    await operator.mouse.move(cx, cy, { steps: 6 });
+    await operator.mouse.up();
+    await vi.waitFor(async () => expect(await position()).toBeGreaterThan(beforeDrag + 1));
+    await vi.waitFor(async () => expect(await outputOffset()).toBeCloseTo(await position(), 1));
+
+    // Dragging down moves back. A plain click moves nothing.
+    const beforeBack = await position();
+    await operator.mouse.move(cx, cy);
+    await operator.mouse.down();
+    await operator.mouse.move(cx, cy + 100, { steps: 6 });
+    await operator.mouse.up();
+    await vi.waitFor(async () => expect(await position()).toBeLessThan(beforeBack));
+    const beforeClick = await position();
+    await operator.mouse.click(cx, cy);
+    expect(await position()).toBeCloseTo(beforeClick, 5);
+  });
+
   describe('the Producer page with a token set', () => {
     const port = 47811;
     const TOKEN = 'e2e-token';

@@ -333,3 +333,17 @@
   text-transform: uppercase;
   color: var(--muted);
 }
+
+/* The Script is moved by hand: wheel to scroll, drag to pull the text. */
+.live-view {
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+.live-view[data-handling='true'] {
+  cursor: grabbing;
+}
+.live-fix textarea {
+  cursor: text;
+  user-select: text;
+}

@@ -548,3 +548,101 @@ describe('Run mode: speed meter, dial and arrow keys', () => {
     expect(core.getState().speedLevel).toBe(3.4);
   });
 });
+
+describe('Run mode: scrolling the Live view with the mouse', () => {
+  // Without layout the Live view scale is its starting 0.3, and a visual line is 48 * 1.4 stage px.
+  const PX_PER_LINE = 0.3 * 48 * 1.4;
+  const runMode = async () => {
+    const m = await mount();
+    await act(async () => m.core.dispatch({ type: 'setMode', mode: 'run' }));
+    return m;
+  };
+  const live = () => host.querySelector('[data-testid="live-view"]') as HTMLElement;
+  const scrolls = (dispatched: { type: string }[]) =>
+    dispatched.filter((c) => c.type === 'scrollBy') as { type: 'scrollBy'; lines: number }[];
+  const total = (dispatched: { type: string }[]) =>
+    scrolls(dispatched).reduce((sum, c) => sum + c.lines, 0);
+  const wheel = (deltaY: number, deltaMode = 0) =>
+    act(async () => {
+      live().dispatchEvent(
+        new WheelEvent('wheel', { deltaY, deltaMode, bubbles: true, cancelable: true }),
+      );
+    });
+  const pointer = (type: string, clientY: number, target: Element = live()) =>
+    act(async () => {
+      target.dispatchEvent(
+        new MouseEvent(type, { bubbles: true, clientX: 50, clientY, button: 0 }),
+      );
+      // Let the animation frame that batches drag moves run.
+      await new Promise((r) => setTimeout(r, 30));
+    });
+
+  it('moves the Script forward when the wheel rolls down, and back when it rolls up', async () => {
+    const { dispatched } = await runMode();
+    await wheel(100);
+    expect(total(dispatched)).toBeCloseTo(100 / PX_PER_LINE, 3);
+    await wheel(-100);
+    expect(total(dispatched)).toBeCloseTo(0, 3);
+  });
+
+  it('treats a wheel that counts in lines as lines, not pixels', async () => {
+    const { dispatched } = await runMode();
+    await wheel(3, 1);
+    expect(total(dispatched)).toBeCloseTo((3 * 16) / PX_PER_LINE, 3);
+  });
+
+  it('cancels the wheel so the page itself does not scroll', async () => {
+    await runMode();
+    const event = new WheelEvent('wheel', { deltaY: 50, bubbles: true, cancelable: true });
+    await act(async () => void live().dispatchEvent(event));
+    expect(event.defaultPrevented).toBe(true);
+  });
+
+  it('drags the text with the pointer: dragging up moves forward, down moves back', async () => {
+    const { dispatched } = await runMode();
+    await pointer('pointerdown', 200);
+    await pointer('pointermove', 180);
+    await pointer('pointerup', 180);
+    expect(total(dispatched)).toBeCloseTo(20 / PX_PER_LINE, 3);
+    await pointer('pointerdown', 200);
+    await pointer('pointermove', 230);
+    await pointer('pointerup', 230);
+    expect(total(dispatched)).toBeCloseTo((20 - 30) / PX_PER_LINE, 3);
+  });
+
+  it('does not scroll on a plain click, so a double-click can still open a live fix', async () => {
+    const { dispatched } = await runMode();
+    await pointer('pointerdown', 200);
+    await pointer('pointermove', 201);
+    await pointer('pointerup', 201);
+    expect(scrolls(dispatched)).toHaveLength(0);
+  });
+
+  it('holds a playing Script still while it is dragged, then lets it carry on', async () => {
+    const { core, dispatched } = await runMode();
+    core.dispatch({ type: 'setViewport', lines: 1 });
+    core.dispatch({
+      type: 'setLineExtents',
+      extents: [1, 1, 1],
+      revision: core.getState().scriptRevision,
+    });
+    core.dispatch({ type: 'play' });
+    expect(core.getState().playing).toBe(true);
+    dispatched.length = 0;
+    await pointer('pointerdown', 200);
+    await pointer('pointermove', 180);
+    expect(dispatched.map((c) => c.type)).toContain('pause');
+    expect(core.getState().playing).toBe(false);
+    await pointer('pointerup', 180);
+    expect(core.getState().playing).toBe(true);
+  });
+
+  it('does not drag the Script when the Reading line handle is dragged', async () => {
+    const { dispatched } = await runMode();
+    const handle = live().querySelector('[data-live="reading-line"]')!;
+    await pointer('pointerdown', 100, handle);
+    await pointer('pointermove', 140, handle);
+    await pointer('pointerup', 140, handle);
+    expect(scrolls(dispatched)).toHaveLength(0);
+  });
+});
