@@ -87,8 +87,20 @@ function openWindow(
     });
   }
   windows.add(win);
-  win.on('closed', () => windows.delete(win));
+  win.on('closed', () => {
+    windows.delete(win);
+    // The Operator can close the windowed Output by hand; nothing may keep pointing at it.
+    if (outputWin === win) outputWin = null;
+  });
   return win;
+}
+
+/** Sends to every open window. One that is closing or already gone is skipped, not an error. */
+function sendToWindows(channel: string, payload: (contents: Electron.WebContents) => unknown) {
+  for (const w of windows) {
+    if (w.isDestroyed() || w.webContents.isDestroyed()) continue;
+    w.webContents.send(channel, payload(w.webContents));
+  }
 }
 
 // Windows open sized for their content and the screen, and come back where the Operator left them.
@@ -235,7 +247,9 @@ app.whenReady().then(() => {
   }
   // Notifications are Operator-only: the Output window only ever receives `outputState`.
   const stateFor = (contents: Electron.WebContents, state: CoreState) =>
-    outputWin && contents === outputWin.webContents ? outputState(state) : state;
+    outputWin && !outputWin.isDestroyed() && contents === outputWin.webContents
+      ? outputState(state)
+      : state;
   ipcMain.handle(IPC.getState, (e) => stateFor(e.sender, core.getState()));
   ipcMain.on(IPC.command, (_e, command: Command) => core.dispatch(command));
   ipcMain.handle(IPC.importScript, async () => {
@@ -328,7 +342,7 @@ app.whenReady().then(() => {
     fetchLatest: () => fetchLatestRelease(app.getVersion()),
     now: () => Date.now(),
   });
-  updates.subscribe((view) => windows.forEach((w) => w.webContents.send(IPC.updateView, view)));
+  updates.subscribe((view) => sendToWindows(IPC.updateView, () => view));
   ipcMain.handle(IPC.updateGet, () => updates.getView());
   ipcMain.handle(IPC.updateCheck, () => updates.checkNow());
   ipcMain.handle(IPC.updateSetAuto, (_e, on: boolean) => updates.setAutoCheck(on === true));
@@ -372,7 +386,7 @@ app.whenReady().then(() => {
     input.setButton(button, action);
     return input.getView();
   });
-  input.subscribe((view) => windows.forEach((w) => w.webContents.send(IPC.inputMapping, view)));
+  input.subscribe((view) => sendToWindows(IPC.inputMapping, () => view));
   ipcMain.handle(IPC.inputGetKeys, () => input.getKeyView());
   const keyChange =
     (change: (action: ActionId, key: NonNullable<ReturnType<typeof parseKeyChord>>) => unknown) =>
@@ -403,12 +417,12 @@ app.whenReady().then(() => {
     input.resetKeys();
     return input.getKeyView();
   });
-  input.subscribeKeys((view) => windows.forEach((w) => w.webContents.send(IPC.inputKeys, view)));
+  input.subscribeKeys((view) => sendToWindows(IPC.inputKeys, () => view));
 
   // Broadcast on command changes, plus a steady tick so scrolling is visible.
   const broadcast = () => {
     const state = core.getState();
-    windows.forEach((w) => w.webContents.send(IPC.state, stateFor(w.webContents, state)));
+    sendToWindows(IPC.state, (contents) => stateFor(contents, state));
   };
   let hadNotifications = false;
   core.subscribe(broadcast);
