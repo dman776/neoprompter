@@ -11,6 +11,7 @@ import {
   RING_MAX_LINES_PER_SECOND,
   type Command,
   type CoreState,
+  type Mode,
   type Script,
 } from './types';
 import { createMemoryLibraryStorage, type LibraryStorage } from './library';
@@ -106,6 +107,7 @@ export function createCore(options: CoreOptions = {}): Core {
   let lastSave = clock.now();
   const SAVE_INTERVAL_MS = 1000;
 
+  let mode: Mode = 'edit';
   let notificationDurationMs = DEFAULT_NOTIFICATION_MS;
   const clampDuration = (ms: number) =>
     Math.max(MIN_NOTIFICATION_MS, Math.min(MAX_NOTIFICATION_MS, Math.round(ms)));
@@ -131,6 +133,7 @@ export function createCore(options: CoreOptions = {}): Core {
       restored.activePreset && presets[restored.activePreset] ? restored.activePreset : null;
     outputBlank = true;
   }
+  if (restored?.mode === 'edit' || restored?.mode === 'run') mode = restored.mode;
   if (restored?.notificationDurationMs !== undefined) {
     notificationDurationMs = clampDuration(restored.notificationDurationMs);
   }
@@ -144,6 +147,7 @@ export function createCore(options: CoreOptions = {}): Core {
       speedLevel,
       appearance,
       activePreset,
+      mode,
       notificationDurationMs,
     });
   }
@@ -210,6 +214,7 @@ export function createCore(options: CoreOptions = {}): Core {
       presets: Object.keys(presets),
       activePreset,
       outputBlank,
+      mode,
       notifications: notifications.map(({ id, text }) => ({ id, text })).reverse(),
       notificationDurationMs,
     };
@@ -339,6 +344,10 @@ export function createCore(options: CoreOptions = {}): Core {
           break;
         case 'confirmOutput':
           outputBlank = false;
+          break;
+        case 'setMode':
+          if (command.mode !== 'edit' && command.mode !== 'run') return;
+          mode = command.mode;
           break;
         case 'notify': {
           const text = command.text.trim();

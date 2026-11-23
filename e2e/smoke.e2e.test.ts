@@ -103,6 +103,15 @@ describe('the running app', () => {
     expect(await operator.title()).toContain('Operator view');
   });
 
+  it('switches the Operator view between Edit mode and Run mode', async () => {
+    await operator.getByRole('radio', { name: 'Run' }).click();
+    await expect.poll(async () => (await state()).mode).toBe('run');
+    await expect.poll(() => operator.locator('main').getAttribute('data-mode')).toBe('run');
+    await operator.screenshot({ path: join(artifacts, 'operator-run.png') });
+    await operator.getByRole('radio', { name: 'Edit' }).click();
+    await expect.poll(() => operator.locator('main').getAttribute('data-mode')).toBe('edit');
+  });
+
   describe('the Producer page with a token set', () => {
     const port = 47811;
     const TOKEN = 'e2e-token';

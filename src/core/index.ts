@@ -7,6 +7,7 @@ export type {
   Command,
   CoreState,
   LibraryEntry,
+  Mode,
   Notification,
   OutputState,
   RichLine,

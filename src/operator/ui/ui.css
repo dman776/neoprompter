@@ -1,0 +1,134 @@
+/* Base design-system pieces: Button, Switch, Segment, Panel. */
+.np-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 38px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: linear-gradient(var(--raised), var(--surface));
+  color: var(--muted);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  font-size: 11.5px;
+  text-transform: uppercase;
+}
+.np-button:hover {
+  color: var(--text);
+}
+.np-button:active {
+  transform: translateY(1px);
+}
+.np-button:focus-visible,
+.np-switch:focus-visible,
+.np-segment button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.np-button[data-variant='primary'] {
+  background: linear-gradient(color-mix(in srgb, var(--accent) 92%, #fff), var(--accent));
+  color: var(--accent-ink);
+  border-color: color-mix(in srgb, var(--accent) 60%, #000);
+}
+.np-button[data-lit='true'] {
+  color: var(--accent);
+}
+.np-button[data-square='true'] {
+  width: 38px;
+  padding: 0;
+}
+
+/* A lamp-style switch: the lamp is lit when the switch is on. */
+.np-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  height: 38px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: linear-gradient(var(--raised), var(--surface));
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  font-size: 11.5px;
+  text-transform: uppercase;
+}
+.np-switch .np-lamp {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--muted) 45%, var(--bg));
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.6) inset;
+}
+.np-switch[data-state='checked'] {
+  border-color: color-mix(in srgb, var(--accent) 60%, transparent);
+}
+.np-switch[data-state='checked'] .np-lamp {
+  background: var(--accent);
+  box-shadow: 0 0 14px 2px var(--accent);
+}
+
+/* A segmented single-choice control (the mode switch). */
+.np-segment {
+  display: flex;
+  background: var(--well);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 3px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4) inset;
+}
+.np-segment button {
+  min-width: 118px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  border-radius: 3px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  font-size: 11.5px;
+  text-transform: uppercase;
+}
+.np-segment button[data-state='on'] {
+  background: linear-gradient(var(--raised), var(--surface));
+  color: var(--text);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.08) inset,
+    0 2px 6px rgba(0, 0, 0, 0.4);
+}
+.np-segment button[data-state='on'] svg {
+  color: var(--accent);
+}
+
+.np-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: linear-gradient(var(--surface), color-mix(in srgb, var(--surface) 88%, #000));
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+.np-panel > h4 {
+  margin: 0;
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--border);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  display: flex;
+  justify-content: space-between;
+}
+.np-icon {
+  width: 18px;
+  height: 18px;
+  flex: none;
+}

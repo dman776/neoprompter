@@ -12,7 +12,7 @@ Three seams, from cheapest to most real. Use the cheapest one that can show the 
 
 ## When you change a renderer
 
-Renderers are `src/operator/` and `src/output/`. If the change affects what the Operator or Talent sees (layout, scrolling, colors, wrapping, text rendering), run `npm run test:e2e`, then open the screenshots it writes to `e2e/artifacts/` (`output-loaded.png`, `output-end.png`, `operator.png`) and look at them. A passing unit test does not show that text is visible or readable. Say in your report what you looked at. If you did not run the app, say that.
+Renderers are `src/operator/` (React, `operator.tsx`, with its design-system pieces in `src/operator/ui/`; a page with a `<name>.tsx` entry is built as React) and `src/output/` (plain TypeScript). If the change affects what the Operator or Talent sees (layout, scrolling, colors, wrapping, text rendering), run `npm run test:e2e`, then open the screenshots it writes to `e2e/artifacts/` (`output-loaded.png`, `output-end.png`, `operator.png`) and look at them. A passing unit test does not show that text is visible or readable. Say in your report what you looked at. If you did not run the app, say that.
 
 ## How the Electron test works
 

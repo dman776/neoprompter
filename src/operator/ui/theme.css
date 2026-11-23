@@ -1,0 +1,56 @@
+/* Design tokens. Dark first; `data-theme="light"` on <html> switches to the light theme.
+   One amber accent in both. Components read these variables and never hard-code a color. */
+:root {
+  --font: system-ui, -apple-system, 'Segoe UI Variable', 'Segoe UI', sans-serif;
+  --mono: ui-monospace, 'SF Mono', 'Cascadia Mono', Menlo, monospace;
+  --radius: 5px;
+  --ok: #3fb950;
+  --bg: #0a0d11;
+  --surface: #11161c;
+  --raised: #171e26;
+  --border: #212a35;
+  --text: #dfe5ee;
+  --muted: #7a8799;
+  --accent: #ffb02e;
+  --accent-ink: #1a1204;
+  --well: #000;
+  --shadow: 0 0 0 1px rgba(255, 255, 255, 0.02) inset, 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+:root[data-theme='light'] {
+  --bg: #e6e9ee;
+  --surface: #f4f6f9;
+  --raised: #ffffff;
+  --border: #ccd2db;
+  --text: #19202a;
+  --muted: #5f6b7c;
+  --accent: #d98a0b;
+  --accent-ink: #ffffff;
+  --well: #e6e9ee;
+  --shadow: 0 1px 0 #fff inset, 0 8px 22px rgba(25, 32, 42, 0.12);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font: 13px/1.45 var(--font);
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  cursor: default;
+}

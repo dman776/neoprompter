@@ -45,7 +45,7 @@ function openWindow(
     width: 640,
     height: 480,
     ...extra,
-    backgroundColor: page === 'output' ? '#000000' : '#202020',
+    backgroundColor: page === 'output' ? '#000000' : '#0a0d11',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,

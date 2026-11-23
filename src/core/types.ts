@@ -22,6 +22,9 @@ export interface Script {
   lines: ScriptLine[];
 }
 
+/** The Operator view's two modes: preparing Scripts, and a live production. */
+export type Mode = 'edit' | 'run';
+
 /** Commands go in. Every input and surface (Operator view, shuttle, keyboard, API) uses these. */
 export type Command =
   | { type: 'play' }
@@ -62,6 +65,8 @@ export type Command =
   | { type: 'deletePreset'; name: string }
   /** Operator confirms after a restore; until then the Output stays blank. */
   | { type: 'confirmOutput' }
+  /** Switch the Operator view between Edit mode and Run mode (persisted). */
+  | { type: 'setMode'; mode: Mode }
   /**
    * Show a plain-text Notification banner in the Operator view (never the Output). Called by
    * the HTTP API from the main process. `durationMs` overrides the display time.
@@ -157,6 +162,8 @@ export interface CoreState {
   activePreset: string | null;
   /** True after a restore until the Operator confirms; the Output renders nothing. */
   outputBlank: boolean;
+  /** Which mode the Operator view is in. */
+  mode: Mode;
   /** Visible Notifications, newest first. Operator view only; see `outputState`. */
   notifications: Notification[];
   /** Default Notification display time in ms. */

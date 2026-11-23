@@ -20,8 +20,8 @@ function walk(dir) {
   });
 }
 
-const sources = walk('src').filter((f) => /\.(ts|html)$/.test(f));
-const isTest = (f) => /\.test\.ts$/.test(f);
+const sources = walk('src').filter((f) => /\.(tsx?|html)$/.test(f));
+const isTest = (f) => /\.test\.tsx?$/.test(f);
 const problems = [];
 
 for (const file of sources) {

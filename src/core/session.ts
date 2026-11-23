@@ -1,4 +1,4 @@
-import type { Appearance, Script } from './types';
+import type { Appearance, Mode, Script } from './types';
 
 /** What survives a crash or restart. Never includes "playing": a restore is always paused. */
 export interface Session {
@@ -8,6 +8,8 @@ export interface Session {
   speedLevel: number;
   appearance: Appearance;
   activePreset: string | null;
+  /** Optional so older session files still load (they open in Edit mode). */
+  mode?: Mode;
   /** Optional so older session files still load. */
   notificationDurationMs?: number;
 }
