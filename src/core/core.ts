@@ -19,6 +19,7 @@ import { createMemoryPresetStore, type PresetStore } from './presets';
 import { defaultAppearance, type Appearance } from './types';
 import { colorLineRange, editLineText, remapPosition } from './editing';
 import { PALETTE_COLORS } from './palette';
+import { changedSpan, sanitizeLines } from './scriptLines';
 import { contrastRatio, MIN_CONTRAST, readableTextOn } from './readableColor';
 import { lineText } from './richScript';
 import { createMemorySessionStore, type SessionStore } from './session';
@@ -304,6 +305,11 @@ export function createCore(options: CoreOptions = {}): Core {
           const old = script.lines[command.line];
           if (old === undefined) return;
           spliceLines(command.line, 1, editLineText(old, command.text));
+          break;
+        }
+        case 'setScriptLines': {
+          const span = changedSpan(script.lines, sanitizeLines(command.lines));
+          if (span) spliceLines(span.at, span.removed, span.added);
           break;
         }
         case 'cutLines': {

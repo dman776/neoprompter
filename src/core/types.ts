@@ -53,6 +53,11 @@ export type Command =
   | { type: 'deleteScript'; id: string }
   /** Minimal editing. Replace the text of one line (newlines split it); styling on unchanged text is kept. */
   | { type: 'editLine'; line: number; text: string }
+  /**
+   * The Script editor saving: replace the loaded Script's lines. Only text, bold, italic, a
+   * `#rrggbb` color and heading levels are kept; fonts and sizes never are.
+   */
+  | { type: 'setScriptLines'; lines: ScriptLine[] }
   /** Remove `count` lines starting at `from`. */
   | { type: 'cutLines'; from: number; count: number }
   /** Color characters [start, end) of a line with a palette color; null clears it. */
