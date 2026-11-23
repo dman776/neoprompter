@@ -211,6 +211,25 @@ describe('Appearance', () => {
     expect(bar.style.backgroundColor).toBe('rgb(51, 102, 255)');
   });
 
+  it('draws the sample triangle as a miniature of the Output: the same size at any text size', async () => {
+    const { core } = await openAppearance();
+    const triangle = () => host.querySelector<HTMLElement>('[data-testid="sample-reading-line"]')!;
+    const size = () => [
+      triangle().style.borderLeftWidth,
+      triangle().style.borderTopWidth,
+      triangle().style.borderBottomWidth,
+    ];
+    // The Output's triangle is 56px wide and 64px tall on the stage; the sample is 0.4 of it.
+    expect(size()).toEqual(['22.4px', '12.8px', '12.8px']);
+    await act(async () => core.dispatch({ type: 'setAppearance', changes: { fontSize: 120 } }));
+    expect(size()).toEqual(['22.4px', '12.8px', '12.8px']);
+    await act(async () => core.dispatch({ type: 'setAppearance', changes: { fontSize: 24 } }));
+    expect(size()).toEqual(['22.4px', '12.8px', '12.8px']);
+    // The text, by contrast, follows the font size.
+    const sample = host.querySelector<HTMLElement>('[data-testid="sample"]')!;
+    expect(sample.style.fontSize).toBe('9.6px');
+  });
+
   it('keeps the title, the sample and the tab strip fixed above the tab panel', async () => {
     await openAppearance();
     const head = host.querySelector('.pf-head')!;

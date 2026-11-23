@@ -224,8 +224,10 @@
   position: absolute;
   left: 0;
   translate: 0 -50%;
-  border-left: 1.17em solid #ff0000;
-  border-block: 0.67em solid transparent;
+  /* The size is set inline from the Output's, scaled to the sample (AppearancePage.tsx). */
+  border-style: solid;
+  border-color: transparent;
+  border-right-width: 0;
 }
 .pf-sample-progress {
   position: absolute;

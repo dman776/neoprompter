@@ -5,6 +5,8 @@ import {
   MAX_TEXT_WIDTH,
   MIN_FONT_SIZE,
   MIN_TEXT_WIDTH,
+  READING_LINE_HEIGHT,
+  READING_LINE_WIDTH,
   type CoreState,
 } from '../core';
 import { Button } from '../operator/ui/Button';
@@ -12,7 +14,7 @@ import { Switch } from '../operator/ui/Switch';
 import { ColorField, Row, Slider } from './controls';
 import type { PageProps } from './categories';
 
-/** The sample scales the Output's text so a large font size still fits the window. */
+/** The sample is the Output at this scale: its text, and its Reading line triangle. */
 const SAMPLE_SCALE = 0.4;
 
 /** The sample stays fixed above the settings (the window pins it), so every change is seen as made. */
@@ -36,7 +38,15 @@ export function AppearanceSample({ state }: { state: CoreState }) {
           className="pf-reading-line"
           data-testid="sample-reading-line"
           aria-hidden="true"
-          style={{ top: `${a.readingLineY * 100}%`, borderLeftColor: a.readingLineColor }}
+          // A miniature of the Output's triangle: the same size as on the stage times the sample's
+          // scale, so it stays the same however big or small the text is (it is not in `em`).
+          style={{
+            top: `${a.readingLineY * 100}%`,
+            borderLeftColor: a.readingLineColor,
+            borderLeftWidth: `${READING_LINE_WIDTH * SAMPLE_SCALE}px`,
+            borderTopWidth: `${(READING_LINE_HEIGHT / 2) * SAMPLE_SCALE}px`,
+            borderBottomWidth: `${(READING_LINE_HEIGHT / 2) * SAMPLE_SCALE}px`,
+          }}
         />
       )}
       <span
