@@ -16,7 +16,7 @@ describe('importDocument for .pdf', () => {
     });
   });
 
-  it('starts a new paragraph where the vertical gap is larger than a wrapped line', async () => {
+  it('starts a new paragraph, with a blank line between, where the gap is larger than a wrapped line', async () => {
     const pdf = makePdf([
       [
         { text: 'Good morning', y: 700 },
@@ -26,7 +26,59 @@ describe('importDocument for .pdf', () => {
     ]);
     expect(await importDocument(pdf, 'x.pdf')).toMatchObject({
       ok: true,
-      script: { lines: ['Good morning everyone', 'Please stand'] },
+      script: { lines: ['Good morning everyone', '', 'Please stand'] },
+    });
+  });
+
+  it('puts a blank line for each extra line height of gap', async () => {
+    const pdf = makePdf([
+      [
+        { text: 'First', y: 700 },
+        { text: 'Second', y: 676 },
+        { text: 'Third', y: 628 },
+      ],
+    ]);
+    expect(await importDocument(pdf, 'x.pdf')).toMatchObject({
+      ok: true,
+      script: { lines: ['First', '', 'Second', '', '', '', 'Third'] },
+    });
+  });
+
+  it('keeps the spaces pdf.js reports between words, as one space each', async () => {
+    // pdf.js gives a run of spaces as one space and drops leading and trailing ones, so the
+    // importer cannot tell how many the file had; it does not collapse or trim anything else.
+    const pdf = makePdf([[{ text: 'Alpha   beta', y: 700 }]]);
+    expect(await importDocument(pdf, 'x.pdf')).toMatchObject({
+      ok: true,
+      script: { lines: ['Alpha beta'] },
+    });
+  });
+
+  it('joins a wrapped line with one space, and does not double a space the PDF has', async () => {
+    const pdf = makePdf([
+      [
+        { text: 'Good morning ', y: 700 },
+        { text: 'everyone', y: 686 },
+        { text: 'and welcome', y: 672 },
+      ],
+    ]);
+    expect(await importDocument(pdf, 'x.pdf')).toMatchObject({
+      ok: true,
+      script: { lines: ['Good morning everyone and welcome'] },
+    });
+  });
+
+  it('ignores a line of spaces alone, and measures the gap between the lines that are read', async () => {
+    const pdf = makePdf([
+      [
+        { text: 'Above', y: 700 },
+        { text: '   ', y: 686 },
+        { text: 'Below', y: 672 },
+      ],
+    ]);
+    expect(await importDocument(pdf, 'x.pdf')).toMatchObject({
+      ok: true,
+      script: { lines: ['Above', '', 'Below'] },
     });
   });
 

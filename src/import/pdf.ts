@@ -41,6 +41,7 @@ function loadPdfjs(): Promise<Pdfjs> {
 /**
  * A gap between two lines, in line heights, above which the next line starts a new paragraph.
  * Wrapped lines sit about 1.2 to 1.5 heights apart; a blank line or paragraph spacing is more.
+ * Each line height of gap beyond the first is a blank line (at least one).
  */
 const PARAGRAPH_GAP = 1.6;
 
@@ -50,7 +51,19 @@ interface Line {
   height: number;
 }
 
-/** Imports a `.pdf` as a Script: its text only, with wrapped lines joined into paragraphs. */
+/**
+ * Joins a wrapped line to the one before it. The wrap itself is one space, unless the PDF already
+ * has a space there, so the spaces the file has are kept and none is doubled.
+ */
+function joinWrapped(a: string, b: string): string {
+  return /\s$/.test(a) || /^\s/.test(b) ? a + b : `${a} ${b}`;
+}
+
+/**
+ * Imports a `.pdf` as a Script: its text only, with wrapped lines joined into paragraphs. The
+ * text is kept as pdf.js reports it (it gives a run of spaces as one and drops leading and
+ * trailing spaces, so those cannot be recovered), and a gap between paragraphs becomes blank lines.
+ */
 export async function importPdf(bytes: Uint8Array, fileName: string): Promise<ImportResult> {
   const { getDocument } = await loadPdfjs();
   // A plain Uint8Array copy: pdf.js refuses a Node Buffer and takes ownership of what it is given.
@@ -70,7 +83,7 @@ export async function importPdf(bytes: Uint8Array, fileName: string): Promise<Im
   const lines: string[] = [];
   let paragraph: string[] = [];
   const endParagraph = () => {
-    if (paragraph.length > 0) lines.push(paragraph.join(' '));
+    if (paragraph.length > 0) lines.push(paragraph.reduce(joinWrapped));
     paragraph = [];
   };
 
@@ -78,7 +91,11 @@ export async function importPdf(bytes: Uint8Array, fileName: string): Promise<Im
     for (let n = 1; n <= doc.numPages; n++) {
       let previous: Line | null = null;
       for (const line of linesOf(await (await doc.getPage(n)).getTextContent())) {
-        if (previous && previous.y - line.y > PARAGRAPH_GAP * previous.height) endParagraph();
+        if (previous && previous.y - line.y > PARAGRAPH_GAP * previous.height) {
+          endParagraph();
+          const blanks = Math.max(1, Math.round((previous.y - line.y) / previous.height) - 1);
+          for (let i = 0; i < blanks; i++) lines.push('');
+        }
         paragraph.push(line.text);
         previous = line;
       }
@@ -109,7 +126,6 @@ function linesOf(content: { items: unknown[] }): Line[] {
     if (last && Math.abs(last.y - y) < (height || last.height) / 2) last.text += str;
     else lines.push({ text: str, y, height: height || 12 });
   }
-  return lines
-    .map((l) => ({ ...l, text: l.text.replace(/\s+/g, ' ').trim() }))
-    .filter((l) => l.text !== '');
+  // A line of spaces alone has nothing to read; the gap is measured between the lines that are.
+  return lines.filter((l) => l.text.trim() !== '');
 }
