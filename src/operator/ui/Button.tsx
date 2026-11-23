@@ -1,7 +1,8 @@
 import type { ButtonHTMLAttributes } from 'react';
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'plain' | 'primary';
+  /** `ghost` is a flat tool button for a toolbar. */
+  variant?: 'plain' | 'primary' | 'ghost';
   /** An icon-only button: square, and `aria-label` names it. */
   square?: boolean;
   /** The button's function is switched on (drawn in the accent color). */
