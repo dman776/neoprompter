@@ -225,7 +225,7 @@ function readDoc(bytes: Uint8Array): RichLine[] {
       } else if (code === CH_LINE_BREAK) {
         current.push([]);
       } else if (code === CH_TAB) {
-        add(' ', direct(off));
+        add('\t', direct(off));
       } else if (code === CH_NON_BREAKING_HYPHEN) {
         add('-', direct(off));
       } else if (code === CH_OPTIONAL_HYPHEN || code === CH_PAGE_BREAK || code < 0x20) {

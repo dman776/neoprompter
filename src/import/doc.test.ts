@@ -26,6 +26,13 @@ describe('importDoc (legacy .doc)', () => {
     ]);
   });
 
+  it('keeps a tab as a tab, splits on a line break, and keeps spaces', () => {
+    expect(lines([{ runs: [{ text: '  a\tb\u000bc  d' }] }])).toEqual([
+      { runs: [{ text: '  a\tb' }] },
+      { runs: [{ text: 'c  d' }] },
+    ]);
+  });
+
   it('reads UTF-16 text', () => {
     expect(lines([{ runs: [{ text: 'Grace — é中' }] }], { unicode: true })).toEqual([
       { runs: [{ text: 'Grace — é中' }] },

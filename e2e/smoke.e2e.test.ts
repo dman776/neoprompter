@@ -207,6 +207,15 @@ describe('the running app', () => {
     await output.screenshot({ path: join(artifacts, 'output-loaded.png') });
   });
 
+  it('shows spaces and tabs as the Script has them, on the Output and in the Live view', async () => {
+    const whiteSpace = (page: Page, selector: string) =>
+      page.evaluate((s) => getComputedStyle(document.querySelector(s)!).whiteSpace, selector);
+    expect(await whiteSpace(output, '#text')).toBe('pre-wrap');
+    await dispatch({ type: 'setMode', mode: 'run' });
+    await expect.poll(() => whiteSpace(operator, '.live-text')).toBe('pre-wrap');
+    await dispatch({ type: 'setMode', mode: 'edit' });
+  });
+
   it('shows a live edit on the Output right away', async () => {
     await dispatch({ type: 'editLine', line: 0, text: 'First line, edited' });
     await expect.poll(async () => (await outputLines())[0]).toBe('First line, edited');

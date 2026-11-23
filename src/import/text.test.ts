@@ -13,6 +13,17 @@ describe('importDocument for .txt', () => {
     expect(result).toMatchObject({ ok: true, script: { lines: ['A', '', 'B', 'C'] } });
   });
 
+  it('keeps leading, trailing and repeated spaces, tabs and a final blank line', async () => {
+    const result = await importDocument(
+      strToU8('  Indented\twith tab  \r\n\r\n\r\nAfter\r\n'),
+      'x.txt',
+    );
+    expect(result).toMatchObject({
+      ok: true,
+      script: { lines: ['  Indented\twith tab  ', '', '', 'After', ''] },
+    });
+  });
+
   it('strips a UTF-8 byte order mark', async () => {
     const bytes = new Uint8Array([0xef, 0xbb, 0xbf, ...strToU8('Grace é')]);
     expect(await importDocument(bytes, 'x.txt')).toMatchObject({

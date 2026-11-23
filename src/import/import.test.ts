@@ -101,6 +101,17 @@ describe('importDocx', () => {
     ]);
   });
 
+  it('splits on a carriage return as well as a line break, and keeps a tab as a tab', () => {
+    const body = para([run('a'), '<w:r><w:cr/></w:r>', run('b'), '<w:r><w:tab/></w:r>', run('c')]);
+    expect(lines(body)).toEqual([{ runs: [{ text: 'a' }] }, { runs: [{ text: 'b\tc' }] }]);
+  });
+
+  it('keeps spaces in a run, including leading and trailing ones', () => {
+    expect(lines(para([run('  two  spaces  ')]))).toEqual([
+      { runs: [{ text: '  two  spaces  ' }] },
+    ]);
+  });
+
   it('gives a clear message for a corrupt file', () => {
     const result = importDocx(strToU8('definitely not a zip'), 'bad.docx');
     expect(result.ok).toBe(false);

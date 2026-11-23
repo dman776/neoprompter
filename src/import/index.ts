@@ -154,9 +154,11 @@ function readParagraph(
     for (const part of run) {
       const tag = tagOf(part);
       if (tag === 'w:t') addText(textOf(children(part, tag)), style);
-      else if (tag === 'w:tab') addText(' ', style);
+      else if (tag === 'w:tab') addText('\t', style);
       else if (tag === 'w:noBreakHyphen') addText('-', style);
-      else if (tag === 'w:br') lines.push([]);
+      // A line break (Shift+Enter) or a carriage return inside the paragraph; a page or column
+      // break is a break as well, as it always was.
+      else if (tag === 'w:br' || tag === 'w:cr') lines.push([]);
     }
   };
 
