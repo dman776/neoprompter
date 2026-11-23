@@ -162,11 +162,11 @@ describe('importDoc (legacy .doc)', () => {
 });
 
 describe('importDocument', () => {
-  it('dispatches by extension', () => {
-    const doc = importDocument(makeDoc([{ runs: [{ text: 'hi' }] }]), 'A.DOC');
+  it('dispatches by extension', async () => {
+    const doc = await importDocument(makeDoc([{ runs: [{ text: 'hi' }] }]), 'A.DOC');
     expect(doc).toEqual({ ok: true, script: { name: 'A', lines: [{ runs: [{ text: 'hi' }] }] } });
-    const other = importDocument(strToU8('x'), 'A.png');
+    const other = await importDocument(strToU8('x'), 'A.png');
     expect(other.ok).toBe(false);
-    if (!other.ok) expect(other.message).toMatch(/\.doc, \.docx or \.txt/);
+    if (!other.ok) expect(other.message).toMatch(/\.doc, \.docx, \.txt or \.pdf/);
   });
 });

@@ -6,6 +6,7 @@ import { join } from 'node:path';
 import { _electron as electron, type ElectronApplication, type Page } from 'playwright-core';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { makeDocx, para, run } from '../src/import/fixtures';
+import { makePdf } from '../src/import/pdfFixtures';
 
 const root = process.cwd();
 const artifacts = join(root, 'e2e', 'artifacts');
@@ -36,6 +37,8 @@ beforeAll(async () => {
     join(drop, 'Sunday.docx'),
     makeDocx(para([run('Welcome everyone')]) + para([run('Let us pray')])),
   );
+  writeFileSync(join(drop, 'Notes.txt'), 'Call to worship\nOpening prayer');
+  writeFileSync(join(drop, 'Guide.pdf'), makePdf([[{ text: 'Welcome everyone', y: 700 }]]));
   writeFileSync(join(drop, 'Broken.doc'), 'this is not a Word file');
   writeFileSync(join(drop, 'photo.png'), 'not a script');
   app = await electron.launch({
@@ -70,7 +73,9 @@ describe('the Watched folder in the running app', () => {
         (s) => s.name,
       ),
     );
-    expect(library).toEqual(['Sunday']);
+    expect([...library].sort()).toEqual(['Guide', 'Notes', 'Sunday']);
+    expect(existsSync(join(drop, 'imported', 'Guide.pdf'))).toBe(true);
+    expect(existsSync(join(drop, 'imported', 'Notes.txt'))).toBe(true);
     expect(existsSync(join(drop, 'Sunday.docx'))).toBe(false);
     expect(existsSync(join(drop, 'imported', 'Sunday.docx'))).toBe(true);
     await operator.screenshot({ path: join(artifacts, 'watched-folder-library.png') });
@@ -84,7 +89,9 @@ describe('the Watched folder in the running app', () => {
   it('tells the Operator about the startup Import in the notice banner', async () => {
     const banner = operator.getByTestId('notice');
     await banner.waitFor({ timeout: 5000 });
-    expect(await banner.textContent()).toContain('Imported "Sunday" from the Watched folder.');
+    expect(await banner.textContent()).toContain(
+      'Imported 3 Scripts from the Watched folder: "Guide", "Notes", "Sunday".',
+    );
     expect(await banner.textContent()).toContain('Broken.doc');
     await operator.screenshot({ path: join(artifacts, 'watched-folder-notice.png') });
   });
@@ -99,7 +106,7 @@ describe('the Watched folder in the running app', () => {
     const prefs = await windowTitled('Preferences');
     const result = prefs.getByTestId('watched-folder-result');
     await result.waitFor({ timeout: 5000 });
-    expect(await result.textContent()).toContain('Imported "Sunday"');
+    expect(await result.textContent()).toContain('Imported 3 Scripts');
     await prefs.screenshot({ path: join(artifacts, 'watched-folder-preferences.png') });
   });
 
