@@ -6,7 +6,6 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
-  PALETTE_COLORS,
   createCore,
   createFakeClock,
   defaultAppearance,
@@ -90,9 +89,9 @@ describe('Output renderer', () => {
     m.core.dispatch({ type: 'cutLines', from: 0, count: 1 });
     expect(lines(m)).toEqual(['too', 'three']);
 
-    m.core.dispatch({ type: 'colorRange', line: 0, start: 0, end: 3, color: PALETTE_COLORS[0] });
+    m.core.dispatch({ type: 'colorRange', line: 0, start: 0, end: 3, color: '#ff00aa' });
     const span = m.text.querySelector<HTMLElement>('span[data-source-color]');
-    expect(span?.dataset.sourceColor).toBe(PALETTE_COLORS[0]);
+    expect(span?.dataset.sourceColor).toBe('#ff00aa');
   });
 
   it('never shows imported black text on a black background', async () => {
@@ -108,6 +107,15 @@ describe('Output renderer', () => {
     probe.style.color = textColor;
     expect(span.style.color).toBe(probe.style.color);
     expect(span.style.color).not.toBe('rgb(0, 0, 0)');
+  });
+
+  it('replaces an arbitrary picked color that is unreadable on the background', async () => {
+    const m = await mountOutput(script('hidden'));
+    m.core.dispatch({ type: 'colorRange', line: 0, start: 0, end: 6, color: '#0a0a0a' });
+    const span = m.text.querySelector<HTMLElement>('span[data-source-color]')!;
+    // The source color is kept as-is; what is shown is not the near-black the Operator picked.
+    expect(span.dataset.sourceColor).toBe('#0a0a0a');
+    expect(span.style.color).not.toBe('rgb(10, 10, 10)');
   });
 
   it('re-evaluates every color when the background changes', async () => {

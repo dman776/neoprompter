@@ -4,6 +4,7 @@ import './ui/ui.css';
 import './ui/key.css';
 import './run.css';
 import './shell.css';
+import './editor.css';
 import { App } from './App';
 
 createRoot(document.getElementById('root')!).render(<App bridge={window.neoprompter} />);

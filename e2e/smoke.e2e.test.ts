@@ -69,6 +69,27 @@ afterAll(async () => {
 });
 
 describe('the running app', () => {
+  it('opens the Virtual shuttle as its own single window from the Window menu', async () => {
+    const titles = async () =>
+      (await Promise.all(app.windows().map((w) => w.title()))).filter((t) =>
+        t.includes('Virtual shuttle'),
+      );
+    expect(await titles()).toHaveLength(0);
+    const choose = () =>
+      app.evaluate(({ Menu }) => {
+        Menu.getApplicationMenu()!
+          .items.find((i) => i.label === 'Window')!
+          .submenu!.items.find((i) => i.label === 'Virtual shuttle')!
+          .click();
+      });
+    await choose();
+    const shuttle = await windowTitled('Virtual shuttle');
+    await shuttle.screenshot({ path: join(artifacts, 'virtual-shuttle.png') });
+    await choose();
+    expect(await titles()).toHaveLength(1);
+    await shuttle.close();
+  });
+
   it('shows the loaded Script on the Output', async () => {
     await expect.poll(outputLines).toEqual(['First line', LONG, 'Closing line']);
     await output.screenshot({ path: join(artifacts, 'output-loaded.png') });

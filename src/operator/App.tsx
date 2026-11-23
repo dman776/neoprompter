@@ -1,6 +1,7 @@
 import type { Mode } from '../core';
 import { useCoreState, useOutputBlocked, type CoreBridge } from './useCoreState';
 import { Header } from './Header';
+import { ScriptEditor } from './ScriptEditor';
 import { StatusBar } from './StatusBar';
 import { Notifications } from './Notifications';
 import { Panel } from './ui/Panel';
@@ -24,9 +25,12 @@ export function App({ bridge }: { bridge: CoreBridge }) {
       />
       <main className="shell-body" data-mode={state.mode}>
         {state.mode === 'edit' ? (
-          <Panel title="Script">
-            <p className="placeholder">The Script editor and library arrive here.</p>
-          </Panel>
+          <ScriptEditor
+            bridge={bridge}
+            script={state.script}
+            editable={state.mode === 'edit'}
+            recentColors={state.recentColors}
+          />
         ) : (
           <RunMode state={state} bridge={bridge} outputBlocked={outputBlocked !== null} />
         )}

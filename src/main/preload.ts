@@ -2,6 +2,7 @@ import { contextBridge, ipcRenderer } from 'electron';
 import { IPC } from '../shared/ipc';
 import type { Command, CoreState } from '../core';
 import type { OutputWindowView } from '../output-window';
+import type { UiAction } from '../window-host';
 import type { ApiSettings, ApiView } from '../api';
 
 const api = {
@@ -18,6 +19,10 @@ const api = {
   getApiView: (): Promise<ApiView> => ipcRenderer.invoke(IPC.apiGet),
   setApiSettings: (settings: ApiSettings): Promise<ApiView> =>
     ipcRenderer.invoke(IPC.apiSet, settings),
+  /** Native menu items for the Operator view (New, Import, theme, right column, find). */
+  onMenuAction: (listener: (action: UiAction) => void): void => {
+    ipcRenderer.on(IPC.menuAction, (_e, action: UiAction) => listener(action));
+  },
   onState: (listener: (state: CoreState) => void): void => {
     ipcRenderer.on(IPC.state, (_e, state: CoreState) => listener(state));
   },

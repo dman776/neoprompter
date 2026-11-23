@@ -3,7 +3,6 @@ import { createCore } from './core';
 import { createFakeClock } from './clock';
 import { createMemoryLibraryStorage } from './library';
 import { lineRuns, lineText } from './richScript';
-import { PALETTE, PALETTE_COLORS } from './palette';
 import type { ScriptLine } from './types';
 
 function setup(lines: ScriptLine[] = Array.from({ length: 10 }, (_, i) => `line ${i}`)) {
@@ -28,14 +27,14 @@ describe('minimal editor', () => {
       {
         runs: [
           { text: 'hello ', bold: true },
-          { text: 'wrld', color: PALETTE[0].color },
+          { text: 'wrld', color: '#ff0000' },
         ],
       },
     ]);
     core.dispatch({ type: 'editLine', line: 0, text: 'hello world' });
     expect(lineRuns(core.getState().script.lines[0])).toEqual([
       { text: 'hello ', bold: true },
-      { text: 'world', color: PALETTE[0].color },
+      { text: 'world', color: '#ff0000' },
     ]);
   });
 
@@ -45,9 +44,9 @@ describe('minimal editor', () => {
     expect(texts(core).slice(0, 3)).toEqual(['line 0', 'line 3', 'line 4']);
   });
 
-  it('colors a range from the fixed palette', () => {
+  it('colors a range', () => {
     const { core } = setup();
-    const color = PALETTE[1].color;
+    const color = '#00ff00';
     core.dispatch({ type: 'colorRange', line: 0, start: 0, end: 4, color });
     expect(lineRuns(core.getState().script.lines[0])).toEqual([
       { text: 'line', color },
@@ -57,20 +56,15 @@ describe('minimal editor', () => {
 
   it('clears color with null', () => {
     const { core } = setup();
-    core.dispatch({ type: 'colorRange', line: 0, start: 0, end: 4, color: PALETTE[1].color });
+    core.dispatch({ type: 'colorRange', line: 0, start: 0, end: 4, color: '#00ff00' });
     core.dispatch({ type: 'colorRange', line: 0, start: 0, end: 4, color: null });
     expect(lineRuns(core.getState().script.lines[0]).map((r) => r.color)).toEqual([undefined]);
   });
 
-  it('rejects colors outside the palette', () => {
+  it('rejects colors that are not #rrggbb', () => {
     const { core } = setup();
-    core.dispatch({ type: 'colorRange', line: 0, start: 0, end: 4, color: '#123456' });
+    core.dispatch({ type: 'colorRange', line: 0, start: 0, end: 4, color: 'red' });
     expect(core.getState().script.lines[0]).toBe('line 0');
-  });
-
-  it('palette is a small fixed set of #rrggbb colors', () => {
-    expect(PALETTE_COLORS.length).toBeGreaterThan(3);
-    for (const c of PALETTE_COLORS) expect(c).toMatch(/^#[0-9a-f]{6}$/);
   });
 
   it('updates the library copy of a loaded Script', () => {

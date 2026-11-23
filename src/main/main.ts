@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, screen } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, Menu, screen } from 'electron';
 import { importDocument } from '../import';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -11,6 +11,12 @@ import { createJsonFile, libraryFileIo } from './jsonFile';
 import { createApiController } from './apiController';
 import { createFileQuickMessageStore } from './fileQuickMessageStore';
 import { createFileApiSettingsStore } from './fileApiSettingsStore';
+import {
+  buildMenuTemplate,
+  createWindowHost,
+  type MenuAction,
+  type MenuItemSpec,
+} from '../window-host';
 import { createOutputWindowManager, type OutputSettings } from '../output-window';
 
 // Tests (e2e/) point the app at a throwaway data directory so they never touch the real library.
@@ -33,7 +39,7 @@ let operatorWin: BrowserWindow | null = null;
 let outputWin: BrowserWindow | null = null;
 
 function openWindow(
-  page: 'operator' | 'output',
+  page: 'operator' | 'output' | 'preferences' | 'shuttle',
   title: string,
   x: number,
   extra: Electron.BrowserWindowConstructorOptions = {},
@@ -159,6 +165,42 @@ app.whenReady().then(() => {
   app.on('will-quit', () => void api.stop());
 
   operatorWin = openWindow('operator', 'Neoprompter - Operator view', 40);
+
+  // Preferences and the Virtual shuttle: one window each, and none open at launch.
+  const windowHost = createWindowHost({
+    create: (kind) => {
+      const win =
+        kind === 'preferences'
+          ? openWindow('preferences', 'Neoprompter - Preferences', 120, { width: 720, height: 520 })
+          : openWindow('shuttle', 'Neoprompter - Virtual shuttle', 200, {
+              width: 360,
+              height: 420,
+            });
+      return { focus: () => win.focus(), onClosed: (l) => win.on('closed', l) };
+    },
+  });
+  const perform = (action: MenuAction) => {
+    if (action.type === 'dispatch') core.dispatch(action.command);
+    else if (action.type === 'open-window') windowHost.open(action.window);
+    else if (operatorWin && !operatorWin.isDestroyed()) {
+      operatorWin.webContents.send(IPC.menuAction, action.action);
+    }
+  };
+  const toElectron = (item: MenuItemSpec): Electron.MenuItemConstructorOptions => ({
+    label: item.label,
+    accelerator: item.accelerator,
+    role: item.role as Electron.MenuItemConstructorOptions['role'],
+    type: item.type,
+    submenu: item.submenu?.map(toElectron),
+    click: item.action ? () => perform(item.action!) : undefined,
+  });
+  Menu.setApplicationMenu(
+    Menu.buildFromTemplate(
+      buildMenuTemplate(
+        process.platform === 'darwin' ? 'darwin' : process.platform === 'win32' ? 'win32' : 'linux',
+      ).map(toElectron),
+    ),
+  );
 
   // The Output opens full screen on the chosen monitor; with it missing it stays closed.
   const output = createOutputManager();

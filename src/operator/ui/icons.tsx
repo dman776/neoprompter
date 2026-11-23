@@ -47,3 +47,41 @@ export const PlayStartIcon = () => (
     <path d="M6 5v14M18 6l-9 6 9 6z" />
   </svg>
 );
+
+export const UndoIcon = () => (
+  <svg {...base}>
+    <path d="M9 7L4 12l5 5" />
+    <path d="M4 12h10a6 6 0 010 8h-3" />
+  </svg>
+);
+
+export const RedoIcon = () => (
+  <svg {...base}>
+    <path d="M15 7l5 5-5 5" />
+    <path d="M20 12H10a6 6 0 000 8h3" />
+  </svg>
+);
+
+export const HeadingIcon = () => (
+  <svg {...base}>
+    <path d="M6 4v16M18 4v16M6 12h12" />
+  </svg>
+);
+
+export const BoldIcon = () => (
+  <svg {...base}>
+    <path d="M7 5h6a3.5 3.5 0 010 7H7zM7 12h7a3.5 3.5 0 010 7H7z" />
+  </svg>
+);
+
+export const ItalicIcon = () => (
+  <svg {...base}>
+    <path d="M10 5h8M6 19h8M14 5l-4 14" />
+  </svg>
+);
+
+export const ColorIcon = () => (
+  <svg {...base}>
+    <path d="M6 16L12 4l6 12M8.2 12h7.6" />
+  </svg>
+);
