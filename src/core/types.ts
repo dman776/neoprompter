@@ -109,7 +109,7 @@ export type Command =
    * Show a plain-text Notification banner in the Operator view (never the Output). Called by
    * the HTTP API from the main process. `durationMs` overrides the display time.
    */
-  | { type: 'notify'; text: string; durationMs?: number }
+  | { type: 'notify'; text: string; durationMs?: number; color?: NotificationColor }
   /** Dismiss the Notification with `id`, or the newest visible one when omitted. */
   | { type: 'dismissNotification'; id?: number }
   /** How long a Notification shows before it disappears on its own (persisted). */
@@ -121,10 +121,29 @@ export const MIN_NOTIFICATION_MS = 1000;
 export const MAX_NOTIFICATION_MS = 60000;
 export const MAX_NOTIFICATIONS = 5;
 
+/**
+ * The fixed palette a Quick message (and the Notification it sends) can be colored from. `bg`
+ * fills the banner or button; `fg` is the text color tuned to stay readable on it.
+ */
+export const NOTIFICATION_PALETTE = [
+  { name: 'red', label: 'Red', bg: '#c62828', fg: '#ffffff' },
+  { name: 'amber', label: 'Amber', bg: '#f5a623', fg: '#1a1200' },
+  { name: 'green', label: 'Green', bg: '#2e7d32', fg: '#ffffff' },
+  { name: 'blue', label: 'Blue', bg: '#1565c0', fg: '#ffffff' },
+  { name: 'purple', label: 'Purple', bg: '#6a1b9a', fg: '#ffffff' },
+  { name: 'gray', label: 'Gray', bg: '#546e7a', fg: '#ffffff' },
+] as const;
+export type NotificationColor = (typeof NOTIFICATION_PALETTE)[number]['name'];
+export function isNotificationColor(value: unknown): value is NotificationColor {
+  return NOTIFICATION_PALETTE.some((c) => c.name === value);
+}
+
 /** A plain-text Notification currently visible in the Operator view. */
 export interface Notification {
   id: number;
   text: string;
+  /** A palette color; absent for the neutral look. */
+  color?: NotificationColor;
 }
 
 export const MAX_SPEED_LEVEL = 10;

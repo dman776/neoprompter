@@ -49,11 +49,11 @@ The clean, full-screen, text-only window the Talent reads, sent to the prompter 
 _Avoid_: Prompter screen, display, program
 
 **Notification**:
-A short live message from the Producer, shown as a banner only in the Operator view and never on the Output. It disappears on its own after a set time.
+A short live message for the Operator, usually from the Producer, shown as a banner only in the Operator view and never on the Output. It disappears on its own after a set time. It may carry a Quick message color, which fills the banner.
 _Avoid_: Alert, message, cue
 
 **Quick message**:
-A saved Notification text the Producer can send with one tap from the Producer page.
+A saved Notification text the Producer can send with one tap from the Producer page. It may have a color, one of a small fixed palette, shown on its button and on the Notification it sends. With no color it looks neutral.
 _Avoid_: Canned message, macro
 
 **Producer page**:

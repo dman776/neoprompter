@@ -127,18 +127,17 @@
   align-items: center;
   gap: 10px;
   padding: 9px 12px 9px 14px;
-  background: var(--accent);
-  color: var(--accent-ink);
+  /* Neutral on purpose: a palette color (set inline) is the only thing that fills a banner. */
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
   border-radius: var(--radius);
   font-weight: 600;
   box-shadow: var(--shadow);
   animation: notification-in 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
-.notification-source {
-  font-weight: 500;
-  opacity: 0.75;
-  font-size: 12px;
-  white-space: nowrap;
+.notification[data-color] {
+  border-color: transparent;
 }
 .notification-text {
   flex: 1;
@@ -146,7 +145,7 @@
   overflow-wrap: anywhere;
 }
 .notification-dismiss {
-  background: rgba(0, 0, 0, 0.14);
+  background: color-mix(in srgb, currentColor 16%, transparent);
   border: 0;
   color: inherit;
   border-radius: 6px;

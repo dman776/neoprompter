@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createCore, createFakeClock, createMemoryPresetStore } from '../core';
 import { createFakeBridge } from '../operator/fakeBridge';
 import type { ApiView } from '../api';
+import type { QuickMessage } from '../api/producer';
 import { defaultButtonMapping, type ButtonMappingView } from '../input';
 import type { OutputWindowView } from '../output-window';
 import { Preferences } from './PreferencesWindow';
@@ -57,8 +58,8 @@ async function mount(
   let mapping: ButtonMappingView = { mapping: { ...defaultButtonMapping }, actions: ACTIONS };
   const mappingListeners: Array<(v: ButtonMappingView) => void> = [];
   const apiSaved: Array<{ port: number; token: string }> = [];
-  let quick = ['Slow down', 'Wrap up'];
-  const quickSaved: string[][] = [];
+  let quick: QuickMessage[] = [{ text: 'Slow down', color: 'amber' }, { text: 'Wrap up' }];
+  const quickSaved: QuickMessage[][] = [];
   let view: OutputWindowView = { ...baseView, ...initialView };
   let watched: string | null = options.watched?.path ?? null;
   let watchedExtra = {
@@ -108,7 +109,7 @@ async function mount(
     getQuickMessages: async () => quick,
     setQuickMessages: async (messages) => {
       quickSaved.push(messages);
-      quick = messages.map((m) => m.trim()).filter(Boolean);
+      quick = messages.filter((m) => m.text.trim() !== '');
       return quick;
     },
   });
@@ -672,7 +673,11 @@ describe('Network', () => {
     const { quickSaved } = await openQuickMessages();
     await setValue(field('New Quick message'), 'Look at camera');
     await act(async () => button('Add').click());
-    expect(quickSaved.at(-1)).toEqual(['Slow down', 'Wrap up', 'Look at camera']);
+    expect(quickSaved.at(-1)).toEqual([
+      { text: 'Slow down', color: 'amber' },
+      { text: 'Wrap up' },
+      { text: 'Look at camera' },
+    ]);
     expect(field('Quick message 3').value).toBe('Look at camera');
     expect(field('New Quick message').value).toBe('');
   });
@@ -680,13 +685,29 @@ describe('Network', () => {
   it('edits a Quick message when the field is left', async () => {
     const { quickSaved } = await openQuickMessages();
     await typeAndLeave(field('Quick message 2'), 'Wrap up now');
-    expect(quickSaved.at(-1)).toEqual(['Slow down', 'Wrap up now']);
+    expect(quickSaved.at(-1)).toEqual([
+      { text: 'Slow down', color: 'amber' },
+      { text: 'Wrap up now' },
+    ]);
+  });
+
+  it('shows each Quick message color and changes or clears it', async () => {
+    const { quickSaved } = await openQuickMessages();
+    expect(field('Quick message 1 color').value).toBe('amber');
+    expect(field('Quick message 2 color').value).toBe('');
+    await setValue(field('Quick message 2 color'), 'red');
+    expect(quickSaved.at(-1)).toEqual([
+      { text: 'Slow down', color: 'amber' },
+      { text: 'Wrap up', color: 'red' },
+    ]);
+    await setValue(field('Quick message 1 color'), '');
+    expect(quickSaved.at(-1)).toEqual([{ text: 'Slow down' }, { text: 'Wrap up', color: 'red' }]);
   });
 
   it('removes a Quick message', async () => {
     const { quickSaved } = await openQuickMessages();
     await act(async () => field('Remove Quick message 1').click());
-    expect(quickSaved.at(-1)).toEqual(['Wrap up']);
+    expect(quickSaved.at(-1)).toEqual([{ text: 'Wrap up' }]);
     expect(field('Quick message 1').value).toBe('Wrap up');
   });
 

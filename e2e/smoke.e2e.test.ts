@@ -185,7 +185,11 @@ describe('the running app', () => {
     await prefs.getByLabel('New Quick message').fill('Eyes up');
     await prefs.getByRole('button', { name: 'Add', exact: true }).click();
     const quick = async () =>
-      (await operator.evaluate(() => (window as any).neoprompter.getQuickMessages())) as string[];
+      (
+        (await operator.evaluate(() => (window as any).neoprompter.getQuickMessages())) as {
+          text: string;
+        }[]
+      ).map((m) => m.text);
     await expect.poll(quick).toContain('Eyes up');
     await prefs.screenshot({ path: join(artifacts, 'preferences-network-quick-messages.png') });
     await prefs.getByLabel('Remove Quick message 6').click();
@@ -394,7 +398,12 @@ describe('the running app', () => {
       await expect.poll(() => operator.locator('main').getAttribute('data-mode')).toBe(mode);
       const before = await rects();
       await dispatch({ type: 'notify', text: 'Wrap up in two minutes', durationMs: 60_000 });
-      await dispatch({ type: 'notify', text: 'Second message', durationMs: 60_000 });
+      await dispatch({
+        type: 'notify',
+        text: 'Second message',
+        color: 'red',
+        durationMs: 60_000,
+      });
       await expect.poll(() => operator.locator('.notification').count()).toBe(2);
       expect(await rects()).toEqual(before);
       await new Promise((r) => setTimeout(r, 400)); // let the slide-in finish before the picture

@@ -12,6 +12,18 @@ function setup() {
 const texts = (core: ReturnType<typeof createCore>) =>
   core.getState().notifications.map((n) => n.text);
 
+describe('Notification colors', () => {
+  it('carries a palette color to the banner and leaves uncolored ones plain', () => {
+    const { core } = setup();
+    core.dispatch({ type: 'notify', text: 'Wrap up', color: 'red' });
+    core.dispatch({ type: 'notify', text: 'Hello' });
+    expect(core.getState().notifications).toEqual([
+      { id: 2, text: 'Hello' },
+      { id: 1, text: 'Wrap up', color: 'red' },
+    ]);
+  });
+});
+
 describe('Notifications', () => {
   it('shows a Notification and auto-dismisses it after the default time', () => {
     const { clock, core } = setup();

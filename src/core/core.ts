@@ -17,8 +17,10 @@ import {
   MAX_FONT_SIZE,
   MIN_FONT_SIZE,
   RING_MAX_LINES_PER_SECOND,
+  isNotificationColor,
   type Command,
   type CoreState,
+  type NotificationColor,
   type Mode,
   type OpenInMode,
   type Theme,
@@ -180,7 +182,8 @@ export function createCore(options: CoreOptions = {}): Core {
   const clampDuration = (ms: number) =>
     Math.max(MIN_NOTIFICATION_MS, Math.min(MAX_NOTIFICATION_MS, Math.round(ms)));
   /** Oldest first; each carries its own expiry. Never persisted, never logged. */
-  let notifications: { id: number; text: string; expiresAt: number }[] = [];
+  let notifications: { id: number; text: string; color?: NotificationColor; expiresAt: number }[] =
+    [];
   let nextNotificationId = 1;
 
   let recentColors: string[] = [...DEFAULT_RECENT_COLORS];
@@ -328,7 +331,9 @@ export function createCore(options: CoreOptions = {}): Core {
       theme,
       rightColumnCollapsed,
       openInMode,
-      notifications: notifications.map(({ id, text }) => ({ id, text })).reverse(),
+      notifications: notifications
+        .map(({ id, text, color }) => (color ? { id, text, color } : { id, text }))
+        .reverse(),
       notificationDurationMs,
       recentColors: [...recentColors],
     };
@@ -567,7 +572,12 @@ export function createCore(options: CoreOptions = {}): Core {
               : notificationDurationMs;
           notifications = [
             ...notifications,
-            { id: nextNotificationId++, text, expiresAt: clock.now() + ms },
+            {
+              id: nextNotificationId++,
+              text,
+              ...(isNotificationColor(command.color) ? { color: command.color } : {}),
+              expiresAt: clock.now() + ms,
+            },
           ].slice(-MAX_NOTIFICATIONS);
           break;
         }

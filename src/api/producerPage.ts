@@ -3,6 +3,8 @@
  * It never contains the API token. With a token set, the browser asks for it in its own password
  * box (HTTP Basic) before showing the page, then sends it on the page's requests itself.
  */
+import { NOTIFICATION_PALETTE } from '../core';
+
 export const PRODUCER_PAGE = `<!doctype html>
 <html lang="en">
 <head>
@@ -62,6 +64,11 @@ export const PRODUCER_PAGE = `<!doctype html>
 (function () {
   var $ = function (id) { return document.getElementById(id); };
   var messages = [];
+  var PALETTE = ${JSON.stringify(NOTIFICATION_PALETTE)};
+  function paletteEntry(name) {
+    for (var i = 0; i < PALETTE.length; i++) if (PALETTE[i].name === name) return PALETTE[i];
+    return null;
+  }
 
   function setStatus(text, kind) {
     var s = $('status');
@@ -87,12 +94,12 @@ export const PRODUCER_PAGE = `<!doctype html>
     setStatus(offline ? 'Could not reach NeoPrompter. Check you are on the same network.' : what + ' failed: ' + e.message, 'bad');
   }
 
-  function send(text, button) {
+  function send(text, button, color) {
     text = text.trim();
     if (!text) { setStatus('Type a Notification first.', 'bad'); return Promise.resolve(false); }
     if (button) button.disabled = true;
     setStatus('Sending...', '');
-    return call('/api/notify', 'POST', { text: text })
+    return call('/api/notify', 'POST', (color ? { text: text, color: color } : { text: text }))
       .then(function () { setStatus('Sent: ' + text, 'ok'); return true; })
       .catch(function (e) { fail(e, 'Sending'); return false; })
       .then(function (ok) { if (button) button.disabled = false; return ok; });
@@ -103,25 +110,42 @@ export const PRODUCER_PAGE = `<!doctype html>
     q.textContent = '';
     messages.forEach(function (m) {
       var b = document.createElement('button');
-      b.textContent = m;
-      b.onclick = function () { send(m, b); };
+      b.textContent = m.text;
+      var c = paletteEntry(m.color);
+      if (c) { b.style.background = c.bg; b.style.color = c.fg; b.style.borderColor = c.bg; }
+      b.onclick = function () { send(m.text, b, m.color); };
       q.appendChild(b);
     });
     $('empty').hidden = messages.length > 0;
   }
-  function addEditRow(value) {
+  function addEditRow(message) {
     var row = document.createElement('div');
     row.className = 'row';
     row.style.marginBottom = '8px';
     var input = document.createElement('input');
-    input.value = value;
+    input.value = message.text;
     input.maxLength = 500;
     input.setAttribute('aria-label', 'Quick message');
+    var color = document.createElement('select');
+    color.setAttribute('aria-label', 'Quick message color');
+    color.style.cssText = 'font:inherit;color:var(--fg);background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px;min-height:48px';
+    var none = document.createElement('option');
+    none.value = '';
+    none.textContent = 'No color';
+    color.appendChild(none);
+    PALETTE.forEach(function (c) {
+      var o = document.createElement('option');
+      o.value = c.name;
+      o.textContent = c.label;
+      color.appendChild(o);
+    });
+    color.value = message.color || '';
     var del = document.createElement('button');
     del.className = 'small';
     del.textContent = 'Remove';
     del.onclick = function () { row.remove(); };
     row.appendChild(input);
+    row.appendChild(color);
     row.appendChild(del);
     $('editRows').appendChild(row);
     return input;
@@ -147,9 +171,14 @@ export const PRODUCER_PAGE = `<!doctype html>
     send($('text').value, $('send')).then(function (ok) { if (ok) $('text').value = ''; });
   };
   $('editToggle').onclick = function () { if ($('editor').hidden) openEditor(); else closeEditor(); };
-  $('addRow').onclick = function () { addEditRow('').focus(); };
+  $('addRow').onclick = function () { addEditRow({ text: '' }).focus(); };
   $('saveList').onclick = function () {
-    var list = Array.prototype.map.call($('editRows').querySelectorAll('input'), function (i) { return i.value; });
+    var list = Array.prototype.map.call($('editRows').children, function (row) {
+      var color = row.querySelector('select').value;
+      var item = { text: row.querySelector('input').value };
+      if (color) item.color = color;
+      return item;
+    });
     call('/api/quick-messages', 'POST', { messages: list })
       .then(function (data) { messages = data.messages; renderQuick(); closeEditor(); setStatus('Buttons saved.', 'ok'); })
       .catch(function (e) { fail(e, 'Saving buttons'); });

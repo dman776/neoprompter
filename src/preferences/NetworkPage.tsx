@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { ApiView } from '../api';
+import type { QuickMessage } from '../api/producer';
+import { NOTIFICATION_PALETTE, type NotificationColor } from '../core';
 import { useApiView } from '../operator/useCoreState';
 import { Button } from '../operator/ui/Button';
 import { Row } from './controls';
@@ -106,7 +108,7 @@ function Settings({
 
 /** The one list of Quick messages every Producer's browser shows. Each change is saved at once. */
 export function QuickMessagesTab({ bridge }: PageProps) {
-  const [messages, setMessages] = useState<string[] | null>(null);
+  const [messages, setMessages] = useState<QuickMessage[] | null>(null);
   const [draft, setDraft] = useState('');
   useEffect(() => {
     let live = true;
@@ -117,10 +119,10 @@ export function QuickMessagesTab({ bridge }: PageProps) {
   }, [bridge]);
   if (!messages) return null;
 
-  const save = (next: string[]) => void bridge.setQuickMessages(next).then(setMessages);
+  const save = (next: QuickMessage[]) => void bridge.setQuickMessages(next).then(setMessages);
   const add = () => {
     if (draft.trim() === '') return;
-    save([...messages, draft]);
+    save([...messages, { text: draft }]);
     setDraft('');
   };
 
@@ -134,12 +136,34 @@ export function QuickMessagesTab({ bridge }: PageProps) {
               type="text"
               aria-label={`Quick message ${i + 1}`}
               maxLength={MAX_MESSAGE_LENGTH}
-              value={m}
+              value={m.text}
               onChange={(e) =>
-                setMessages(messages.map((old, j) => (j === i ? e.target.value : old)))
+                setMessages(
+                  messages.map((old, j) => (j === i ? { ...old, text: e.target.value } : old)),
+                )
               }
               onBlur={() => save(messages)}
             />
+            <select
+              aria-label={`Quick message ${i + 1} color`}
+              value={m.color ?? ''}
+              onChange={(e) => {
+                const { color: _old, ...rest } = m;
+                const next = e.target.value as NotificationColor | '';
+                save(
+                  messages.map((old, j) =>
+                    j === i ? (next ? { ...rest, color: next } : rest) : old,
+                  ),
+                );
+              }}
+            >
+              <option value="">No color</option>
+              {NOTIFICATION_PALETTE.map((c) => (
+                <option key={c.name} value={c.name}>
+                  {c.label}
+                </option>
+              ))}
+            </select>
             <Button
               aria-label={`Remove Quick message ${i + 1}`}
               onClick={() => save(messages.filter((_, j) => j !== i))}

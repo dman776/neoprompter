@@ -11,12 +11,14 @@ export type {
   OpenInMode,
   Theme,
   Notification,
+  NotificationColor,
   OutputState,
   RichLine,
   Run,
   Script,
   ScriptLine,
 } from './types';
+export { NOTIFICATION_PALETTE, isNotificationColor } from './types';
 export { lineHeading, lineRuns, lineText } from './richScript';
 export { contrastRatio, displayColor, readableTextOn, MIN_CONTRAST } from './readableColor';
 export { createMemoryLibraryStorage } from './library';

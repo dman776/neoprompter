@@ -1,7 +1,7 @@
 import http from 'node:http';
 import net from 'node:net';
 import { timingSafeEqual } from 'node:crypto';
-import type { Core } from '../core';
+import { isNotificationColor, type Core } from '../core';
 
 export const DEFAULT_API_PORT = 4780;
 export const MAX_BODY_BYTES = 4096;
@@ -135,7 +135,11 @@ export function createApiServer(options: ApiServerOptions): ApiServer {
       if (typeof data !== 'object' || data === null || Array.isArray(data)) {
         return res.json(400, { error: 'Body must be a JSON object' });
       }
-      const { text, durationMs } = data as { text?: unknown; durationMs?: unknown };
+      const { text, durationMs, color } = data as {
+        text?: unknown;
+        durationMs?: unknown;
+        color?: unknown;
+      };
       if (typeof text !== 'string' || text.trim() === '') {
         return res.json(400, { error: '"text" must be a non-empty string' });
       }
@@ -150,7 +154,13 @@ export function createApiServer(options: ApiServerOptions): ApiServer {
       ) {
         return res.json(400, { error: '"durationMs" must be a positive number of milliseconds' });
       }
-      core.dispatch({ type: 'notify', text, durationMs });
+      // An unknown color is ignored, so the Notification still shows in the neutral look.
+      core.dispatch({
+        type: 'notify',
+        text,
+        durationMs,
+        ...(isNotificationColor(color) ? { color } : {}),
+      });
       res.json(202, { ok: true });
     },
   };

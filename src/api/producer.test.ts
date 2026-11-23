@@ -113,9 +113,10 @@ describe('quick messages', () => {
     const { call } = await setup();
     const body = await (await call('/api/quick-messages')).json();
     expect(body.messages).toEqual(DEFAULT_QUICK_MESSAGES);
-    expect(DEFAULT_QUICK_MESSAGES).toEqual(
+    expect(DEFAULT_QUICK_MESSAGES.map((m) => m.text)).toEqual(
       expect.arrayContaining(['Slow down', 'Wrap up', 'Pause']),
     );
+    expect(DEFAULT_QUICK_MESSAGES.every((m) => m.color)).toBe(true);
   });
 
   it('saves an edited list, shared with every reader and persisted in the store', async () => {
@@ -123,19 +124,35 @@ describe('quick messages', () => {
     const h = { 'x-neoprompter-token': 't' };
     const res = await save(['  Louder ', 'Wrap up', 'Louder', ''], h);
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ messages: ['Louder', 'Wrap up'] });
+    expect(await res.json()).toEqual({ messages: [{ text: 'Louder' }, { text: 'Wrap up' }] });
     expect((await (await call('/api/quick-messages', { headers: h })).json()).messages).toEqual([
-      'Louder',
-      'Wrap up',
+      { text: 'Louder' },
+      { text: 'Wrap up' },
     ]);
-    expect(store.load()).toEqual(['Louder', 'Wrap up']);
+    expect(store.load()).toEqual([{ text: 'Louder' }, { text: 'Wrap up' }]);
+  });
+
+  it('saves colors with the texts, drops an unknown color, and still takes plain strings', async () => {
+    const { call, save } = await setup();
+    const res = await save([
+      { text: 'Pause', color: 'purple' },
+      { text: 'Slow', color: 'chartreuse' },
+      'Plain',
+    ]);
+    expect(await res.json()).toEqual({
+      messages: [{ text: 'Pause', color: 'purple' }, { text: 'Slow' }, { text: 'Plain' }],
+    });
+    expect((await (await call('/api/quick-messages')).json()).messages[0]).toEqual({
+      text: 'Pause',
+      color: 'purple',
+    });
   });
 
   it('survives a restart through the store', async () => {
     const store = createMemoryQuickMessageStore();
     await (await setup({ store })).save(['One']);
     const { call } = await setup({ store });
-    expect((await (await call('/api/quick-messages')).json()).messages).toEqual(['One']);
+    expect((await (await call('/api/quick-messages')).json()).messages).toEqual([{ text: 'One' }]);
   });
 
   it('allows removing every button', async () => {
@@ -148,6 +165,7 @@ describe('quick messages', () => {
     const { call, save } = await setup();
     expect((await save('nope')).status).toBe(400);
     expect((await save([1])).status).toBe(400);
+    expect((await save([{ color: 'red' }])).status).toBe(400);
     expect((await save(['x'.repeat(501)])).status).toBe(400);
     expect((await save(Array.from({ length: 60 }, (_, i) => `m${i}`))).status).toBe(400);
     expect((await call('/api/quick-messages', { method: 'POST', body: '{bad' })).status).toBe(400);

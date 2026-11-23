@@ -15,7 +15,7 @@ async function setup() {
   const controller = createApiController(
     createCore({ clock: createFakeClock() }),
     createMemoryApiSettingsStore({ port: PORT, token: 'abc' }),
-    createMemoryQuickMessageStore(['Wrap up']),
+    createMemoryQuickMessageStore([{ text: 'Wrap up', color: 'red' }]),
     () => ({ en0: [{ address: '192.168.1.20', family: 'IPv4', internal: false }] }),
   );
   controllers.push(controller);
@@ -36,15 +36,16 @@ describe('API controller', () => {
 
   it('serves a changed list of Quick messages on the Producer page, behind the token', async () => {
     const c = await setup();
-    expect(c.getQuickMessages()).toEqual(['Wrap up']);
-    expect(await c.setQuickMessages(['  Slow down ', 'Pause', 'Pause', ''])).toEqual([
-      'Slow down',
-      'Pause',
-    ]);
+    expect(c.getQuickMessages()).toEqual([{ text: 'Wrap up', color: 'red' }]);
+    expect(
+      await c.setQuickMessages([{ text: '  Slow down ', color: 'amber' }, 'Pause', 'Pause', '']),
+    ).toEqual([{ text: 'Slow down', color: 'amber' }, { text: 'Pause' }]);
     const url = `http://127.0.0.1:${PORT}/api/quick-messages`;
     expect((await fetch(url)).status).toBe(401);
     const res = await fetch(url, { headers: basic('abc') });
-    expect(await res.json()).toEqual({ messages: ['Slow down', 'Pause'] });
+    expect(await res.json()).toEqual({
+      messages: [{ text: 'Slow down', color: 'amber' }, { text: 'Pause' }],
+    });
   });
 
   it('keeps asking for the new token after it changes', async () => {

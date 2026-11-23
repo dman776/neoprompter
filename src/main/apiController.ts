@@ -14,6 +14,7 @@ import {
   MAX_QUICK_MESSAGE_LENGTH,
   MAX_QUICK_MESSAGES,
   normalizeQuickMessages,
+  type QuickMessage,
   type QuickMessageStore,
 } from '../api/producer';
 import type { Core } from '../core';
@@ -57,11 +58,11 @@ export function createApiController(
   return {
     startup,
     getView: view,
-    getQuickMessages: (): string[] => quickMessages.load(),
+    getQuickMessages: (): QuickMessage[] => quickMessages.load(),
     /** Saves the list the Producer page shows: trimmed, no blanks or repeats, within the limits. */
-    async setQuickMessages(messages: string[]): Promise<string[]> {
+    async setQuickMessages(messages: Array<string | QuickMessage>): Promise<QuickMessage[]> {
       const clean = (normalizeQuickMessages(messages) ?? [])
-        .map((m) => m.slice(0, MAX_QUICK_MESSAGE_LENGTH))
+        .map((m) => ({ ...m, text: m.text.slice(0, MAX_QUICK_MESSAGE_LENGTH) }))
         .slice(0, MAX_QUICK_MESSAGES);
       quickMessages.save(clean);
       return clean;

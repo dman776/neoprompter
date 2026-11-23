@@ -22,7 +22,7 @@ Add the action **Generic: HTTP Requests > POST**:
 - Body: `{"text": "Wrap up in 2 minutes", "durationMs": 10000}`
 - Header (JSON): `{"Content-Type": "application/json", "X-Neoprompter-Token": "<token>"}`
 
-`text` is required (plain text, up to 500 characters). `durationMs` is optional (milliseconds); without it the display time set in Preferences (Notifications) applies. Success is `202 {"ok":true}`; bad input is `400`.
+`text` is required (plain text, up to 500 characters). `durationMs` is optional (milliseconds); without it the display time set in Preferences (Notifications) applies. `color` is optional and is one of `red`, `amber`, `green`, `blue`, `purple`, `gray`: the banner is filled with that color (an unknown color is ignored and the banner stays neutral). Success is `202 {"ok":true}`; bad input is `400`.
 
 Test from a terminal:
 

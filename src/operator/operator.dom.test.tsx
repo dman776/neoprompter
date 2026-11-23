@@ -197,16 +197,28 @@ describe('the theme', () => {
 });
 
 describe('Notification overlays', () => {
-  it('shows a Notification with its text, its source and a Dismiss button, outside the layout flow', async () => {
+  it('shows a Notification with its text and a Dismiss button, outside the layout flow', async () => {
     const { core } = await mount();
     await act(async () => core.dispatch({ type: 'notify', text: 'Wrap up in two minutes' }));
     const overlay = host.querySelector('[data-testid="notifications"]')!;
     expect(overlay.textContent).toContain('Wrap up in two minutes');
-    expect(overlay.textContent).toContain('Producer');
+    expect(overlay.textContent).not.toContain('Producer');
+    expect(overlay.querySelector('[role="status"]')!.getAttribute('style')).toBeNull();
     expect(overlay.querySelector('button')!.textContent).toBe('Dismiss');
     // Not a child of the layout grid, so it cannot move or resize anything.
     expect(host.querySelector('main')!.contains(overlay)).toBe(false);
     expect(host.querySelector('header')!.contains(overlay)).toBe(false);
+  });
+
+  it('fills a colored Notification with its palette color and a readable text color', async () => {
+    const { core } = await mount();
+    await act(async () => core.dispatch({ type: 'notify', text: 'Wrap up', color: 'red' }));
+    const banner = host.querySelector<HTMLElement>(
+      '[data-testid="notifications"] [role="status"]',
+    )!;
+    expect(banner.dataset.color).toBe('red');
+    expect(banner.style.background).toBe('rgb(198, 40, 40)');
+    expect(banner.style.color).toBe('rgb(255, 255, 255)');
   });
 
   it('dismisses the Notification through the core', async () => {

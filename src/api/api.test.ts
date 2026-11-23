@@ -96,6 +96,18 @@ describe('GET /api/status', () => {
     expect((await (await call('/api/status')).json()).state).toBe('playing');
   });
 
+  it('passes a palette color to the Notification and ignores an unknown one', async () => {
+    const { core, post } = await setup();
+    await post({ text: 'Wrap up', color: 'red' });
+    await post({ text: 'Odd', color: 'chartreuse' });
+    await post({ text: 'Plain' });
+    expect(core.getState().notifications).toEqual([
+      { id: 3, text: 'Plain' },
+      { id: 2, text: 'Odd' },
+      { id: 1, text: 'Wrap up', color: 'red' },
+    ]);
+  });
+
   it('reports the app version', async () => {
     const { call } = await setup();
     expect(await (await call('/api/status')).json()).toMatchObject({ version: '9.8.7' });

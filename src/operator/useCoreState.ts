@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Command, CoreState } from '../core';
 import type { OutputBlocked, OutputWindowView } from '../output-window';
 import type { ApiSettings, ApiView } from '../api';
+import type { QuickMessage } from '../api/producer';
 import type { ActionId, ButtonId, ButtonMappingView } from '../input';
 import type { UiAction } from '../window-host';
 import type { WatchedFolderView } from '../watched-folder';
@@ -37,8 +38,8 @@ export interface PreferencesBridge extends CoreBridge {
   setButton(button: ButtonId, action: ActionId): Promise<ButtonMappingView>;
   onButtonMapping(listener: (view: ButtonMappingView) => void): void;
   setApiSettings(settings: ApiSettings): Promise<ApiView>;
-  getQuickMessages(): Promise<string[]>;
-  setQuickMessages(messages: string[]): Promise<string[]>;
+  getQuickMessages(): Promise<QuickMessage[]>;
+  setQuickMessages(messages: QuickMessage[]): Promise<QuickMessage[]>;
   getVersion(): Promise<string>;
   getWatchedFolder(): Promise<WatchedFolderView>;
   chooseWatchedFolder(): Promise<WatchedFolderView>;

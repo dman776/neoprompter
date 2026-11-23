@@ -9,7 +9,7 @@ import { createJsonFile } from './jsonFile';
 export function createFileQuickMessageStore(file: string): QuickMessageStore {
   const json = createJsonFile(file, {
     parse: normalizeQuickMessages,
-    fallback: () => [...DEFAULT_QUICK_MESSAGES],
+    fallback: () => DEFAULT_QUICK_MESSAGES.map((m) => ({ ...m })),
   });
   return { load: json.read, save: json.write };
 }

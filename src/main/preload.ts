@@ -4,6 +4,7 @@ import type { Command, CoreState } from '../core';
 import type { OutputWindowView } from '../output-window';
 import type { UiAction } from '../window-host';
 import type { ApiSettings, ApiView } from '../api';
+import type { QuickMessage } from '../api/producer';
 import type { WatchedFolderView } from '../watched-folder';
 import type { ActionId, ButtonId, ButtonMappingView, DeviceEvent } from '../input';
 
@@ -23,8 +24,8 @@ const api = {
   getApiView: (): Promise<ApiView> => ipcRenderer.invoke(IPC.apiGet),
   setApiSettings: (settings: ApiSettings): Promise<ApiView> =>
     ipcRenderer.invoke(IPC.apiSet, settings),
-  getQuickMessages: (): Promise<string[]> => ipcRenderer.invoke(IPC.quickMessagesGet),
-  setQuickMessages: (messages: string[]): Promise<string[]> =>
+  getQuickMessages: (): Promise<QuickMessage[]> => ipcRenderer.invoke(IPC.quickMessagesGet),
+  setQuickMessages: (messages: QuickMessage[]): Promise<QuickMessage[]> =>
     ipcRenderer.invoke(IPC.quickMessagesSet, messages),
   getVersion: (): Promise<string> => ipcRenderer.invoke(IPC.appVersionGet),
   getWatchedFolder: (): Promise<WatchedFolderView> => ipcRenderer.invoke(IPC.watchedFolderGet),
