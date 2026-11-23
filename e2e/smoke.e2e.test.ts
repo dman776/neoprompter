@@ -1003,6 +1003,34 @@ describe('the running app', () => {
     expect(await outputWindows()).toBe(1);
   });
 
+  it('Esc takes a windowed Output out of full screen that the Operator put it in themselves', async () => {
+    // The green button (or a shortcut) can make any window full screen; Esc must leave it too.
+    const outputState = () =>
+      app.evaluate(({ BrowserWindow }) => {
+        const win = BrowserWindow.getAllWindows().find((w) =>
+          w.webContents.getURL().includes('/output/'),
+        );
+        return win ? { fullScreen: win.isFullScreen() } : null;
+      });
+    await app.evaluate(({ BrowserWindow }) => {
+      BrowserWindow.getAllWindows()
+        .find((w) => w.webContents.getURL().includes('/output/'))!
+        .setFullScreen(true);
+    });
+    await vi.waitFor(async () => expect((await outputState())?.fullScreen).toBe(true), {
+      timeout: 10_000,
+    });
+    await output.waitForFunction(() => document.querySelectorAll('#text > div').length > 0);
+    await output.keyboard.press('Escape');
+    await vi.waitFor(async () => expect((await outputState())?.fullScreen).toBe(false), {
+      timeout: 10_000,
+      interval: 250,
+    });
+    // It is still the one Output, still on.
+    expect(await outputWindows()).toBe(1);
+    expect((await state()).outputOn).toBe(true);
+  });
+
   describe('the Producer page with a token set', () => {
     const port = 47811;
     const TOKEN = 'e2e-token';

@@ -63,6 +63,15 @@ function openWindow(
     },
   });
   win.loadFile(path.join(__dirname, '..', page, 'index.html'));
+  if (page === 'output') {
+    // Esc is also caught here, before the page sees it, so it works even if the page's own key
+    // handler cannot (the page is still loading, or something else has the keyboard).
+    win.webContents.on('before-input-event', (_event, input) => {
+      if (input.type === 'keyDown' && input.key === 'Escape' && win === outputWin) {
+        leaveOutputFullscreen();
+      }
+    });
+  }
   windows.add(win);
   win.on('closed', () => windows.delete(win));
   return win;
@@ -113,6 +122,22 @@ function openPlaced(
  * Space (it comes up full screen at the display's size), so a new Output waits for this.
  */
 let outputGone: Promise<void> = Promise.resolve();
+
+/** Set once the Output manager exists: Esc on the Output asks it to leave full screen. */
+let exitOutputFullscreen: () => void = () => {};
+
+/**
+ * Esc on the Output. A full screen Output (the monitor placement) becomes an ordinary window; and
+ * an Output window the Operator made full screen themselves (the green button, a shortcut) goes
+ * back to its window. Either way it is still the one Output, still on.
+ */
+function leaveOutputFullscreen(): void {
+  exitOutputFullscreen();
+  // The first case retires the window; whatever is left and full screen is the second case.
+  if (outputWin && !outputWin.isDestroyed() && outputWin.isFullScreen()) {
+    outputWin.setFullScreen(false);
+  }
+}
 
 /** Counts show/hide requests, so a late finish never opens a window nobody wants any more. */
 let showSequence = 0;
@@ -326,6 +351,7 @@ app.whenReady().then(() => {
 
   // The Output opens full screen on the chosen monitor; with it missing it stays closed.
   const output = createOutputManager();
+  exitOutputFullscreen = () => output.exitFullscreen();
   ipcMain.handle(IPC.outputGetView, () => output.getView());
   ipcMain.handle(IPC.outputChooseMonitor, (_e, id: string) => {
     output.chooseMonitor(id);
@@ -338,7 +364,7 @@ app.whenReady().then(() => {
   // Esc on the Output takes it out of full screen. Only the Output window's own page may ask.
   ipcMain.on(IPC.outputExitFullscreen, (e) => {
     if (outputWin && !outputWin.isDestroyed() && e.sender === outputWin.webContents) {
-      output.exitFullscreen();
+      leaveOutputFullscreen();
     }
   });
   // The Output window follows the core's Output switch, which is Off at every launch.

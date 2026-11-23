@@ -45,7 +45,7 @@ A separate window holding the settings, grouped by category.
 _Avoid_: Settings panel, options, config
 
 **Output**:
-The clean, full-screen, text-only window the Talent reads, sent to the prompter display. It is always a 1920x1080 picture, scaled to fit the display, so the same lines wrap, space and sit in the same place whatever the monitor. The Operator can switch it on or off and choose its monitor; there is only ever one. Esc on the Output takes it out of full screen into an ordinary window until it is switched Off and On again.
+The clean, full-screen, text-only window the Talent reads, sent to the prompter display. It is always a 1920x1080 picture, scaled to fit the display, so the same lines wrap, space and sit in the same place whatever the monitor. The Operator can switch it on or off and choose its monitor; there is only ever one. Esc on the Output takes it out of full screen, however it got there: a full screen Output on its monitor becomes an ordinary window until it is switched Off and On again, and a window the Operator made full screen themselves goes back to its size.
 _Avoid_: Prompter screen, display, program
 
 **Notification**:
