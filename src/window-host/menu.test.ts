@@ -15,12 +15,12 @@ function flatten(items: MenuItemSpec[]): MenuItemSpec[] {
 
 describe('native menu', () => {
   it('has File, Edit, View, Output and Window on Windows', () => {
-    expect(names(top('win32'))).toEqual(['File', 'Edit', 'View', 'Output', 'Window']);
+    expect(names(top('win32'))).toEqual(['File', 'Edit', 'View', 'Output', 'Window', 'Help']);
   });
 
   it('puts the app menu first on macOS', () => {
     expect(names(top('darwin'))).toEqual([
-      'Neoprompter',
+      'NeoPrompter',
       'File',
       'Edit',
       'View',
@@ -105,10 +105,17 @@ describe('native menu', () => {
     });
   });
 
+  it('has an About item on every platform', () => {
+    expect(find(top('darwin'), 'About NeoPrompter').action).toEqual({ type: 'about' });
+    expect(find(top('win32'), 'About NeoPrompter').action).toEqual({ type: 'about' });
+  });
+
   it('every action item has a shortcut and no two share one', () => {
     for (const platform of ['darwin', 'win32'] as const) {
       const all = flatten(top(platform));
-      expect(all.filter((i) => i.action).every((i) => i.accelerator)).toBe(true);
+      expect(
+        all.filter((i) => i.action && i.action.type !== 'about').every((i) => i.accelerator),
+      ).toBe(true);
       const accels = all.map((i) => i.accelerator).filter(Boolean);
       expect(new Set(accels).size).toBe(accels.length);
     }

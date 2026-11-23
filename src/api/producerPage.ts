@@ -8,7 +8,7 @@ export const PRODUCER_PAGE = `<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Neoprompter Producer</title>
+<title>NeoPrompter Producer</title>
 <style>
   :root { color-scheme: dark; --bg:#111; --fg:#f2f2f2; --muted:#9a9a9a; --card:#1e1e1e; --line:#3a3a3a; --accent:#3b82f6; --ok:#22c55e; --bad:#ef4444; }
   * { box-sizing: border-box; }
@@ -32,7 +32,7 @@ export const PRODUCER_PAGE = `<!doctype html>
 </head>
 <body>
 <main>
-  <h1>Neoprompter: send a Notification to the Operator</h1>
+  <h1>NeoPrompter: send a Notification to the Operator</h1>
 
   <section>
     <textarea id="text" maxlength="500" placeholder="Short plain-text Notification" aria-label="Notification"></textarea>
@@ -84,7 +84,7 @@ export const PRODUCER_PAGE = `<!doctype html>
   function fail(e, what) {
     if (e && e.auth) return denied();
     var offline = e instanceof TypeError;
-    setStatus(offline ? 'Could not reach Neoprompter. Check you are on the same network.' : what + ' failed: ' + e.message, 'bad');
+    setStatus(offline ? 'Could not reach NeoPrompter. Check you are on the same network.' : what + ' failed: ' + e.message, 'bad');
   }
 
   function send(text, button) {

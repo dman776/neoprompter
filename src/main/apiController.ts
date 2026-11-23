@@ -24,6 +24,7 @@ export function createApiController(
   store: ApiSettingsStore,
   quickMessages: QuickMessageStore = createMemoryQuickMessageStore(),
   interfaces: () => NetworkInterfaces = os.networkInterfaces,
+  version?: string,
 ) {
   let settings = store.load();
   let server: ApiServer | null = null;
@@ -36,6 +37,7 @@ export function createApiController(
       port: settings.port,
       token: settings.token,
       extraRoutes: createProducerRoutes(quickMessages),
+      version,
     });
     try {
       await server.start();

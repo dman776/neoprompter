@@ -39,6 +39,7 @@ export interface PreferencesBridge extends CoreBridge {
   setApiSettings(settings: ApiSettings): Promise<ApiView>;
   getQuickMessages(): Promise<string[]>;
   setQuickMessages(messages: string[]): Promise<string[]>;
+  getVersion(): Promise<string>;
   getWatchedFolder(): Promise<WatchedFolderView>;
   chooseWatchedFolder(): Promise<WatchedFolderView>;
   clearWatchedFolder(): Promise<WatchedFolderView>;

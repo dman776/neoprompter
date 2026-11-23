@@ -132,6 +132,11 @@
 .pf-row small {
   color: var(--muted);
 }
+.pf-version {
+  display: block;
+  margin-top: 14px;
+  color: var(--muted);
+}
 .pf-control {
   display: flex;
   flex-direction: column;

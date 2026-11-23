@@ -99,6 +99,8 @@ export interface ApiServerOptions {
   isAllowedRemote?: (address: string | undefined) => boolean;
   /** Extra routes (such as the Producer page). They sit behind the same address gate and token. */
   extraRoutes?: Route[];
+  /** The app version, reported by `GET /api/status`. */
+  version?: string;
 }
 export interface ApiServer {
   start(): Promise<{ port: number; host: string }>;
@@ -165,6 +167,7 @@ export function createApiServer(options: ApiServerOptions): ApiServer {
         progress: s.progress,
         mode: s.mode,
         outputOn: s.outputOn,
+        version: options.version ?? null,
       });
     },
   };

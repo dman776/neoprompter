@@ -77,6 +77,7 @@ export function createFakeBridge(
     }),
     getQuickMessages: async () => [],
     setQuickMessages: async (m) => m,
+    getVersion: async () => '0.0.0-test',
     getWatchedFolder: async () => quietWatchedFolder,
     chooseWatchedFolder: async () => quietWatchedFolder,
     clearWatchedFolder: async () => quietWatchedFolder,

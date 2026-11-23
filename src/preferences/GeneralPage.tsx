@@ -57,6 +57,23 @@ function WatchedFolderRow({ bridge }: Pick<PageProps, 'bridge'>) {
   );
 }
 
+function VersionLine({ bridge }: Pick<PageProps, 'bridge'>) {
+  const [version, setVersion] = useState<string | null>(null);
+  useEffect(() => {
+    let live = true;
+    void bridge.getVersion().then((v) => live && setVersion(v));
+    return () => {
+      live = false;
+    };
+  }, [bridge]);
+  if (!version) return null;
+  return (
+    <small className="pf-version" data-testid="app-version">
+      NeoPrompter version {version}
+    </small>
+  );
+}
+
 export function GeneralPage({ state, bridge, dispatch }: PageProps) {
   return (
     <>
@@ -89,6 +106,7 @@ export function GeneralPage({ state, bridge, dispatch }: PageProps) {
         </select>
       </Row>
       <WatchedFolderRow bridge={bridge} />
+      <VersionLine bridge={bridge} />
     </>
   );
 }

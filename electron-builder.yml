@@ -1,11 +1,11 @@
 appId: org.neoprompter.app
-productName: Neoprompter
+productName: NeoPrompter
 directories:
   output: release
 files:
   - dist/**
   - package.json
-  - "!**/*.map"
+  - '!**/*.map'
 mac:
   target: dmg
   identity: null # no code signing

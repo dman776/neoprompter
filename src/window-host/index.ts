@@ -57,7 +57,9 @@ export type MenuAction =
   | { type: 'open-window'; window: WindowKind }
   | { type: 'ui'; action: UiAction }
   /** Flip the Output switch; the app reads the current state and sends `setOutput`. */
-  | { type: 'toggle-output' };
+  | { type: 'toggle-output' }
+  /** Show the About panel (name and version). */
+  | { type: 'about' };
 
 export type Platform = 'darwin' | 'win32' | 'linux';
 
@@ -85,9 +87,9 @@ export function buildMenuTemplate(platform: Platform): MenuItemSpec[] {
     platform === 'darwin'
       ? [
           {
-            label: 'Neoprompter',
+            label: 'NeoPrompter',
             submenu: [
-              { role: 'about' },
+              { label: 'About NeoPrompter', action: { type: 'about' } },
               SEPARATOR,
               { role: 'hide' },
               { role: 'hideOthers' },
@@ -188,5 +190,13 @@ export function buildMenuTemplate(platform: Platform): MenuItemSpec[] {
         { role: 'minimize' },
       ],
     },
+    ...(platform === 'darwin'
+      ? []
+      : [
+          {
+            label: 'Help',
+            submenu: [{ label: 'About NeoPrompter', action: { type: 'about' } as MenuAction }],
+          },
+        ]),
   ];
 }

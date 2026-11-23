@@ -17,6 +17,7 @@ async function setup(opts: { token?: string; maxBodyBytes?: number; allow?: () =
     token: opts.token,
     maxBodyBytes: opts.maxBodyBytes,
     isAllowedRemote: opts.allow,
+    version: '9.8.7',
   });
   servers.push(server);
   const { port } = await server.start();
@@ -93,6 +94,11 @@ describe('GET /api/status', () => {
     });
     core.dispatch({ type: 'play' });
     expect((await (await call('/api/status')).json()).state).toBe('playing');
+  });
+
+  it('reports the app version', async () => {
+    const { call } = await setup();
+    expect(await (await call('/api/status')).json()).toMatchObject({ version: '9.8.7' });
   });
 
   it('reports the mode and whether the Output is on', async () => {

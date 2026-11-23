@@ -26,6 +26,7 @@ const api = {
   getQuickMessages: (): Promise<string[]> => ipcRenderer.invoke(IPC.quickMessagesGet),
   setQuickMessages: (messages: string[]): Promise<string[]> =>
     ipcRenderer.invoke(IPC.quickMessagesSet, messages),
+  getVersion: (): Promise<string> => ipcRenderer.invoke(IPC.appVersionGet),
   getWatchedFolder: (): Promise<WatchedFolderView> => ipcRenderer.invoke(IPC.watchedFolderGet),
   chooseWatchedFolder: (): Promise<WatchedFolderView> =>
     ipcRenderer.invoke(IPC.watchedFolderChoose),

@@ -95,6 +95,7 @@ async function mount(
         : { ...api, ...settings, running: true, error: null };
       return api;
     },
+    getVersion: async () => '1.2.3',
     getWatchedFolder: async () => ({ path: watched, ...watchedExtra }),
     chooseWatchedFolder: async () => {
       watched = '/Scripts/Drop';
@@ -443,6 +444,13 @@ describe('General', () => {
     expect(field('Open in').value).toBe('last');
     await setValue(field('Open in'), 'run');
     expect(core.getState().openInMode).toBe('run');
+  });
+
+  it('shows the app version on the General page', async () => {
+    await mount();
+    expect(host.querySelector('[data-testid="app-version"]')?.textContent).toBe(
+      'NeoPrompter version 1.2.3',
+    );
   });
 
   it('shows the Watched folder as Off, then chooses one and clears it', async () => {

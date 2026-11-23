@@ -1,4 +1,4 @@
-# Neoprompter
+# NeoPrompter
 
 A desktop teleprompter for a church live production team. One person, the Operator, runs it while others on the team send them live information.
 

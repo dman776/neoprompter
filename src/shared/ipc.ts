@@ -26,6 +26,7 @@ export const IPC = {
   quickMessagesSet: 'api:quick-messages-set',
   /** renderer -> main (invoke): the Watched folder setting */
   watchedFolderGet: 'watched-folder:get',
+  appVersionGet: 'app:version',
   /** renderer -> main (invoke): pick the Watched folder, returns the new view */
   watchedFolderChoose: 'watched-folder:choose',
   /** renderer -> main (invoke): turn the Watched folder off, returns the new view */

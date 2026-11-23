@@ -335,7 +335,10 @@ app.whenReady().then(() => {
     core,
     createFileApiSettingsStore(path.join(app.getPath('userData'), 'api-settings.json')),
     createFileQuickMessageStore(path.join(app.getPath('userData'), 'quick-messages.json')),
+    undefined,
+    app.getVersion(),
   );
+  ipcMain.handle(IPC.appVersionGet, () => app.getVersion());
   ipcMain.handle(IPC.apiGet, () => api.getView());
   ipcMain.handle(IPC.apiSet, (_e, settings) => api.apply(settings));
   ipcMain.handle(IPC.quickMessagesGet, () => api.getQuickMessages());
@@ -359,7 +362,15 @@ app.whenReady().then(() => {
   const perform = (action: MenuAction) => {
     if (action.type === 'dispatch') core.dispatch(action.command);
     else if (action.type === 'open-window') windowHost.open(action.window);
-    else if (action.type === 'toggle-output') {
+    else if (action.type === 'about') {
+      void dialog.showMessageBox({
+        type: 'info',
+        title: 'About NeoPrompter',
+        message: 'NeoPrompter',
+        detail: `Version ${app.getVersion()}`,
+        buttons: ['OK'],
+      });
+    } else if (action.type === 'toggle-output') {
       core.dispatch({ type: 'setOutput', on: !core.getState().outputOn });
     } else if (
       (action.action === 'undo' || action.action === 'redo') &&
