@@ -94,11 +94,12 @@ export function buildMenuTemplate(platform: Platform): MenuItemSpec[] {
               { label: 'About NeoPrompter', action: { type: 'about' } },
               { label: 'Check for Updates…', action: { type: 'check-updates' } },
               SEPARATOR,
-              { role: 'hide' },
+              // Labeled here: the roles' own labels use the package name, in lower case.
+              { role: 'hide', label: 'Hide NeoPrompter' },
               { role: 'hideOthers' },
               { role: 'unhide' },
               SEPARATOR,
-              { role: 'quit' },
+              { role: 'quit', label: 'Quit NeoPrompter' },
             ],
           },
         ]
