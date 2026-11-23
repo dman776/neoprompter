@@ -36,6 +36,9 @@ async function mount() {
     getOutputView: async () => {
       throw new Error('not used by Preferences yet');
     },
+    getApiView: async () => {
+      throw new Error('not used by Preferences yet');
+    },
   };
   root = createRoot(host);
   await act(async () => root.render(<Preferences bridge={bridge} />));
