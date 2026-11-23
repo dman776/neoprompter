@@ -208,6 +208,22 @@ describe('the running app', () => {
     await operator.getByRole('button', { name: 'Play start' }).click();
     await expect.poll(async () => (await state()).progress).toBe(0);
     await operator.screenshot({ path: join(artifacts, 'operator-run-live.png') });
+    // Speed: arrow keys nudge it, dragging the dial sets it, the readout follows.
+    await dispatch({ type: 'setSpeed', level: 3 });
+    await operator.keyboard.press('ArrowUp');
+    await expect.poll(async () => (await state()).speedLevel).toBe(3.1);
+    await operator.keyboard.press('Shift+ArrowDown');
+    await expect.poll(async () => (await state()).speedLevel).toBe(2.6);
+    const dial = await operator.locator('[role="slider"]').boundingBox();
+    await operator.mouse.move(dial!.x + dial!.width / 2, dial!.y + dial!.height / 2);
+    await operator.mouse.down();
+    await operator.mouse.move(dial!.x + dial!.width / 2, dial!.y + dial!.height / 2 - 28);
+    await operator.mouse.up();
+    await expect.poll(async () => (await state()).speedLevel).toBeCloseTo(4.6, 1);
+    await expect
+      .poll(() => operator.locator('[data-testid="speed-readout"]').textContent())
+      .toBe((await state()).speed.toFixed(2));
+    await operator.screenshot({ path: join(artifacts, 'operator-run-speed.png') });
     await operator.getByRole('radio', { name: 'Edit' }).click();
   });
 

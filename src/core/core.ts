@@ -8,6 +8,8 @@ import {
   MIN_NOTIFICATION_MS,
   LINES_PER_SECOND_PER_LEVEL,
   MAX_SPEED_LEVEL,
+  SPEED_NUDGE_BIG_STEP,
+  SPEED_NUDGE_STEP,
   RING_MAX_LINES_PER_SECOND,
   type Command,
   type CoreState,
@@ -60,7 +62,9 @@ export function createCore(options: CoreOptions = {}): Core {
   let stored = storage.readAll();
   let loadedScriptId: string | null = null;
   let nextId = stored.reduce((m, s) => Math.max(m, Number(s.id) || 0), 0) + 1;
-  const clampLevel = (l: number) => Math.max(0, Math.min(MAX_SPEED_LEVEL, Math.round(l)));
+  // Rounded to three decimals so repeated 0.1 nudges do not drift.
+  const clampLevel = (l: number) =>
+    Math.max(0, Math.min(MAX_SPEED_LEVEL, Math.round(l * 1000) / 1000));
   let speedLevel = clampLevel((options.speed ?? 3) / LINES_PER_SECOND_PER_LEVEL);
   let viewportLines = 10;
 
@@ -268,6 +272,12 @@ export function createCore(options: CoreOptions = {}): Core {
           break;
         case 'setSpeed':
           speedLevel = clampLevel(command.level);
+          break;
+        case 'nudgeSpeed':
+          speedLevel = clampLevel(
+            speedLevel +
+              command.direction * (command.big ? SPEED_NUDGE_BIG_STEP : SPEED_NUDGE_STEP),
+          );
           break;
         case 'setViewport':
           viewportLines = Math.max(1, Math.round(command.lines));

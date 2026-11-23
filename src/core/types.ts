@@ -35,8 +35,10 @@ export type OpenInMode = 'last' | Mode;
 export type Command =
   | { type: 'play' }
   | { type: 'pause' }
-  /** Speed level from 0 (stopped) to MAX_SPEED_LEVEL (fast). */
+  /** Speed level from 0 (stopped) to MAX_SPEED_LEVEL (fast); any value in between (continuous). */
   | { type: 'setSpeed'; level: number }
+  /** Change the speed level by a small step, or a larger one when `big`. Clamped. */
+  | { type: 'nudgeSpeed'; direction: 1 | -1; big: boolean }
   /** How many lines the Output shows (changes with font size, never with speed). */
   | { type: 'setViewport'; lines: number }
   /**
@@ -114,6 +116,9 @@ export interface Notification {
 }
 
 export const MAX_SPEED_LEVEL = 10;
+/** Speed level change for one nudge (an arrow key), and for a nudge with Shift. */
+export const SPEED_NUDGE_STEP = 0.1;
+export const SPEED_NUDGE_BIG_STEP = 0.5;
 /** Lines per second at full ring deflection. */
 export const RING_MAX_LINES_PER_SECOND = 20;
 /** Lines per second for each speed level step. */

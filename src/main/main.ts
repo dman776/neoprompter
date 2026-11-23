@@ -164,7 +164,13 @@ app.whenReady().then(() => {
   void api.startup();
   app.on('will-quit', () => void api.stop());
 
-  operatorWin = openWindow('operator', 'Neoprompter - Operator view', 40);
+  // Run mode (meter, Live view, transport, status column) needs room: it does not fit 640 wide.
+  operatorWin = openWindow('operator', 'Neoprompter - Operator view', 40, {
+    width: 1200,
+    height: 780,
+    minWidth: 1100,
+    minHeight: 640,
+  });
 
   // Preferences and the Virtual shuttle: one window each, and none open at launch.
   const windowHost = createWindowHost({
