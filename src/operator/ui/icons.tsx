@@ -53,3 +53,9 @@ export const ItalicIcon = () => (
     <path d="M10 5h8M6 19h8M14 5l-4 14" />
   </svg>
 );
+
+export const ColorIcon = () => (
+  <svg {...base}>
+    <path d="M6 16L12 4l6 12M8.2 12h7.6" />
+  </svg>
+);

@@ -12,6 +12,8 @@ export interface Session {
   mode?: Mode;
   /** Optional so older session files still load. */
   notificationDurationMs?: number;
+  /** Optional so older session files still load (they get the seed colors). */
+  recentColors?: string[];
 }
 
 /** Persistence for the last session. Injected so tests never touch the disk. */
