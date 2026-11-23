@@ -35,4 +35,14 @@ describe('core progress', () => {
     const core = createCore({ clock: createFakeClock(), script: { name: 'e', lines: [] } });
     expect(core.getState().progress).toBe(0);
   });
+
+  it('counts the visual lines left to read, falling as the Script plays and 0 at the end', () => {
+    const { clock, core } = setup();
+    expect(core.getState().remainingLines).toBe(12);
+    core.dispatch({ type: 'play' });
+    clock.advance(5000);
+    expect(core.getState().remainingLines).toBeCloseTo(7);
+    clock.advance(20000);
+    expect(core.getState().remainingLines).toBe(0);
+  });
 });

@@ -1,4 +1,4 @@
 {
   "userFacingFiles": ["src/operator/", "src/output/", "src/api/producer", "src/main/main.ts"],
-  "glossaryAllow": ["Quick message", "Word document", "Notification display time"]
+  "glossaryAllow": ["Quick message", "Word document", "Notification display time", "Producer page"]
 }

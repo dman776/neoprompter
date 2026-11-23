@@ -1,0 +1,184 @@
+/* Run mode: the Live view in a bezel, the transport under it, status in the right-hand column. */
+.run {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 250px;
+  gap: 14px;
+  height: 100%;
+  min-height: 0;
+}
+/* Reserved for the speed meter, the dial and the Script lock; empty ones take no room. */
+.run-slot:empty {
+  display: none;
+}
+.run:has(> .run-slot-meter:not(:empty)) {
+  grid-template-columns: auto minmax(0, 1fr) 250px;
+}
+.run-center {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: 14px;
+  min-height: 0;
+  min-width: 0;
+}
+.run-bezel {
+  display: grid;
+  padding: 14px;
+  min-height: 0;
+  background: #07090c;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow:
+    0 0 0 5px color-mix(in srgb, var(--surface) 90%, #000),
+    var(--shadow);
+}
+:root[data-theme='light'] .run-bezel {
+  background: #1b2029;
+}
+
+/* The Live view: the Output drawn at 1920x1080, scaled down to fit the bezel. */
+.live-fit {
+  position: relative;
+  min-height: 0;
+  min-width: 0;
+}
+.live-view {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  translate: -50% -50%;
+  overflow: hidden;
+  background: #000;
+}
+.live-scaler {
+  transform-origin: 0 0;
+}
+.live-surface {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #000;
+  color: #fff;
+}
+.live-text {
+  position: absolute;
+  top: 0;
+  left: 10%;
+  right: 10%;
+  will-change: transform;
+}
+.live-line {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  border-top: 16px solid transparent;
+  border-bottom: 16px solid transparent;
+  border-left: 28px solid #f5a623;
+}
+.live-progress {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 3px;
+  width: 100%;
+  background: #fff;
+  transform-origin: left;
+  transform: scaleX(0);
+}
+.live-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  padding: 3px 9px;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.72);
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.live-view[data-output='on'] .live-badge {
+  color: var(--accent);
+}
+
+.run-transport {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 18px;
+  align-items: center;
+  padding: 12px 18px;
+}
+.run-keys {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+}
+.run-transport:has(> .run-slot-dial:not(:empty)) {
+  grid-template-columns: auto 1fr auto;
+}
+.run-read {
+  display: grid;
+  gap: 8px;
+  min-width: 108px;
+  text-align: right;
+}
+.run-read b {
+  display: block;
+  font-size: 22px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.run-read small {
+  font-size: 9.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.run-side {
+  display: grid;
+  align-content: start;
+  gap: 14px;
+  min-height: 0;
+}
+.status-rows {
+  display: grid;
+  gap: 1px;
+  padding: 4px 0;
+}
+.status-rows > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 12px;
+  font-size: 12px;
+}
+.status-rows span {
+  color: var(--muted);
+}
+.status-rows b {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-weight: 600;
+  text-align: right;
+}
+.status-rows em {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: none;
+  background: color-mix(in srgb, var(--muted) 50%, var(--bg));
+}
+.status-rows em[data-tone='ok'] {
+  background: var(--ok);
+  box-shadow: 0 0 8px var(--ok);
+}
+.status-rows em[data-tone='warn'] {
+  background: var(--accent);
+  box-shadow: 0 0 8px var(--accent);
+}

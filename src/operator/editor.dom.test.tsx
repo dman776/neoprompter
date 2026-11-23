@@ -41,7 +41,15 @@ async function mount(lines: string[] = ['Hello there.', 'Second line.']) {
       core.dispatch(c);
     },
     onState: (l) => listeners.push(l),
-    getOutputView: async () => ({ blocked: false }) as never,
+    getOutputView: async () =>
+      ({
+        blocked: null,
+        windowed: false,
+        monitors: [],
+        chosenMonitorId: null,
+        missingMonitorId: null,
+      }) as never,
+    getApiView: async () => ({ running: true, error: null }) as never,
   };
   root = createRoot(host);
   await act(async () => root.render(<App bridge={bridge} />));
