@@ -33,7 +33,7 @@ The Operator view for a live production: transport controls, the reading positio
 _Avoid_: Live mode, show mode, presenter mode
 
 **Live view**:
-In Run mode, a scaled copy of the Output showing exactly what the Talent sees, including the Reading line and Progress bar.
+In Run mode, a scaled copy of the Output showing exactly what the Talent sees, including the Reading line and Progress bar. Its top line is always the Output's top line.
 _Avoid_: Preview
 
 **Button bar**:
@@ -45,7 +45,7 @@ A separate window holding the settings, grouped by category.
 _Avoid_: Settings panel, options, config
 
 **Output**:
-The clean, full-screen, text-only window the Talent reads, sent to the prompter display. The Operator can switch it on or off and choose its monitor; there is only ever one.
+The clean, full-screen, text-only window the Talent reads, sent to the prompter display. It is always a 1920x1080 picture, scaled to fit the display, so the same lines wrap, space and sit in the same place whatever the monitor. The Operator can switch it on or off and choose its monitor; there is only ever one.
 _Avoid_: Prompter screen, display, program
 
 **Notification**:

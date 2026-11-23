@@ -130,10 +130,28 @@ describe('Output renderer', () => {
     expect(span.style.color).not.toBe(onBlack);
   });
 
-  it('reports the viewport height in visual lines', async () => {
-    const m = await mountOutput(script('one'), { height: 700 });
-    const expected = Math.floor(700 / m.lineHeight());
-    expect(m.dispatched).toContainEqual({ type: 'setViewport', lines: expected });
+  it('reports the 1080px stage height in visual lines, whatever size the window is', async () => {
+    // The Output is always laid out as 1920x1080 and scaled, so the Operator's Live view (which
+    // draws the same stage) shows the same lines.
+    for (const [width, height] of [
+      [1920, 1080],
+      [1000, 700],
+      [2560, 1440],
+    ]) {
+      const m = await mountOutput(script('one'), { width, height });
+      expect(m.dispatched).toContainEqual({
+        type: 'setViewport',
+        lines: Math.floor(1080 / m.lineHeight()),
+      });
+    }
+  });
+
+  it('scales the stage to the window and centers it', async () => {
+    await mountOutput(script('one'), { width: 960, height: 900 });
+    const stage = document.getElementById('stage')!;
+    expect(stage.style.transform).toBe(`translate(0px, ${(900 - 540) / 2}px) scale(0.5)`);
+    window.dispatchEvent(new Event('resize'));
+    expect(stage.style.transform).toBe(`translate(0px, ${(900 - 540) / 2}px) scale(0.5)`);
   });
 
   it('reports how many visual lines each wrapped paragraph occupies', async () => {

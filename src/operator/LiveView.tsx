@@ -2,10 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { MouseEvent as ReactMouseEvent } from 'react';
 import { lineText, outputState, type Command, type CoreState } from '../core';
 import { createOutputRenderer } from '../output/renderer';
-
-/** The size the Live view draws the Output at before scaling it down to fit. */
-export const STAGE_WIDTH = 1920;
-export const STAGE_HEIGHT = 1080;
+import { STAGE_HEIGHT, STAGE_WIDTH } from '../output/stage';
 
 interface LiveViewProps {
   state: CoreState;

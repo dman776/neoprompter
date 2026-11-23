@@ -12,6 +12,16 @@
         background: #000;
         color: #fff;
       }
+      /* Always 1920x1080; output.ts scales it to the window. Text beyond it is clipped. */
+      #stage {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        transform-origin: 0 0;
+      }
       #text {
         position: absolute;
         left: 10%;
@@ -45,9 +55,11 @@
     </style>
   </head>
   <body>
-    <div id="text"></div>
-    <div id="reading-line"></div>
-    <div id="progress"></div>
+    <div id="stage">
+      <div id="text"></div>
+      <div id="reading-line"></div>
+      <div id="progress"></div>
+    </div>
     <script src="output.js"></script>
   </body>
 </html>

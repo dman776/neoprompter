@@ -1,18 +1,28 @@
 import type { OutputState } from '../core';
 import { createOutputRenderer } from './renderer';
+import { fitStage, STAGE_HEIGHT, STAGE_WIDTH } from './stage';
 
+const stage = document.getElementById('stage')!;
+
+// The Output is always a 1920x1080 stage, scaled to the window (see stage.ts).
 const render = createOutputRenderer({
   surface: document.body,
   text: document.getElementById('text')!,
   readingLine: document.getElementById('reading-line')!,
   progress: document.getElementById('progress')!,
-  size: () => ({ width: window.innerWidth, height: window.innerHeight }),
+  size: () => ({ width: STAGE_WIDTH, height: STAGE_HEIGHT }),
   report: (command) => window.neoprompter.dispatch(command),
 });
+
+function fit() {
+  const { scale, left, top } = fitStage({ width: window.innerWidth, height: window.innerHeight });
+  stage.style.transform = `translate(${left}px, ${top}px) scale(${scale})`;
+}
 
 let lastState: OutputState | null = null;
 const draw = (state: OutputState) => render((lastState = state));
 
-window.addEventListener('resize', () => lastState && draw(lastState));
+fit();
+window.addEventListener('resize', fit);
 window.neoprompter.onState(draw);
 window.neoprompter.getState().then(draw);

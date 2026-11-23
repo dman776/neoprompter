@@ -60,6 +60,10 @@
   transform-origin: 0 0;
 }
 .live-surface {
+  /* Start from a blank page, as the Output page is, so nothing from the Operator view's own
+     styles (letter spacing, text rendering, font features) can change how the text wraps. */
+  all: initial;
+  display: block;
   position: relative;
   width: 100%;
   height: 100%;

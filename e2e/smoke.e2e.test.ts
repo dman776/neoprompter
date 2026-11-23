@@ -9,7 +9,10 @@ import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
 const root = process.cwd();
 const artifacts = join(root, 'e2e', 'artifacts');
-const LONG = 'This is a long paragraph that will wrap over several visual lines. '.repeat(8).trim();
+// Long enough to scroll on the 1920x1080 Output (about 16 visual lines high).
+const LONG = 'This is a long paragraph that will wrap over several visual lines. '
+  .repeat(20)
+  .trim();
 
 let app: ElectronApplication;
 let operator: Page;
@@ -213,7 +216,8 @@ describe('the running app', () => {
       .poll(async () =>
         output.evaluate(() => {
           const last = document.querySelector('#text > div:last-child')!.getBoundingClientRect();
-          return last.top >= 0 && last.bottom <= window.innerHeight + 1;
+          const stage = document.getElementById('stage')!.getBoundingClientRect();
+          return last.top >= stage.top - 1 && last.bottom <= stage.bottom + 1;
         }),
       )
       .toBe(true);
@@ -549,6 +553,90 @@ describe('the running app', () => {
     }
     await resize(1200, 780);
     await dispatch({ type: 'setMode', mode: 'edit' });
+  });
+
+  it('shows the same lines, spacing and position on the Output and the Live view, at any Output window size', async () => {
+    // The Output is always laid out as 1920x1080 and scaled to its window, so the Talent's top
+    // line is the Operator's top line however big the window or monitor is.
+    const topLine = (page: Page, sel: { text: string; stage: string }) =>
+      page.evaluate((sel) => {
+        const text = document.querySelector(sel.text)!;
+        const stage = document.querySelector(sel.stage)!.getBoundingClientRect();
+        const scale = stage.width / 1920;
+        const words: { w: string; top: number; bottom: number }[] = [];
+        const walker = document.createTreeWalker(text, NodeFilter.SHOW_TEXT);
+        for (let n = walker.nextNode() as Text | null; n; n = walker.nextNode() as Text | null) {
+          const re = /\S+/g;
+          for (let m = re.exec(n.data); m; m = re.exec(n.data)) {
+            const range = document.createRange();
+            range.setStart(n, m.index);
+            range.setEnd(n, m.index + m[0].length);
+            const r = range.getBoundingClientRect();
+            words.push({
+              w: m[0],
+              top: (r.top - stage.top) / scale,
+              bottom: (r.bottom - stage.top) / scale,
+            });
+          }
+        }
+        const shown = words.filter((x) => x.bottom > 0);
+        const first = Math.min(...shown.map((x) => x.top));
+        const row = shown.filter((x) => Math.abs(x.top - first) < 2);
+        return {
+          line: row.map((x) => x.w).join(' '),
+          top: Math.round(first),
+          stageWidth: Math.round(stage.width / scale),
+        };
+      }, sel);
+    const setOutputSize = (width: number, height: number) =>
+      app.evaluate(
+        ({ BrowserWindow }, { width, height }) => {
+          const win = BrowserWindow.getAllWindows().find((w) => w.getTitle().includes('Output'))!;
+          win.setContentSize(width, height);
+        },
+        { width, height },
+      );
+    await dispatch({ type: 'setMode', mode: 'run' });
+    await operator.getByTestId('live-view').waitFor();
+    await dispatch({ type: 'scrollBy', lines: -10_000 });
+    for (const [width, height] of [
+      [1920, 1080],
+      [1280, 720],
+      [1000, 900],
+      [2560, 1080],
+    ]) {
+      await setOutputSize(width, height);
+      // The visible line count (so a Screen jump and the end of the Script) is the 1080px stage's,
+      // not the window's.
+      await expect
+        .poll(async () => {
+          const s = await state();
+          return (
+            s.viewportLines - Math.floor(1080 / (s.appearance.fontSize * s.appearance.lineSpacing))
+          );
+        })
+        .toBe(0);
+      for (const step of [0, 1, 2, 1, 3, 1]) {
+        await dispatch({ type: 'scrollBy', lines: step });
+        await expect
+          .poll(async () => {
+            const talent = await topLine(output, { text: '#text', stage: '#stage' });
+            const operatorView = await topLine(operator, {
+              text: '[data-live="text"]',
+              stage: '[data-live="surface"]',
+            });
+            return JSON.stringify([talent, operatorView]);
+          })
+          .toSatisfy((both: string) => {
+            const [a, b] = JSON.parse(both);
+            return (
+              a.line === b.line && a.top === b.top && a.stageWidth === 1920 && b.stageWidth === 1920
+            );
+          });
+      }
+    }
+    await output.screenshot({ path: join(artifacts, 'output-scaled.png') });
+    await setOutputSize(1920, 1080);
   });
 
   describe('the Producer page with a token set', () => {
