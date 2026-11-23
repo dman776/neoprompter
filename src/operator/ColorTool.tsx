@@ -11,20 +11,20 @@ interface ColorToolProps {
   /** The core's recent colors, newest first. */
   recentColors: readonly string[];
   /** A color was used: the Operator picked a swatch or finished choosing in the system picker. */
-  onUse(color: string): void;
+  onColorPicked(color: string): void;
 }
 
 /** The shortcut for slot `i` (0 to 9): Alt+1 to Alt+9, then Alt+0 for the tenth. */
 const slotKey = (i: number) => String((i + 1) % 10);
 
 /** The Color button: a panel of the recent colors and an "Any color" system picker. */
-export function ColorTool({ editor, editable, recentColors, onUse }: ColorToolProps) {
+export function ColorTool({ editor, editable, recentColors, onColorPicked }: ColorToolProps) {
   const [open, setOpen] = useState(false);
   const [current, setCurrent] = useState(recentColors[0] ?? '#ffffff');
   const wrap = useRef<HTMLSpanElement>(null);
   const picker = useRef<HTMLInputElement>(null);
-  const live = useRef({ editor, editable, recentColors, onUse });
-  live.current = { editor, editable, recentColors, onUse };
+  const live = useRef({ editor, editable, recentColors, onColorPicked });
+  live.current = { editor, editable, recentColors, onColorPicked };
 
   const paint = (color: string) => {
     live.current.editor?.chain().focus().setMark('color', { color }).run();
@@ -32,7 +32,7 @@ export function ColorTool({ editor, editable, recentColors, onUse }: ColorToolPr
   };
   const use = (color: string) => {
     paint(color);
-    live.current.onUse(color);
+    live.current.onColorPicked(color);
   };
 
   // Alt+1 to Alt+0 use the first to the tenth recent color, without leaving the keys.

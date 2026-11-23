@@ -115,6 +115,10 @@ app.whenReady().then(() => {
   ipcMain.handle(IPC.getState, (e) => stateFor(e.sender, core.getState()));
   ipcMain.on(IPC.command, (_e, command: Command) => core.dispatch(command));
   ipcMain.handle(IPC.importScript, async () => {
+    // Run mode freezes the library (the core would reject the save), so say so plainly.
+    if (core.getState().mode !== 'edit') {
+      return { ok: false, message: 'Import is only available in Edit mode.' };
+    }
     const picked = await dialog.showOpenDialog({
       title: 'Import Script',
       properties: ['openFile'],
@@ -206,11 +210,22 @@ app.whenReady().then(() => {
   const perform = (action: MenuAction) => {
     if (action.type === 'dispatch') core.dispatch(action.command);
     else if (action.type === 'open-window') windowHost.open(action.window);
-    else if (operatorWin && !operatorWin.isDestroyed()) {
+    else if (action.type === 'toggle-output') {
+      core.dispatch({ type: 'setOutput', on: !core.getState().outputOn });
+    } else if (
+      (action.action === 'undo' || action.action === 'redo') &&
+      BrowserWindow.getFocusedWindow() !== operatorWin
+    ) {
+      // Preferences and the Virtual shuttle have no editor: undo in their own text fields.
+      const focused = BrowserWindow.getFocusedWindow();
+      if (action.action === 'undo') focused?.webContents.undo();
+      else focused?.webContents.redo();
+    } else if (operatorWin && !operatorWin.isDestroyed()) {
       operatorWin.webContents.send(IPC.menuAction, action.action);
     }
   };
   const toElectron = (item: MenuItemSpec): Electron.MenuItemConstructorOptions => ({
+    id: item.id,
     label: item.label,
     accelerator: item.accelerator,
     role: item.role as Electron.MenuItemConstructorOptions['role'],
@@ -218,13 +233,25 @@ app.whenReady().then(() => {
     submenu: item.submenu?.map(toElectron),
     click: item.action ? () => perform(item.action!) : undefined,
   });
-  Menu.setApplicationMenu(
-    Menu.buildFromTemplate(
-      buildMenuTemplate(
-        process.platform === 'darwin' ? 'darwin' : process.platform === 'win32' ? 'win32' : 'linux',
-      ).map(toElectron),
-    ),
+  const menu = Menu.buildFromTemplate(
+    buildMenuTemplate(
+      process.platform === 'darwin' ? 'darwin' : process.platform === 'win32' ? 'win32' : 'linux',
+    ).map(toElectron),
   );
+  Menu.setApplicationMenu(menu);
+  // Import and New Script belong to Edit mode (Run mode locks the library); the Output item
+  // shows whether the Output is on.
+  const syncMenu = (state: CoreState) => {
+    const set = (id: string, change: (item: Electron.MenuItem) => void) => {
+      const item = menu.getMenuItemById(id);
+      if (item) change(item);
+    };
+    set('import', (i) => (i.enabled = state.mode === 'edit'));
+    set('new', (i) => (i.enabled = state.mode === 'edit'));
+    set('output', (i) => (i.checked = state.outputOn));
+  };
+  core.subscribe(syncMenu);
+  syncMenu(core.getState());
 
   // The Output opens full screen on the chosen monitor; with it missing it stays closed.
   const output = createOutputManager();

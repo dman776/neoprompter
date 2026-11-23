@@ -4,12 +4,10 @@
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { createCore, createFakeClock, createMemoryLibraryStorage, type Command } from '../core';
+import { createCore, createFakeClock, createMemoryLibraryStorage } from '../core';
 import { App } from './App';
-import type { CoreBridge, ImportOutcome } from './useCoreState';
-import type { OutputWindowView } from '../output-window';
-import type { ApiView } from '../api';
-import type { UiAction } from '../window-host';
+import type { ImportOutcome } from './useCoreState';
+import { createFakeBridge } from './fakeBridge';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -25,16 +23,6 @@ afterEach(() => {
   host.remove();
 });
 
-const view: OutputWindowView = {
-  windowed: false,
-  outputOn: false,
-  blocked: null,
-  chosenMonitorId: 'prompter',
-  missingMonitorId: null,
-  monitors: [],
-};
-const apiView: ApiView = { port: 4780, token: '', running: true, error: null, producerUrls: [] };
-
 async function mount(importResult: ImportOutcome | null = null) {
   const clock = createFakeClock(Date.UTC(2026, 10, 22, 12, 0));
   const storage = createMemoryLibraryStorage();
@@ -45,35 +33,20 @@ async function mount(importResult: ImportOutcome | null = null) {
   });
   core.dispatch({ type: 'saveScript', name: 'Sunday service', text: 'one\ntwo' });
   core.dispatch({ type: 'saveScript', name: 'Wedding', text: 'three' });
-  const dispatched: Command[] = [];
-  const listeners: Array<(s: ReturnType<typeof core.getState>) => void> = [];
-  const menuListeners: Array<(action: UiAction) => void> = [];
-  core.subscribe((s) => listeners.forEach((l) => act(() => l(s))));
   let imports = 0;
-  const bridge: CoreBridge = {
-    getState: async () => core.getState(),
-    dispatch: (c) => {
-      dispatched.push(c);
-      core.dispatch(c);
-    },
-    onState: (l) => listeners.push(l),
-    getOutputView: async () => view,
-    getApiView: async () => apiView,
-    onMenuAction: (l) => menuListeners.push(l),
-    chooseOutputMonitor: async () => view,
-    setWindowedOutput: async () => view,
+  const { bridge, dispatched, menu } = createFakeBridge(core, {
     importScript: async () => {
       imports++;
       return importResult;
     },
-  };
+  });
   root = createRoot(host);
   await act(async () => root.render(<App bridge={bridge} />));
   return {
     core,
     dispatched,
     imports: () => imports,
-    menu: (action: UiAction) => act(async () => menuListeners.forEach((l) => l(action))),
+    menu,
   };
 }
 
@@ -190,22 +163,30 @@ describe('Import', () => {
     const { imports } = await mount(null);
     await press(host.querySelector('header [data-testid="import"]'));
     expect(imports()).toBe(1);
-    expect(host.querySelector('[data-testid="import-note"]')).toBeNull();
+    expect(host.querySelector('[data-testid="notice"]')).toBeNull();
   });
 
   it('shows a plain message when a file cannot be imported', async () => {
     await mount({ ok: false, message: '"a.docx" is not a Word file.' });
     await press(host.querySelector('header [data-testid="import"]'));
-    const note = host.querySelector('[data-testid="import-note"]')!;
+    const note = host.querySelector('[data-testid="notice"]')!;
     expect(note.getAttribute('role')).toBe('alert');
     expect(note.textContent).toContain('is not a Word file');
     await press(note.querySelector('button'));
-    expect(host.querySelector('[data-testid="import-note"]')).toBeNull();
+    expect(host.querySelector('[data-testid="notice"]')).toBeNull();
   });
 
   it('shows the result of a good Import', async () => {
     await mount({ ok: true, message: 'Imported "Talk" into the library.' });
     await press(host.querySelector('header [data-testid="import"]'));
-    expect(host.querySelector('[data-testid="import-note"]')!.textContent).toContain('Imported');
+    expect(host.querySelector('[data-testid="notice"]')!.textContent).toContain('Imported');
+  });
+
+  it('is Edit mode only: the menu item does nothing and the header button is gone in Run mode', async () => {
+    const { imports, core, menu } = await mount({ ok: true, message: 'Imported' });
+    await act(async () => core.dispatch({ type: 'setMode', mode: 'run' }));
+    await menu('import');
+    expect(imports()).toBe(0);
+    expect(host.querySelector('header [data-testid="import"]')).toBeNull();
   });
 });

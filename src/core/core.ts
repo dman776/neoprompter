@@ -22,7 +22,7 @@ import { createMemoryLibraryStorage, type LibraryStorage, type StoredScript } fr
 import { createMemoryPresetStore, type PresetStore } from './presets';
 import { defaultAppearance, type Appearance } from './types';
 import { colorLineRange, editLineText, remapPosition } from './editing';
-import { MAX_RECENT_COLORS, SEED_COLORS, isHexColor, moveColorToFront } from './palette';
+import { MAX_RECENT_COLORS, DEFAULT_RECENT_COLORS, isHexColor, moveColorToFront } from './palette';
 import { changedSpan, sanitizeLines } from './scriptLines';
 import { contrastRatio, MIN_CONTRAST, readableTextOn } from './readableColor';
 import { lineText } from './richScript';
@@ -117,7 +117,14 @@ export function createCore(options: CoreOptions = {}): Core {
   let mode: Mode = 'edit';
   /** Never persisted: every launch and every mode change starts locked. */
   let unlocked = false;
-  /** The Script is locked against editing in Run mode (ADR 0003); a live fix has its own rule. */
+  /**
+   * Run mode locks everything that changes what the Talent reads (ADR 0003): editing the loaded
+   * Script (editLine, setScriptLines, cutLines, colorRange) and the whole library (saveScript,
+   * newScript, duplicateScript, loadScript, renameScript, deleteScript), because loading,
+   * renaming or deleting replaces or detaches the live Script and any library change could be
+   * a step towards one. Unlocking allows only `liveFix`, one paragraph's text. Mode switches,
+   * transport, appearance and Notifications are not Script changes and stay open.
+   */
   const locked = () => mode === 'run';
   let theme: Theme = 'dark';
   let rightColumnCollapsed = false;
@@ -129,7 +136,7 @@ export function createCore(options: CoreOptions = {}): Core {
   let notifications: { id: number; text: string; expiresAt: number }[] = [];
   let nextNotificationId = 1;
 
-  let recentColors: string[] = [...SEED_COLORS];
+  let recentColors: string[] = [...DEFAULT_RECENT_COLORS];
 
   const restored = sessionStore.load();
   if (restored) {
@@ -327,6 +334,7 @@ export function createCore(options: CoreOptions = {}): Core {
           position = clampPosition(playStart);
           break;
         case 'saveScript':
+          if (locked()) return;
           stored = [
             ...stored,
             {
@@ -340,6 +348,7 @@ export function createCore(options: CoreOptions = {}): Core {
           storage.writeAll(stored);
           break;
         case 'newScript': {
+          if (locked()) return;
           const entry = {
             id: String(nextId++),
             name: 'New Script',
@@ -352,6 +361,7 @@ export function createCore(options: CoreOptions = {}): Core {
           break;
         }
         case 'duplicateScript': {
+          if (locked()) return;
           const original = stored.find((s) => s.id === command.id);
           if (!original) return;
           stored = [
@@ -367,12 +377,14 @@ export function createCore(options: CoreOptions = {}): Core {
           break;
         }
         case 'loadScript': {
+          if (locked()) return;
           const found = stored.find((s) => s.id === command.id);
           if (!found) return;
           loadStored(found);
           break;
         }
         case 'renameScript':
+          if (locked()) return;
           if (!stored.some((s) => s.id === command.id)) return;
           stored = stored.map((s) =>
             s.id === command.id ? { ...s, name: command.name, editedAt: clock.now() } : s,
@@ -381,6 +393,7 @@ export function createCore(options: CoreOptions = {}): Core {
           if (loadedScriptId === command.id) script = { ...script, name: command.name };
           break;
         case 'deleteScript':
+          if (locked()) return;
           if (!stored.some((s) => s.id === command.id)) return;
           stored = stored.filter((s) => s.id !== command.id);
           storage.writeAll(stored);

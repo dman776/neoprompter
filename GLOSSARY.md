@@ -72,6 +72,10 @@ _Avoid_: Cursor, marker, indicator
 A named saved set of appearance settings (font size, spacing, margins, colors, reading line, mirror), for example one per Talent.
 _Avoid_: Theme, profile, template
 
+**Recent colors**:
+The ten text colors the Operator used most recently, newest first, offered as swatches in the editor's Color button. They start as red, green, blue, yellow and white.
+_Avoid_: Palette, color history, swatches
+
 **Screen** (as a distance):
 The visible height of the Output minus one line, which is how far "back one screen" and "forward one screen" jump.
 _Avoid_: Page

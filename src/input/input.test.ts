@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createCore, createFakeClock } from '../core';
+import { createCore, createFakeClock, SPEED_NUDGE_STEP } from '../core';
 import {
   createInputMapper,
   createInputService,
@@ -111,14 +111,14 @@ describe('input mapping', () => {
     expect(core.getState().notifications.map((n) => n.text)).toEqual(['a']);
   });
 
-  it('speed up and speed down actions move the speed level', () => {
+  it('speed up and speed down actions step the speed like an arrow key nudge', () => {
     const { core, mapper } = setup();
     const base = core.getState().speedLevel;
     mapper.runAction('speedUp');
-    expect(core.getState().speedLevel).toBe(base + 1);
+    expect(core.getState().speedLevel).toBeCloseTo(base + SPEED_NUDGE_STEP, 5);
     mapper.runAction('speedDown');
     mapper.runAction('speedDown');
-    expect(core.getState().speedLevel).toBe(base - 1);
+    expect(core.getState().speedLevel).toBeCloseTo(base - SPEED_NUDGE_STEP, 5);
   });
 });
 

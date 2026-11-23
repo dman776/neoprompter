@@ -6,8 +6,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createCore, createFakeClock } from '../core';
 import { App } from './App';
-import type { CoreBridge } from './useCoreState';
-import type { OutputWindowView } from '../output-window';
+import { createFakeBridge } from './fakeBridge';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -23,38 +22,13 @@ afterEach(() => {
   host.remove();
 });
 
-const view: OutputWindowView = {
-  windowed: false,
-  outputOn: false,
-  blocked: null,
-  chosenMonitorId: null,
-  missingMonitorId: null,
-  monitors: [],
-};
-
 async function mount(mode: 'edit' | 'run') {
   const core = createCore({
     clock: createFakeClock(),
     script: { name: 's', lines: Array.from({ length: 200 }, (_, i) => `line ${i}`) },
   });
   core.dispatch({ type: 'setViewport', lines: 10 });
-  const listeners: Array<(s: ReturnType<typeof core.getState>) => void> = [];
-  core.subscribe((s) => listeners.forEach((l) => act(() => l(s))));
-  const bridge: CoreBridge = {
-    getState: async () => core.getState(),
-    dispatch: (c) => core.dispatch(c),
-    onState: (l) => listeners.push(l),
-    getOutputView: async () => view,
-    getApiView: async () => ({
-      port: 4780,
-      token: '',
-      running: true,
-      error: null,
-      producerUrls: [],
-    }),
-    chooseOutputMonitor: async () => view,
-    setWindowedOutput: async () => view,
-  };
+  const { bridge } = createFakeBridge(core);
   root = createRoot(host);
   await act(async () => root.render(<App bridge={bridge} />));
   await act(async () => core.dispatch({ type: 'setMode', mode }));

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type MutableRefObject } from 'react';
 import { EditorContent, useEditor, useEditorState } from '@tiptap/react';
 import Document from '@tiptap/extension-document';
 import Paragraph from '@tiptap/extension-paragraph';
@@ -7,7 +7,7 @@ import Heading from '@tiptap/extension-heading';
 import Bold from '@tiptap/extension-bold';
 import Italic from '@tiptap/extension-italic';
 import { UndoRedo } from '@tiptap/extensions';
-import type { CoreState, ScriptLine } from '../core';
+import { lineText, sameLine, type CoreState, type ScriptLine } from '../core';
 import { cleanPastedHtml, docToLines, formatReadTime, linesToDoc, scriptStats } from '../editor';
 import type { CoreBridge } from './useCoreState';
 import { ColorMark } from './colorMark';
@@ -34,7 +34,21 @@ const extensions = [
   Search,
 ];
 
-const sameLines = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
+const sameLines = (a: ScriptLine[], b: ScriptLine[]) =>
+  a.length === b.length && a.every((line, i) => sameLine(line, b[i]));
+
+/** What the Operator view can ask of the editor from outside (menu items, the mode switch). */
+export interface EditorHandle {
+  /** Send any typing that has not been saved yet; call it before the mode changes. */
+  flush(): void;
+  undo(): void;
+  redo(): void;
+  /** Open the find bar (the Edit menu's Find). */
+  find(): void;
+}
+
+export const SAVE_REJECTED_TEXT =
+  'Your last typing could not be saved, because the Script was locked. Switch back to Edit mode and check it.';
 
 interface ScriptEditorProps {
   bridge: CoreBridge;
@@ -43,10 +57,21 @@ interface ScriptEditorProps {
   editable: boolean;
   /** The core's recent colors, newest first. */
   recentColors: readonly string[];
+  /** Filled with the editor's controls while it is mounted. */
+  handle?: MutableRefObject<EditorHandle | null>;
+  /** Called with a plain message when the core did not keep what the editor sent. */
+  onSaveRejected?: (message: string) => void;
 }
 
 /** The full Script editor: formatting bar, word count, Saved state, and the document itself. */
-export function ScriptEditor({ bridge, script, editable, recentColors }: ScriptEditorProps) {
+export function ScriptEditor({
+  bridge,
+  script,
+  editable,
+  recentColors,
+  handle,
+  onSaveRejected,
+}: ScriptEditorProps) {
   const [saving, setSaving] = useState(false);
   const [finding, setFinding] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -56,13 +81,24 @@ export function ScriptEditor({ bridge, script, editable, recentColors }: ScriptE
   bridgeRef.current = bridge;
   const initial = useMemo(() => linesToDoc(script.lines), []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const rejectedRef = useRef(onSaveRejected);
+  rejectedRef.current = onSaveRejected;
+
   const flush = useRef(() => {
     if (timer.current) clearTimeout(timer.current);
     timer.current = null;
     if (!pending.current) return;
-    bridgeRef.current.dispatch({ type: 'setScriptLines', lines: pending.current });
+    const sent = pending.current;
+    bridgeRef.current.dispatch({ type: 'setScriptLines', lines: sent });
     pending.current = null;
     setSaving(false);
+    // The core refuses edits it should not take (the Script is locked in Run mode). Look at what
+    // it kept, by text, and say so if the typing is gone, unless more typing has come since.
+    void bridgeRef.current.getState().then((s) => {
+      if (pending.current) return;
+      const kept = s.script.lines.map(lineText).join('\n');
+      if (kept !== sent.map(lineText).join('\n')) rejectedRef.current?.(SAVE_REJECTED_TEXT);
+    });
   }).current;
 
   const editor = useEditor({
@@ -82,6 +118,19 @@ export function ScriptEditor({ bridge, script, editable, recentColors }: ScriptE
     },
     onBlur: () => flush(),
   });
+
+  useEffect(() => {
+    if (!handle) return;
+    handle.current = {
+      flush,
+      undo: () => void (editor?.isEditable && editor.chain().focus().undo().run()),
+      redo: () => void (editor?.isEditable && editor.chain().focus().redo().run()),
+      find: () => setFinding(true),
+    };
+    return () => {
+      handle.current = null;
+    };
+  }, [handle, editor, flush]);
 
   // Leaving Edit mode locks the editor; make sure what was typed has been sent first.
   useEffect(() => {
@@ -188,7 +237,7 @@ export function ScriptEditor({ bridge, script, editable, recentColors }: ScriptE
           editor={editor}
           editable={editable}
           recentColors={recentColors}
-          onUse={(color) => bridge.dispatch({ type: 'pickColor', color })}
+          onColorPicked={(color) => bridge.dispatch({ type: 'pickColor', color })}
         />
         <span className="word-count" aria-live="polite">
           <b>{stats.words}</b> words · <b>{formatReadTime(stats.readSeconds)}</b>

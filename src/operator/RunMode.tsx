@@ -1,4 +1,4 @@
-import type { Command, CoreState } from '../core';
+import type { CoreState } from '../core';
 import { LiveView } from './LiveView';
 import { ScriptLock } from './ScriptLock';
 import { SpeedMeter, useSpeedKeys } from './Speed';
@@ -27,7 +27,6 @@ export function RunMode({
   const apiView = useApiView(bridge);
   useSpeedKeys(bridge.dispatch);
   useTransportKeys(state, bridge.dispatch);
-  const dispatch = (command: Command) => bridge.dispatch(command);
   return (
     <div className="run" data-collapsed={columnCollapsed ? 'true' : undefined}>
       <div className="run-slot run-slot-meter" data-slot="speed-meter">
@@ -41,7 +40,19 @@ export function RunMode({
             outputShowing={state.outputOn && !outputBlocked}
           />
         </div>
-        <Transport state={state} dispatch={dispatch} />
+        <Transport
+          state={state}
+          dispatch={bridge.dispatch}
+          lock={
+            columnCollapsed && (
+              <ScriptLock
+                compact
+                unlocked={state.unlocked}
+                onChange={(unlocked) => bridge.dispatch({ type: 'setUnlocked', unlocked })}
+              />
+            )
+          }
+        />
       </div>
       {!columnCollapsed && (
         <aside className="run-side">

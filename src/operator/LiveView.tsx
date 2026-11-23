@@ -67,7 +67,13 @@ export function LiveView({ state, dispatch, outputShowing, badge = true }: LiveV
       readingLine: line.current!,
       progress: progress.current!,
       size: () => ({ width: STAGE_WIDTH, height: STAGE_HEIGHT }),
-      report: outputShowing ? false : dispatch,
+      // With the Output showing it measures the Script; the Live view still measures after a
+      // live fix, so time left and the Progress bar follow the fix at once.
+      report: outputShowing
+        ? (command) => {
+            if (command.type === 'setLineExtents' && latest.current.unlocked) dispatch(command);
+          }
+        : dispatch,
     });
     render.current(outputState(latest.current));
   }, [outputShowing, dispatch]);

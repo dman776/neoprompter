@@ -2,7 +2,7 @@
 export const MAX_RECENT_COLORS = 10;
 
 /** The recent colors before the Operator has picked anything: red, green, blue, yellow, white. */
-export const SEED_COLORS: readonly string[] = [
+export const DEFAULT_RECENT_COLORS: readonly string[] = [
   '#ff0000',
   '#00ff00',
   '#0000ff',

@@ -40,22 +40,36 @@ export function createWindowHost(factory: WindowFactory): WindowHost {
 }
 
 /** Things only the Operator view can do; sent to it over IPC (`window.neoprompter.onMenuAction`). */
-export type UiAction = 'new' | 'import' | 'toggle-theme' | 'toggle-right-column' | 'find';
+export type UiAction =
+  | 'new'
+  | 'import'
+  | 'toggle-theme'
+  | 'toggle-right-column'
+  | 'find'
+  | 'undo'
+  | 'redo'
+  /** Mode switches go through the Operator view so it can send unsaved typing first. */
+  | 'mode-edit'
+  | 'mode-run';
 
 export type MenuAction =
   | { type: 'dispatch'; command: Command }
   | { type: 'open-window'; window: WindowKind }
-  | { type: 'ui'; action: UiAction };
+  | { type: 'ui'; action: UiAction }
+  /** Flip the Output switch; the app reads the current state and sends `setOutput`. */
+  | { type: 'toggle-output' };
 
 export type Platform = 'darwin' | 'win32' | 'linux';
 
 export interface MenuItemSpec {
+  /** Lets the app find an item later to enable it or tick it (Import, Output on). */
+  id?: string;
   label?: string;
   /** Electron accelerator, already resolved for the platform (Command or Control). */
   accelerator?: string;
   /** An Electron role, for standard items the platform handles itself. */
   role?: string;
-  type?: 'separator';
+  type?: 'separator' | 'checkbox';
   action?: MenuAction;
   submenu?: MenuItemSpec[];
 }
@@ -66,7 +80,6 @@ export function buildMenuTemplate(platform: Platform): MenuItemSpec[] {
   const mod = platform === 'darwin' ? 'Command' : 'Control';
   const key = (k: string) => `${mod}+${k}`;
   const ui = (action: UiAction): MenuAction => ({ type: 'ui', action });
-  const run = (command: Command): MenuAction => ({ type: 'dispatch', command });
 
   const appMenu: MenuItemSpec[] =
     platform === 'darwin'
@@ -91,8 +104,8 @@ export function buildMenuTemplate(platform: Platform): MenuItemSpec[] {
     {
       label: 'File',
       submenu: [
-        { label: 'New Script', accelerator: key('N'), action: ui('new') },
-        { label: 'Import', accelerator: key('I'), action: ui('import') },
+        { id: 'new', label: 'New Script', accelerator: key('N'), action: ui('new') },
+        { id: 'import', label: 'Import', accelerator: key('Shift+I'), action: ui('import') },
         SEPARATOR,
         {
           label: 'Preferences',
@@ -105,8 +118,9 @@ export function buildMenuTemplate(platform: Platform): MenuItemSpec[] {
     {
       label: 'Edit',
       submenu: [
-        { role: 'undo' },
-        { role: 'redo' },
+        // Not native roles: the editor's own history lives in the Operator view.
+        { label: 'Undo', accelerator: key('Z'), action: ui('undo') },
+        { label: 'Redo', accelerator: key('Shift+Z'), action: ui('redo') },
         SEPARATOR,
         { role: 'cut' },
         { role: 'copy' },
@@ -122,12 +136,12 @@ export function buildMenuTemplate(platform: Platform): MenuItemSpec[] {
         {
           label: 'Edit mode',
           accelerator: key('1'),
-          action: run({ type: 'setMode', mode: 'edit' }),
+          action: ui('mode-edit'),
         },
         {
           label: 'Run mode',
           accelerator: key('2'),
-          action: run({ type: 'setMode', mode: 'run' }),
+          action: ui('mode-run'),
         },
         SEPARATOR,
         { label: 'Toggle theme', accelerator: key('Shift+L'), action: ui('toggle-theme') },
@@ -142,14 +156,11 @@ export function buildMenuTemplate(platform: Platform): MenuItemSpec[] {
       label: 'Output',
       submenu: [
         {
-          label: 'Output On',
+          id: 'output',
+          label: 'Output on',
+          type: 'checkbox',
           accelerator: key('Shift+O'),
-          action: run({ type: 'setOutput', on: true }),
-        },
-        {
-          label: 'Output Off',
-          accelerator: key('Shift+X'),
-          action: run({ type: 'setOutput', on: false }),
+          action: { type: 'toggle-output' },
         },
       ],
     },
@@ -158,7 +169,7 @@ export function buildMenuTemplate(platform: Platform): MenuItemSpec[] {
       submenu: [
         {
           label: 'Virtual shuttle',
-          accelerator: key('Shift+V'),
+          accelerator: key('Shift+K'),
           action: { type: 'open-window', window: 'shuttle' },
         },
         SEPARATOR,

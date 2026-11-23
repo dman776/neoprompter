@@ -94,8 +94,8 @@ export function createInputMapper(
     ['jumpBack', () => core.dispatch({ type: 'jumpBack' })],
     ['jumpForward', () => core.dispatch({ type: 'jumpForward' })],
     ['returnToPlayStart', () => core.dispatch({ type: 'returnToPlayStart' })],
-    ['speedUp', () => core.dispatch({ type: 'setSpeed', level: core.getState().speedLevel + 1 })],
-    ['speedDown', () => core.dispatch({ type: 'setSpeed', level: core.getState().speedLevel - 1 })],
+    ['speedUp', () => core.dispatch({ type: 'nudgeSpeed', direction: 1, big: false })],
+    ['speedDown', () => core.dispatch({ type: 'nudgeSpeed', direction: -1, big: false })],
     ['dismissNotification', () => core.dispatch({ type: 'dismissNotification' })],
   ]);
   let mapping: ButtonMapping = { ...defaultButtonMapping };

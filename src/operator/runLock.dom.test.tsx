@@ -3,9 +3,9 @@
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { createCore, createFakeClock, type Command } from '../core';
+import { createCore, createFakeClock } from '../core';
 import { App } from './App';
-import type { CoreBridge } from './useCoreState';
+import { createFakeBridge } from './fakeBridge';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -26,42 +26,7 @@ async function mountRun() {
     script: { name: 'Sunday', lines: ['alpha', 'beta', 'gamma'] },
   });
   core.dispatch({ type: 'setMode', mode: 'run' });
-  const dispatched: Command[] = [];
-  const listeners: Array<(s: ReturnType<typeof core.getState>) => void> = [];
-  core.subscribe((s) => listeners.forEach((l) => act(() => l(s))));
-  const view = {
-    windowed: false,
-    outputOn: false,
-    blocked: null,
-    chosenMonitorId: null,
-    missingMonitorId: null,
-    monitors: [],
-  };
-  const bridge: CoreBridge = {
-    chooseOutputMonitor: async () => view,
-    setWindowedOutput: async () => view,
-    getState: async () => core.getState(),
-    dispatch: (c) => {
-      dispatched.push(c);
-      core.dispatch(c);
-    },
-    onState: (l) => listeners.push(l),
-    getOutputView: async () => ({
-      windowed: false,
-      outputOn: false,
-      blocked: null,
-      chosenMonitorId: null,
-      missingMonitorId: null,
-      monitors: [],
-    }),
-    getApiView: async () => ({
-      port: 4780,
-      token: '',
-      running: true,
-      error: null,
-      producerUrls: [],
-    }),
-  };
+  const { bridge, dispatched } = createFakeBridge(core);
   root = createRoot(host);
   await act(async () => root.render(<App bridge={bridge} />));
   return { core, dispatched };
@@ -75,6 +40,18 @@ const dblclick = (el: Element) =>
   act(() => void el.dispatchEvent(new MouseEvent('dblclick', { bubbles: true })));
 
 describe('Run mode: Script lock', () => {
+  it('stays reachable when the right column is collapsed', async () => {
+    const { core } = await mountRun();
+    await act(async () => core.dispatch({ type: 'setRightColumnCollapsed', collapsed: true }));
+    expect(host.querySelector('.run-side')).toBeNull();
+    const compact = host.querySelector(
+      '[data-testid="transport"] [data-testid="script-lock-compact"] [role="switch"]',
+    ) as HTMLElement;
+    expect(compact).not.toBeNull();
+    await act(async () => compact.click());
+    expect(core.getState().unlocked).toBe(true);
+  });
+
   it('starts locked and says so', async () => {
     await mountRun();
     expect(lockSwitch().getAttribute('aria-checked')).toBe('false');
@@ -129,6 +106,42 @@ describe('Run mode: live fix', () => {
     expect(core.getState().position).toBe(position);
     expect(host.querySelector('textarea')).toBeNull();
     expect(paragraph(1).textContent).toBe('BETA!');
+  });
+
+  it('measures the fixed paragraph again even while the Output is on, without moving the position', async () => {
+    // jsdom has no layout: a paragraph longer than ten characters is three lines tall.
+    const lineHeight = 48 * 1.4;
+    const original = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetHeight');
+    Object.defineProperty(HTMLElement.prototype, 'offsetHeight', {
+      configurable: true,
+      get() {
+        return ((this as HTMLElement).textContent ?? '').length > 10 ? 3 * lineHeight : lineHeight;
+      },
+    });
+    try {
+      const { core, dispatched } = await mountRun();
+      await act(async () => core.dispatch({ type: 'setOutput', on: true }));
+      const position = core.getState().position;
+      await act(async () => lockSwitch().click());
+      dblclick(paragraph(1));
+      const box = host.querySelector('textarea')!;
+      await act(async () => {
+        const set = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!;
+        set.call(box, 'a much longer paragraph now');
+        box.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+      await act(async () => {
+        box.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+      });
+      expect(dispatched).toContainEqual({
+        type: 'setLineExtents',
+        extents: [1, 3, 1],
+        revision: core.getState().scriptRevision,
+      });
+      expect(core.getState().position).toBe(position);
+    } finally {
+      if (original) Object.defineProperty(HTMLElement.prototype, 'offsetHeight', original);
+    }
   });
 
   it('cancels with Escape and changes nothing', async () => {

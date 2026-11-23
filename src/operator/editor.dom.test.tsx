@@ -4,10 +4,10 @@ import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { Editor } from '@tiptap/core';
-import { createCore, createFakeClock, lineText, type Command } from '../core';
+import { createCore, createFakeClock, lineText } from '../core';
 import { App } from './App';
 import { SAVE_DELAY_MS } from './ScriptEditor';
-import type { CoreBridge } from './useCoreState';
+import { createFakeBridge } from './fakeBridge';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -31,45 +31,10 @@ afterEach(() => {
 
 async function mount(lines: string[] = ['Hello there.', 'Second line.']) {
   const core = createCore({ clock: createFakeClock(), script: { name: 'T', lines } });
-  const dispatched: Command[] = [];
-  const listeners: Array<(s: ReturnType<typeof core.getState>) => void> = [];
-  core.subscribe((s) => listeners.forEach((l) => act(() => l(s))));
-  const bridge: CoreBridge = {
-    getState: async () => core.getState(),
-    dispatch: (c) => {
-      dispatched.push(c);
-      core.dispatch(c);
-    },
-    onState: (l) => listeners.push(l),
-    getOutputView: async () =>
-      ({
-        blocked: null,
-        windowed: false,
-        monitors: [],
-        chosenMonitorId: null,
-        missingMonitorId: null,
-      }) as never,
-    getApiView: async () => ({ running: true, error: null }) as never,
-    chooseOutputMonitor: async () =>
-      ({
-        blocked: null,
-        windowed: false,
-        monitors: [],
-        chosenMonitorId: null,
-        missingMonitorId: null,
-      }) as never,
-    setWindowedOutput: async () =>
-      ({
-        blocked: null,
-        windowed: false,
-        monitors: [],
-        chosenMonitorId: null,
-        missingMonitorId: null,
-      }) as never,
-  };
+  const { bridge, dispatched, menu } = createFakeBridge(core);
   root = createRoot(host);
   await act(async () => root.render(<App bridge={bridge} />));
-  return { core, dispatched };
+  return { core, dispatched, menu };
 }
 
 const tiptap = () =>
@@ -143,6 +108,41 @@ describe('the Script editor in Edit mode', () => {
     await act(async () => new Promise((r) => setTimeout(r, SAVE_DELAY_MS + 50)));
     await act(async () => core.dispatch({ type: 'setMode', mode: 'run' }));
     expect(core.getState().script.lines.map(lineText)[0]).toBe('Late Hello there.');
+  });
+
+  it('keeps typing made just before a mode switch, from the header and from the menu', async () => {
+    const { core, menu } = await mount();
+    await act(async () => void tiptap().commands.insertContentAt(1, 'Quick '));
+    const runButton = Array.from(
+      host.querySelectorAll('header button, header [role="radio"]'),
+    ).find((b) => b.textContent?.trim() === 'Run') as HTMLElement;
+    await act(async () => runButton.click());
+    expect(core.getState().mode).toBe('run');
+    expect(core.getState().script.lines.map(lineText)[0]).toBe('Quick Hello there.');
+    await act(async () => core.dispatch({ type: 'setMode', mode: 'edit' }));
+    await act(async () => void tiptap().commands.insertContentAt(1, 'Again '));
+    await menu('mode-run');
+    expect(core.getState().mode).toBe('run');
+    expect(core.getState().script.lines.map(lineText)[0]).toBe('Again Quick Hello there.');
+  });
+
+  it('says so plainly when a save was rejected, instead of staying silent', async () => {
+    const { core } = await mount();
+    await act(async () => void tiptap().commands.insertContentAt(1, 'Lost '));
+    // The mode changes behind the editor's back, so its unsent typing is refused by the core.
+    await act(async () => core.dispatch({ type: 'setMode', mode: 'run' }));
+    const note = host.querySelector('[data-testid="notice"]');
+    expect(note?.getAttribute('role')).toBe('alert');
+    expect(note?.textContent).toContain('could not be saved');
+  });
+
+  it('undoes and redoes from the Edit menu', async () => {
+    const { menu } = await mount();
+    await act(async () => void tiptap().commands.insertContentAt(1, 'X'));
+    await menu('undo');
+    expect(host.querySelector('.ProseMirror')!.textContent).not.toContain('XHello');
+    await menu('redo');
+    expect(host.querySelector('.ProseMirror')!.textContent).toContain('XHello');
   });
 
   it('is not editable when the app is not in Edit mode', async () => {

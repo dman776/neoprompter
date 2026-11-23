@@ -1,16 +1,9 @@
-import { useEffect } from 'react';
-import type { Command, CoreState } from '../core';
+import { useEffect, type ReactNode } from 'react';
+import { formatTimeLeft, type Command, type CoreState } from '../core';
 import { keyToAction } from '../input';
 import { SpeedDial, isTyping } from './Speed';
 import { Key } from './ui/Key';
 import { BackScreenIcon, ForwardScreenIcon, PauseIcon, PlayIcon, PlayStartIcon } from './ui/icons';
-
-/** Time left at the current speed as m:ss, or `--:--` when the speed is zero. */
-export function formatTimeLeft(remainingLines: number, linesPerSecond: number): string {
-  if (linesPerSecond <= 0) return '--:--';
-  const seconds = Math.round(remainingLines / linesPerSecond);
-  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
-}
 
 /**
  * Space plays and pauses; Page Up and Page Down go back and forward a Screen (the key table is
@@ -47,9 +40,12 @@ export function useTransportKeys(state: CoreState, dispatch: (command: Command) 
 export function Transport({
   state,
   dispatch,
+  lock,
 }: {
   state: CoreState;
   dispatch: (command: Command) => void;
+  /** The Script lock, shown here when the right-hand column is collapsed. */
+  lock?: ReactNode;
 }) {
   return (
     <div className="np-panel run-transport" data-testid="transport">
@@ -89,6 +85,7 @@ export function Transport({
           <small>Position</small>
         </div>
       </div>
+      {lock}
     </div>
   );
 }

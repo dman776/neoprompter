@@ -1,11 +1,10 @@
 import { useEffect, useRef } from 'react';
 import { MAX_SPEED_LEVEL, type Command, type CoreState } from '../core';
+import { levelFromDrag } from './speedDrag';
 import './speed.css';
 
 /** Dial travel: it sweeps 270 degrees from the lower left to the lower right. */
 const SWEEP_DEGREES = 270;
-/** Pixels of vertical drag for one speed level. */
-const PIXELS_PER_LEVEL = 14;
 const SEGMENTS = MAX_SPEED_LEVEL;
 
 /** Lines per second to two decimals, as the dial and the Operator read it. */
@@ -86,8 +85,7 @@ export function SpeedDial({
       }}
       onPointerMove={(e) => {
         const d = drag.current;
-        if (d)
-          dispatch({ type: 'setSpeed', level: d.level + (d.y - e.clientY) / PIXELS_PER_LEVEL });
+        if (d) dispatch({ type: 'setSpeed', level: levelFromDrag(d.level, d.y, e.clientY) });
       }}
       onPointerUp={() => (drag.current = null)}
       onPointerCancel={() => (drag.current = null)}

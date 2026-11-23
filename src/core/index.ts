@@ -21,9 +21,17 @@ export { lineHeading, lineRuns, lineText } from './richScript';
 export { contrastRatio, displayColor, readableTextOn, MIN_CONTRAST } from './readableColor';
 export { createMemoryLibraryStorage } from './library';
 export type { LibraryStorage, StoredScript } from './library';
-export { defaultAppearance, outputState, DEFAULT_NOTIFICATION_MS, MAX_SPEED_LEVEL } from './types';
+export {
+  defaultAppearance,
+  outputState,
+  DEFAULT_NOTIFICATION_MS,
+  MAX_SPEED_LEVEL,
+  SPEED_NUDGE_STEP,
+} from './types';
 export { createMemoryPresetStore } from './presets';
 export type { PresetStore } from './presets';
 export { createMemorySessionStore } from './session';
 export type { Session, SessionStore } from './session';
-export { MAX_RECENT_COLORS, SEED_COLORS, isHexColor } from './palette';
+export { MAX_RECENT_COLORS, DEFAULT_RECENT_COLORS, isHexColor } from './palette';
+export { sameLine } from './scriptLines';
+export { formatTimeLeft } from './timeLeft';

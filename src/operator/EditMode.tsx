@@ -1,7 +1,8 @@
+import type { MutableRefObject } from 'react';
 import type { CoreState } from '../core';
 import { LiveView } from './LiveView';
 import { Library } from './Library';
-import { ScriptEditor } from './ScriptEditor';
+import { ScriptEditor, type EditorHandle } from './ScriptEditor';
 import { Panel } from './ui/Panel';
 import type { CoreBridge } from './useCoreState';
 
@@ -10,11 +11,15 @@ export function EditMode({
   state,
   bridge,
   outputShowing,
+  editorHandle,
+  onSaveRejected,
 }: {
   state: CoreState;
   bridge: CoreBridge;
   /** Whether the real Output is showing (then it measures the Script, not the mini Live view). */
   outputShowing: boolean;
+  editorHandle: MutableRefObject<EditorHandle | null>;
+  onSaveRejected: (message: string) => void;
 }) {
   const collapsed = state.rightColumnCollapsed;
   return (
@@ -24,6 +29,8 @@ export function EditMode({
         script={state.script}
         editable={state.mode === 'edit'}
         recentColors={state.recentColors}
+        handle={editorHandle}
+        onSaveRejected={onSaveRejected}
       />
       {!collapsed && (
         <aside className="edit-side" data-testid="edit-side">

@@ -1,6 +1,9 @@
+import { isHexColor } from './palette';
 import type { Run, ScriptLine } from './types';
 
-const HEX_COLOR = /^#[0-9a-f]{6}$/i;
+/** Whether two Script lines hold the same text and styling. */
+export const sameLine = (a: ScriptLine, b: ScriptLine): boolean =>
+  JSON.stringify(a) === JSON.stringify(b);
 
 /**
  * Clean lines that arrive from outside (the editor): only text, bold, italic, a `#rrggbb` color
@@ -14,7 +17,7 @@ export function sanitizeLines(lines: ScriptLine[]): ScriptLine[] {
       text: String(r.text ?? ''),
       ...(r.bold && { bold: true }),
       ...(r.italic && { italic: true }),
-      ...(typeof r.color === 'string' && HEX_COLOR.test(r.color) && { color: r.color }),
+      ...(isHexColor(r.color) && { color: r.color }),
     }));
     const level = line.heading;
     const heading =
@@ -37,9 +40,8 @@ export function changedSpan(
   before: ScriptLine[],
   after: ScriptLine[],
 ): { at: number; removed: number; added: ScriptLine[] } | null {
-  const same = (a: ScriptLine, b: ScriptLine) => JSON.stringify(a) === JSON.stringify(b);
   let start = 0;
-  while (start < before.length && start < after.length && same(before[start], after[start])) {
+  while (start < before.length && start < after.length && sameLine(before[start], after[start])) {
     start++;
   }
   if (start === before.length && start === after.length) return null;
@@ -47,7 +49,7 @@ export function changedSpan(
   while (
     end < before.length - start &&
     end < after.length - start &&
-    same(before[before.length - 1 - end], after[after.length - 1 - end])
+    sameLine(before[before.length - 1 - end], after[after.length - 1 - end])
   ) {
     end++;
   }

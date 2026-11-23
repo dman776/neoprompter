@@ -41,19 +41,29 @@ describe('native menu', () => {
     expect(find(t, 'Preferences').action).toEqual({ type: 'open-window', window: 'preferences' });
   });
 
-  it('Edit has Find, sent to the Operator view', () => {
-    expect(find(top('win32'), 'Find').action).toEqual({ type: 'ui', action: 'find' });
+  it('Edit has Find, Undo and Redo, all sent to the Operator view', () => {
+    const t = top('win32');
+    expect(find(t, 'Find').action).toEqual({ type: 'ui', action: 'find' });
+    // The Operator view owns the editor's history, so these are not native roles.
+    expect(find(t, 'Undo')).toMatchObject({
+      accelerator: 'Control+Z',
+      action: { type: 'ui', action: 'undo' },
+    });
+    expect(find(t, 'Redo')).toMatchObject({
+      accelerator: 'Control+Shift+Z',
+      action: { type: 'ui', action: 'redo' },
+    });
   });
 
-  it('View switches mode, theme and the right column', () => {
+  it('View switches mode through the Operator view, so typing is saved first', () => {
     const t = top('win32');
     expect(find(t, 'Edit mode')).toMatchObject({
       accelerator: 'Control+1',
-      action: { type: 'dispatch', command: { type: 'setMode', mode: 'edit' } },
+      action: { type: 'ui', action: 'mode-edit' },
     });
     expect(find(t, 'Run mode')).toMatchObject({
       accelerator: 'Control+2',
-      action: { type: 'dispatch', command: { type: 'setMode', mode: 'run' } },
+      action: { type: 'ui', action: 'mode-run' },
     });
     expect(find(t, 'Toggle theme').action).toEqual({ type: 'ui', action: 'toggle-theme' });
     expect(find(t, 'Collapse right column').action).toEqual({
@@ -62,21 +72,35 @@ describe('native menu', () => {
     });
   });
 
-  it('Output switches on and off, each with a shortcut', () => {
+  it('Output is one checkbox item with one shortcut', () => {
     const t = top('darwin');
-    expect(find(t, 'Output On')).toMatchObject({
+    const output = flatten(t).filter((i) => i.action?.type === 'toggle-output');
+    expect(output).toHaveLength(1);
+    expect(output[0]).toMatchObject({
+      id: 'output',
+      type: 'checkbox',
       accelerator: 'Command+Shift+O',
-      action: { type: 'dispatch', command: { type: 'setOutput', on: true } },
     });
-    expect(find(t, 'Output Off')).toMatchObject({
-      accelerator: 'Command+Shift+X',
-      action: { type: 'dispatch', command: { type: 'setOutput', on: false } },
-    });
+  });
+
+  it('Import has an id, so the app can disable it in Run mode', () => {
+    expect(find(top('darwin'), 'Import').id).toBe('import');
+  });
+
+  it('no shortcut collides with the editor (bold, italic, undo keys) or macOS paste styles', () => {
+    for (const platform of ['darwin', 'win32'] as const) {
+      const mod = platform === 'darwin' ? 'Command' : 'Control';
+      const editorKeys = ['B', 'I', 'U', 'E', 'L', 'R', 'J', 'Y'].map((k) => `${mod}+${k}`);
+      const accels = flatten(top(platform)).map((i) => i.accelerator);
+      for (const k of editorKeys) expect(accels).not.toContain(k);
+      expect(accels).not.toContain(`${mod}+Shift+V`);
+      expect(accels.some((a) => a?.startsWith(`${mod}+Alt+`))).toBe(false);
+    }
   });
 
   it('Window opens the Virtual shuttle', () => {
     expect(find(top('win32'), 'Virtual shuttle')).toMatchObject({
-      accelerator: 'Control+Shift+V',
+      accelerator: 'Control+Shift+K',
       action: { type: 'open-window', window: 'shuttle' },
     });
   });

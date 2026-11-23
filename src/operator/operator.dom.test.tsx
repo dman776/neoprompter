@@ -4,12 +4,11 @@
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { createCore, createFakeClock, type Command } from '../core';
+import { createCore, createFakeClock } from '../core';
 import { App } from './App';
-import type { CoreBridge } from './useCoreState';
+import { createFakeBridge } from './fakeBridge';
 import type { OutputWindowView } from '../output-window';
 import type { ApiView } from '../api';
-import type { UiAction } from '../window-host';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -43,24 +42,10 @@ async function mount(
 ) {
   const clock = createFakeClock();
   const core = createCore({ clock, script: { name: 'Sunday', lines } });
-  const dispatched: Command[] = [];
-  const listeners: Array<(s: ReturnType<typeof core.getState>) => void> = [];
-  const menuListeners: Array<(action: UiAction) => void> = [];
-  const menu = (action: UiAction) => act(() => menuListeners.forEach((l) => l(action)));
-  core.subscribe((s) => listeners.forEach((l) => act(() => l(s))));
-  const bridge: CoreBridge = {
-    getState: async () => core.getState(),
-    dispatch: (c) => {
-      dispatched.push(c);
-      core.dispatch(c);
-    },
-    onState: (l) => listeners.push(l),
+  const { bridge, dispatched, menu } = createFakeBridge(core, {
     getOutputView: async () => outputView,
     getApiView: async () => api,
-    onMenuAction: (l) => menuListeners.push(l),
-    chooseOutputMonitor: async () => outputView,
-    setWindowedOutput: async () => outputView,
-  };
+  });
   root = createRoot(host);
   await act(async () => root.render(<App bridge={bridge} />));
   return { core, clock, dispatched, menu };

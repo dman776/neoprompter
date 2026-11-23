@@ -33,6 +33,36 @@ describe('the Run mode lock', () => {
     expect(after.scriptRevision).toBe(before.scriptRevision);
   });
 
+  it('freezes the library too: nothing is loaded, created, renamed, copied, saved or deleted', () => {
+    const { core } = setup();
+    core.dispatch({ type: 'saveScript', name: 'S', text: 'a\nb' });
+    const id = core.getState().library[0].id;
+    core.dispatch({ type: 'setMode', mode: 'run' });
+    const before = core.getState();
+    core.dispatch({ type: 'loadScript', id });
+    core.dispatch({ type: 'newScript' });
+    core.dispatch({ type: 'renameScript', id, name: 'Other' });
+    core.dispatch({ type: 'duplicateScript', id });
+    core.dispatch({ type: 'saveScript', name: 'T', text: 'x' });
+    core.dispatch({ type: 'deleteScript', id });
+    const after = core.getState();
+    expect(after.script).toEqual(before.script);
+    expect(after.scriptRevision).toBe(before.scriptRevision);
+    expect(after.library).toEqual(before.library);
+    expect(after.loadedScriptId).toBe(before.loadedScriptId);
+  });
+
+  it('keeps the library frozen after unlocking, and opens it again in Edit mode', () => {
+    const { core } = setup();
+    core.dispatch({ type: 'setMode', mode: 'run' });
+    core.dispatch({ type: 'setUnlocked', unlocked: true });
+    core.dispatch({ type: 'newScript' });
+    expect(core.getState().library).toEqual([]);
+    core.dispatch({ type: 'setMode', mode: 'edit' });
+    core.dispatch({ type: 'newScript' });
+    expect(core.getState().library).toHaveLength(1);
+  });
+
   it('still rejects them after unlocking: only a live fix is allowed', () => {
     const { core } = setup();
     core.dispatch({ type: 'setMode', mode: 'run' });

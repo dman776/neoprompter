@@ -9,10 +9,21 @@ import { Switch } from './ui/Switch';
 export function ScriptLock({
   unlocked,
   onChange,
+  compact = false,
 }: {
   unlocked: boolean;
   onChange: (unlocked: boolean) => void;
+  /** One line beside the transport, for when the right-hand column is collapsed. */
+  compact?: boolean;
 }) {
+  if (compact) {
+    return (
+      <div className="lock-compact" data-testid="script-lock-compact" data-unlocked={unlocked}>
+        <b>{unlocked ? 'Live edit on' : 'Editing locked'}</b>
+        <Switch checked={unlocked} onCheckedChange={onChange} label="Unlock" compact />
+      </div>
+    );
+  }
   return (
     <Panel title="Script" meta={unlocked ? 'Unlocked' : 'Locked'} className="script-lock">
       <div className="lock-row" data-testid="script-lock" data-unlocked={unlocked}>

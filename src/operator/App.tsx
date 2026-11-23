@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Mode } from '../core';
+import type { EditorHandle } from './ScriptEditor';
 import {
   useCoreState,
   useMenuActions,
@@ -35,27 +36,40 @@ export function App({ bridge }: { bridge: CoreBridge }) {
       bridge.dispatch({ type: 'setRightColumnCollapsed', collapsed: !s.rightColumnCollapsed });
     }
   };
-  const [importNote, setImportNote] = useState<ImportOutcome | null>(null);
+  const [notice, setNotice] = useState<ImportOutcome | null>(null);
+  const editorHandle = useRef<EditorHandle | null>(null);
+  const saveRejected = (message: string) => setNotice({ ok: false, message });
+  // Typing waits up to 300 ms before it is saved, so send it before the mode (and the lock) changes.
+  const changeMode = (mode: Mode) => {
+    editorHandle.current?.flush();
+    bridge.dispatch({ type: 'setMode', mode });
+  };
+  // Import adds to the library, which Run mode locks, so it belongs to Edit mode only.
   const runImport = () => {
-    void bridge.importScript?.().then((outcome) => setImportNote(outcome));
+    if (latest.current?.mode !== 'edit') return;
+    void bridge.importScript?.().then((outcome) => setNotice(outcome));
   };
   useMenuActions(bridge, (action) => {
     if (action === 'toggle-theme') toggleTheme();
     else if (action === 'toggle-right-column') toggleColumn();
     else if (action === 'import') runImport();
+    else if (action === 'mode-edit') changeMode('edit');
+    else if (action === 'mode-run') changeMode('run');
+    else if (action === 'undo') editorHandle.current?.undo();
+    else if (action === 'redo') editorHandle.current?.redo();
+    else if (action === 'find') editorHandle.current?.find();
     // A new Script replaces the one on the Output, so it belongs to Edit mode only.
     else if (action === 'new' && latest.current?.mode === 'edit') {
       bridge.dispatch({ type: 'newScript' });
     }
   });
   if (!state) return null;
-  const setMode = (mode: Mode) => bridge.dispatch({ type: 'setMode', mode });
   return (
     <div className="shell">
       <Header
         scriptName={state.script.name}
         mode={state.mode}
-        onModeChange={setMode}
+        onModeChange={changeMode}
         outputOn={state.outputOn}
         onOutputChange={(on) => bridge.dispatch({ type: 'setOutput', on })}
         outputBlocked={outputBlocked}
@@ -65,15 +79,15 @@ export function App({ bridge }: { bridge: CoreBridge }) {
         onToggleTheme={toggleTheme}
         onImport={state.mode === 'edit' && bridge.importScript ? runImport : undefined}
       />
-      {importNote && (
+      {notice && (
         <div
           className="import-note"
-          data-testid="import-note"
-          data-ok={importNote.ok ? 'true' : undefined}
-          role={importNote.ok ? 'status' : 'alert'}
+          data-testid="notice"
+          data-ok={notice.ok ? 'true' : undefined}
+          role={notice.ok ? 'status' : 'alert'}
         >
-          <span>{importNote.message}</span>
-          <button type="button" onClick={() => setImportNote(null)}>
+          <span>{notice.message}</span>
+          <button type="button" onClick={() => setNotice(null)}>
             Dismiss
           </button>
         </div>
@@ -84,6 +98,8 @@ export function App({ bridge }: { bridge: CoreBridge }) {
             state={state}
             bridge={bridge}
             outputShowing={state.outputOn && outputBlocked === null}
+            editorHandle={editorHandle}
+            onSaveRejected={saveRejected}
           />
         ) : (
           <RunMode

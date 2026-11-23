@@ -4,8 +4,8 @@
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { createCore, createFakeClock, createMemoryPresetStore, type Command } from '../core';
-import type { PreferencesBridge } from '../operator/useCoreState';
+import { createCore, createFakeClock, createMemoryPresetStore } from '../core';
+import { createFakeBridge } from '../operator/fakeBridge';
 import type { ApiView } from '../api';
 import { defaultButtonMapping, type ButtonMappingView } from '../input';
 import type { OutputWindowView } from '../output-window';
@@ -59,16 +59,7 @@ async function mount(
   const chosen: string[] = [];
   const windowedCalls: boolean[] = [];
   const core = createCore({ clock: createFakeClock(), presetStore: createMemoryPresetStore() });
-  const dispatched: Command[] = [];
-  const listeners: Array<(s: ReturnType<typeof core.getState>) => void> = [];
-  core.subscribe((s) => listeners.forEach((l) => act(() => l(s))));
-  const bridge: PreferencesBridge = {
-    getState: async () => core.getState(),
-    dispatch: (c) => {
-      dispatched.push(c);
-      core.dispatch(c);
-    },
-    onState: (l) => listeners.push(l),
+  const { bridge, dispatched } = createFakeBridge(core, {
     getOutputView: async () => view,
     chooseOutputMonitor: async (id) => {
       chosen.push(id);
@@ -101,7 +92,7 @@ async function mount(
       quick = messages.map((m) => m.trim()).filter(Boolean);
       return quick;
     },
-  };
+  });
   root = createRoot(host);
   await act(async () => root.render(<Preferences bridge={bridge} />));
   return {

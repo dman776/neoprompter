@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Command, CoreState } from '../core';
 import type { OutputBlocked, OutputWindowView } from '../output-window';
 import type { ApiSettings, ApiView } from '../api';
@@ -53,10 +53,17 @@ export function useCoreState(bridge: CoreBridge): CoreState | null {
 /** How often to look again at why the Output is not showing (a monitor may be plugged in). */
 const BLOCKED_POLL_MS = 1500;
 
-/** Asks the main process for something now and again every `ms`, until the component goes. */
-function usePolled<T>(ask: () => Promise<T>, ms: number): T | null {
+/**
+ * Asks the main process for something now and again every `ms`, until the component goes. While
+ * `enabled` is false it does not ask, and the value is null.
+ */
+function usePolled<T>(ask: () => Promise<T>, ms: number, enabled = true): T | null {
   const [value, setValue] = useState<T | null>(null);
   useEffect(() => {
+    if (!enabled) {
+      setValue(null);
+      return;
+    }
     let live = true;
     const look = () => void ask().then((v) => live && setValue(v));
     look();
@@ -65,7 +72,7 @@ function usePolled<T>(ask: () => Promise<T>, ms: number): T | null {
       live = false;
       clearInterval(timer);
     };
-  }, [ask, ms]);
+  }, [ask, ms, enabled]);
   return value;
 }
 
@@ -84,22 +91,8 @@ export function useApiView(bridge: CoreBridge): ApiView | null {
  * Asked of the main process, which owns the displays; it looks again while the Output is On.
  */
 export function useOutputBlocked(bridge: CoreBridge, outputOn: boolean): OutputBlocked | null {
-  const [blocked, setBlocked] = useState<OutputBlocked | null>(null);
-  useEffect(() => {
-    if (!outputOn) {
-      setBlocked(null);
-      return;
-    }
-    let live = true;
-    const look = () => void bridge.getOutputView().then((v) => live && setBlocked(v.blocked));
-    look();
-    const timer = setInterval(look, BLOCKED_POLL_MS);
-    return () => {
-      live = false;
-      clearInterval(timer);
-    };
-  }, [bridge, outputOn]);
-  return blocked;
+  const ask = useCallback(() => bridge.getOutputView().then((v) => v.blocked), [bridge]);
+  return usePolled(ask, BLOCKED_POLL_MS, outputOn);
 }
 
 /** Calls `handle` for each native menu item that is the Operator view's to handle. */
