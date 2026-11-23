@@ -842,7 +842,7 @@ describe('the running app', () => {
     await shuttle.close();
   });
 
-  it('scrolls the Script with the mouse wheel and by dragging it, and the Output follows', async () => {
+  it('sets the speed with the mouse wheel, scrolls by dragging the text, and the Output follows', async () => {
     await dispatch({ type: 'setMode', mode: 'run' });
     await dispatch({ type: 'scrollBy', lines: -10_000 });
     const box = (await operator.getByTestId('live-view').boundingBox())!;
@@ -857,13 +857,29 @@ describe('the running app', () => {
       });
     expect(await position()).toBeCloseTo(await outputOffset(), 1);
 
-    // Wheel down moves forward, wheel up moves back.
+    // In Run mode the wheel sets the speed (down is faster) and leaves the position alone.
+    const level = async () => (await state()).speedLevel;
+    const startLevel = await level();
+    const startPosition = await position();
     await operator.mouse.move(cx, cy);
-    await operator.mouse.wheel(0, 240);
-    await vi.waitFor(async () => expect(await position()).toBeGreaterThan(1));
-    const afterWheel = await position();
-    await operator.mouse.wheel(0, -120);
-    await vi.waitFor(async () => expect(await position()).toBeLessThan(afterWheel));
+    await operator.mouse.wheel(0, 200);
+    await vi.waitFor(async () => expect(await level()).toBeGreaterThan(startLevel));
+    await operator.mouse.wheel(0, -400);
+    await vi.waitFor(async () => expect(await level()).toBeLessThan(startLevel));
+    expect(await position()).toBeCloseTo(startPosition, 3);
+
+    // The scrollbar: dragging its thumb down moves forward, and the Output follows.
+    await dispatch({ type: 'scrollBy', lines: -10_000 });
+    const bar = (await operator.getByTestId('script-scrollbar').boundingBox())!;
+    const bx = bar.x + bar.width / 2;
+    await operator.mouse.move(bx, bar.y + 6);
+    await operator.mouse.down();
+    await operator.mouse.move(bx, bar.y + bar.height * 0.6, { steps: 6 });
+    await operator.screenshot({ path: join(artifacts, 'operator-run-scrollbar.png') });
+    await operator.mouse.up();
+    await vi.waitFor(async () => expect((await state()).progress).toBeGreaterThan(0.3));
+    await vi.waitFor(async () => expect(await outputOffset()).toBeCloseTo(await position(), 1));
+    await dispatch({ type: 'scrollBy', lines: -10_000 });
 
     // Dragging the text up moves forward; the Output shows the same place.
     const beforeDrag = await position();
@@ -874,7 +890,7 @@ describe('the running app', () => {
     await vi.waitFor(async () => expect(await position()).toBeGreaterThan(beforeDrag + 1));
     await vi.waitFor(async () => expect(await outputOffset()).toBeCloseTo(await position(), 1));
 
-    // Dragging down moves back. A plain click moves nothing.
+    // Dragging down moves back. A plain click does not move the text; it toggles stop and play.
     const beforeBack = await position();
     await operator.mouse.move(cx, cy);
     await operator.mouse.down();
@@ -882,8 +898,14 @@ describe('the running app', () => {
     await operator.mouse.up();
     await vi.waitFor(async () => expect(await position()).toBeLessThan(beforeBack));
     const beforeClick = await position();
+    expect((await state()).playing).toBe(false);
     await operator.mouse.click(cx, cy);
-    expect(await position()).toBeCloseTo(beforeClick, 5);
+    await vi.waitFor(async () => expect((await state()).playing).toBe(true));
+    await operator.mouse.click(cx, cy);
+    await vi.waitFor(async () => expect((await state()).playing).toBe(false));
+    // It played for the moment between the clicks, so the text moved on a little, forward only.
+    expect(await position()).toBeGreaterThanOrEqual(beforeClick);
+    expect(await position()).toBeLessThan(beforeClick + 5);
   });
 
   it('goes forward and back a Screen with the Right and Left arrow keys', async () => {
@@ -893,7 +915,9 @@ describe('the running app', () => {
     await dispatch({ type: 'setAppearance', changes: { fontSize: 96 } });
     await vi.waitFor(async () => expect((await state()).viewportLines).toBe(8));
     await dispatch({ type: 'scrollBy', lines: -10_000 });
+    // The click focuses the window, and in Run mode it also starts playing: stop it again.
     await operator.getByTestId('live-view').click();
+    await dispatch({ type: 'pause' });
     const position = async () => (await state()).position;
     const start = await position();
     // A Screen is the Output's visible height in lines, minus one.
@@ -946,9 +970,25 @@ describe('the running app', () => {
     await dispatch({ type: 'scrollBy', lines: -10_000 });
     await dispatch({ type: 'scrollBy', lines: 12 });
     await dispatch({ type: 'setSpeed', level: 3 });
+    // The click focuses the window, and in Run mode it also starts playing: stop it again.
     await operator.getByTestId('live-view').click();
+    await dispatch({ type: 'pause' });
+    // A middle click on the Live view toggles the direction: stopped it sets the next Play, and
+    // playing it turns the Script round.
+    const liveView = operator.getByTestId('live-view');
+    await liveView.click({ button: 'middle' });
+    await vi.waitFor(async () => expect((await state()).direction).toBe('reverse'));
+    expect((await state()).playing).toBe(false);
+    await liveView.click({ button: 'middle' });
+    await vi.waitFor(async () => expect((await state()).direction).toBe('forward'));
+    await dispatch({ type: 'play' });
+    await liveView.click({ button: 'middle' });
+    await vi.waitFor(async () => expect((await state()).direction).toBe('reverse'));
+    await liveView.click({ button: 'middle' });
+    await vi.waitFor(async () => expect((await state()).direction).toBe('forward'));
+    await dispatch({ type: 'pause' });
     const direction = () => operator.getByTestId('direction').getAttribute('data-direction');
-    expect(await direction()).toBe('forward');
+    await vi.waitFor(async () => expect(await direction()).toBe('forward'));
     await operator.keyboard.press('Shift+Space');
     await vi.waitFor(async () => expect((await state()).direction).toBe('reverse'));
     expect((await state()).playing).toBe(true);

@@ -11,6 +11,23 @@ function setup() {
   return { clock, core };
 }
 
+describe('going to a fraction of the Script', () => {
+  it('puts the reading position that far through, clamped, and ignores a non-number', () => {
+    const { core } = setup();
+    core.dispatch({ type: 'setProgress', progress: 0.5 });
+    expect(core.getState().progress).toBeCloseTo(0.5);
+    core.dispatch({ type: 'setProgress', progress: 7 });
+    expect(core.getState().progress).toBe(1);
+    expect(core.getState().remainingLines).toBe(0);
+    core.dispatch({ type: 'setProgress', progress: -3 });
+    expect(core.getState().progress).toBe(0);
+    expect(core.getState().position).toBe(-core.getState().leadIn);
+    core.dispatch({ type: 'setProgress', progress: 0.25 });
+    core.dispatch({ type: 'setProgress', progress: NaN });
+    expect(core.getState().progress).toBeCloseTo(0.25);
+  });
+});
+
 describe('continuous speed', () => {
   it('keeps a fractional level and maps it linearly to lines per second', () => {
     const { core } = setup();
@@ -24,6 +41,21 @@ describe('continuous speed', () => {
     core.dispatch({ type: 'setSpeed', level: 99 });
     expect(core.getState().speedLevel).toBe(10);
     core.dispatch({ type: 'setSpeed', level: -4 });
+    expect(core.getState().speedLevel).toBe(0);
+  });
+
+  it('adjusts by any amount, clamped, and ignores a value that is not a number', () => {
+    const { core } = setup();
+    core.dispatch({ type: 'setSpeed', level: 3 });
+    core.dispatch({ type: 'adjustSpeed', levels: 0.25 });
+    expect(core.getState().speedLevel).toBeCloseTo(3.25);
+    core.dispatch({ type: 'adjustSpeed', levels: -0.5 });
+    expect(core.getState().speedLevel).toBeCloseTo(2.75);
+    core.dispatch({ type: 'adjustSpeed', levels: 99 });
+    expect(core.getState().speedLevel).toBe(10);
+    core.dispatch({ type: 'adjustSpeed', levels: -99 });
+    expect(core.getState().speedLevel).toBe(0);
+    core.dispatch({ type: 'adjustSpeed', levels: NaN });
     expect(core.getState().speedLevel).toBe(0);
   });
 

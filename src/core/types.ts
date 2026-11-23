@@ -39,10 +39,17 @@ export type Command =
   /** Plays forward unless `direction` says to play in reverse (Shift+Space). Playing again the other way turns round. */
   | { type: 'play'; direction?: Direction }
   | { type: 'pause' }
+  /**
+   * Choose the direction. Playing, it turns the Script round without stopping; stopped, it sets
+   * the way the next Play from the mouse goes. Pausing puts it back to forward.
+   */
+  | { type: 'setDirection'; direction: 'forward' | 'reverse' }
   /** Speed level from 0 (stopped) to MAX_SPEED_LEVEL (fast); any value in between (continuous). */
   | { type: 'setSpeed'; level: number }
   /** Change the speed level by a small step, or a larger one when `big`. Clamped. */
   | { type: 'nudgeSpeed'; direction: 1 | -1; big: boolean }
+  /** Change the speed level by `levels` (negative slows it down). Clamped. The mouse wheel uses it. */
+  | { type: 'adjustSpeed'; levels: number }
   /** How many lines the Output shows (changes with font size, never with speed). */
   | { type: 'setViewport'; lines: number }
   /**
@@ -55,6 +62,8 @@ export type Command =
   | { type: 'setRing'; deflection: number }
   /** Reposition by a number of lines (mouse and trackpad scrolling); negative goes back. */
   | { type: 'scrollBy'; lines: number }
+  /** Go to a fraction (0 to 1) of the way through the Script; the Run mode scrollbar uses it. */
+  | { type: 'setProgress'; progress: number }
   | { type: 'jumpBack' }
   | { type: 'jumpForward' }
   | { type: 'returnToPlayStart' }

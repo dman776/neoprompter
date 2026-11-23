@@ -38,6 +38,7 @@ export function RunMode({
             state={state}
             dispatch={bridge.dispatch}
             outputShowing={state.outputOn && !outputBlocked}
+            scrollbar
           />
         </div>
         <Transport

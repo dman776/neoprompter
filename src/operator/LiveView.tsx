@@ -9,10 +9,12 @@ import {
   outputState,
   READING_LINE_MAX_Y,
   READING_LINE_MIN_Y,
+  SPEED_NUDGE_STEP,
   type Command,
   type CoreState,
 } from '../core';
 import { createOutputRenderer } from '../output/renderer';
+import { ScriptScrollbar } from './ScriptScrollbar';
 import { STAGE_HEIGHT, STAGE_WIDTH } from '../output/stage';
 
 interface LiveViewProps {
@@ -25,13 +27,21 @@ interface LiveViewProps {
   outputShowing: boolean;
   /** Show the "Output on or off" badge (the mini Live view leaves it out). Default true. */
   badge?: boolean;
+  /** Show a scrollbar down the right edge, to drag through the Script (Run mode). Default false. */
+  scrollbar?: boolean;
 }
 
 /**
  * Exactly what the Talent sees: the Output's own renderer, drawn at a fixed stage size and scaled
  * to fit. A badge says whether the Output is on.
  */
-export function LiveView({ state, dispatch, outputShowing, badge = true }: LiveViewProps) {
+export function LiveView({
+  state,
+  dispatch,
+  outputShowing,
+  badge = true,
+  scrollbar = false,
+}: LiveViewProps) {
   const fit = useRef<HTMLDivElement>(null);
   const surface = useRef<HTMLDivElement>(null);
   const text = useRef<HTMLDivElement>(null);
@@ -107,7 +117,7 @@ export function LiveView({ state, dispatch, outputShowing, badge = true }: LiveV
     moveLine(state.appearance.readingLineY + direction * step);
   };
 
-  // Scrolling the Script by hand: the mouse wheel and dragging the text with the pointer. Screen
+  // Scrolling the Script by hand: dragging the text with the pointer, and the mouse wheel in Edit mode (in Run mode the wheel sets the speed). Screen
   // px become visual lines through the Live view's scale and the Output's line height.
   const scaleRef = useRef(scale);
   scaleRef.current = scale;
@@ -171,13 +181,40 @@ export function LiveView({ state, dispatch, outputShowing, badge = true }: LiveV
       flushHand();
     });
   };
-  const endHandDrag = () => {
+  const endHandDrag = (event: ReactPointerEvent) => {
     const d = handDrag.current;
     if (!d) return;
     flushHand();
     handDrag.current = null;
     setHandling(false);
-    if (d.moved && d.wasPlaying) dispatch({ type: 'play', direction: d.wasDirection });
+    if (d.moved) {
+      if (d.wasPlaying) dispatch({ type: 'play', direction: d.wasDirection });
+      return;
+    }
+    // A plain left click in Run mode toggles stop and play. Unlocked, a double-click opens a live
+    // fix instead, so a click does nothing there.
+    const now = latest.current;
+    if (event.type === 'pointerup' && now.mode === 'run' && !now.unlocked) {
+      dispatch(now.playing ? { type: 'pause' } : { type: 'play', direction: now.direction });
+    }
+  };
+
+  // The middle button (a wheel click) toggles the direction: a playing Script turns round, like
+  // Shift+Space, and a stopped one is set so the next click plays that way. Run mode only. The
+  // press itself is cancelled so Windows does not start its middle-click autoscroll.
+  const isOwnControl = (target: EventTarget) =>
+    (target as HTMLElement).closest('.live-scrollbar, .live-line, .live-fix') !== null;
+  const noAutoscroll = (event: ReactMouseEvent) => {
+    if (event.button === 1) event.preventDefault();
+  };
+  const turnRound = (event: ReactMouseEvent) => {
+    const now = latest.current;
+    if (event.button !== 1 || now.mode !== 'run' || isOwnControl(event.target)) return;
+    event.preventDefault();
+    dispatch({
+      type: 'setDirection',
+      direction: now.direction === 'reverse' ? 'forward' : 'reverse',
+    });
   };
 
   useEffect(() => {
@@ -192,6 +229,13 @@ export function LiveView({ state, dispatch, outputShowing, badge = true }: LiveV
           : event.deltaMode === 2
             ? event.deltaY * box.clientHeight
             : event.deltaY;
+      // Run mode: the wheel sets the speed (down is faster), one notch (100 px, or 3 lines) is one
+      // nudge step, and a trackpad's small deltas add up. Edit mode's mini Live view scrolls.
+      if (latest.current.mode === 'run') {
+        const notches = event.deltaMode === 1 ? event.deltaY / 3 : px / 100;
+        dispatch({ type: 'adjustSpeed', levels: notches * SPEED_NUDGE_STEP });
+        return;
+      }
       dispatch({ type: 'scrollBy', lines: px * linesPerPx() });
     };
     box.addEventListener('wheel', onWheel, { passive: false });
@@ -268,6 +312,8 @@ export function LiveView({ state, dispatch, outputShowing, badge = true }: LiveV
         data-handling={handling ? 'true' : undefined}
         ref={view}
         onDoubleClick={startFix}
+        onMouseDown={noAutoscroll}
+        onAuxClick={turnRound}
         onPointerDown={startHandDrag}
         onPointerMove={moveHandDrag}
         onPointerUp={endHandDrag}
@@ -323,6 +369,7 @@ export function LiveView({ state, dispatch, outputShowing, badge = true }: LiveV
             <small>Enter updates the Output now. Esc cancels.</small>
           </div>
         )}
+        {scrollbar && <ScriptScrollbar state={state} dispatch={dispatch} />}
         {badge && (
           <span className="live-badge" data-testid="live-badge">
             {state.outputOn ? 'Output on' : 'Output off'}

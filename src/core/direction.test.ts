@@ -82,6 +82,35 @@ describe('playing in reverse', () => {
     expect(core.getState().position).toBeCloseTo(mid);
   });
 
+  it('sets the way a stopped Script will play, and says so before it starts', () => {
+    const { clock, core } = setup();
+    core.dispatch({ type: 'scrollBy', lines: 40 });
+    const before = core.getState().position;
+    core.dispatch({ type: 'setDirection', direction: 'reverse' });
+    expect(core.getState()).toMatchObject({ playing: false, direction: 'reverse' });
+    core.dispatch({ type: 'play', direction: 'reverse' });
+    clock.advance(1000);
+    expect(core.getState().position).toBeCloseTo(before - 2);
+    core.dispatch({ type: 'pause' });
+    core.dispatch({ type: 'setDirection', direction: 'reverse' });
+    core.dispatch({ type: 'setDirection', direction: 'forward' });
+    expect(core.getState().direction).toBe('forward');
+  });
+
+  it('turns a playing Script round with setDirection, but not past an end', () => {
+    const { clock, core } = setup();
+    core.dispatch({ type: 'scrollBy', lines: 40 });
+    core.dispatch({ type: 'play' });
+    core.dispatch({ type: 'setDirection', direction: 'reverse' });
+    expect(core.getState()).toMatchObject({ playing: true, direction: 'reverse' });
+    clock.advance(60_000);
+    expect(core.getState()).toMatchObject({ playing: false, direction: 'forward' });
+    core.dispatch({ type: 'play' });
+    core.dispatch({ type: 'setDirection', direction: 'reverse' });
+    // At the very start there is nowhere to go back to, so it stops and is forward.
+    expect(core.getState()).toMatchObject({ playing: false, direction: 'forward' });
+  });
+
   it('is forward again after a pause, so Space always means forward', () => {
     const { core } = setup();
     core.dispatch({ type: 'scrollBy', lines: 40 });

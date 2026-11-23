@@ -154,7 +154,10 @@ export function createCore(options: CoreOptions = {}): Core {
   let position = minPosition;
   let playStart = minPosition;
   let playing = false;
-  /** 1 forward, -1 reverse; only meaningful while playing. */
+  /**
+   * 1 forward, -1 reverse. While stopped it is the way the next click-to-play goes (`setDirection`);
+   * pausing, reaching an end, a restart and loading a Script all put it back to forward.
+   */
   let direction: 1 | -1 = 1;
   let ring = 0;
   let lastTick = clock.now();
@@ -284,6 +287,7 @@ export function createCore(options: CoreOptions = {}): Core {
     position = minPosition;
     playStart = minPosition;
     playing = false;
+    direction = 1;
   }
 
   const listeners = new Set<(state: CoreState) => void>();
@@ -298,6 +302,7 @@ export function createCore(options: CoreOptions = {}): Core {
       // Playing stops at the end going forward, and at the start going back.
       if (playing && (direction > 0 ? position >= maxPosition() : position <= minPosition)) {
         playing = false;
+        direction = 1;
       }
     }
     lastTick = now;
@@ -316,7 +321,7 @@ export function createCore(options: CoreOptions = {}): Core {
       speed: speedLevel * LINES_PER_SECOND_PER_LEVEL,
       speedLevel,
       playing,
-      direction: playing && direction < 0 ? 'reverse' : 'forward',
+      direction: direction < 0 ? 'reverse' : 'forward',
       ringDeflection: ring,
       viewportLines,
       leadIn: LEAD_IN_LINES,
@@ -353,7 +358,19 @@ export function createCore(options: CoreOptions = {}): Core {
         }
         case 'pause':
           playing = false;
+          direction = 1;
           break;
+        case 'setDirection': {
+          const next = command.direction === 'reverse' ? -1 : 1;
+          if (!playing) {
+            direction = next;
+            break;
+          }
+          // Playing: turn round without stopping, unless there is nowhere to go that way.
+          playing = next > 0 ? position < maxPosition() : position > minPosition;
+          direction = playing ? next : 1;
+          break;
+        }
         case 'setSpeed':
           speedLevel = clampLevel(command.level);
           break;
@@ -362,6 +379,10 @@ export function createCore(options: CoreOptions = {}): Core {
             speedLevel +
               command.direction * (command.big ? SPEED_NUDGE_BIG_STEP : SPEED_NUDGE_STEP),
           );
+          break;
+        case 'adjustSpeed':
+          if (!Number.isFinite(command.levels)) return;
+          speedLevel = clampLevel(speedLevel + command.levels);
           break;
         case 'setViewport':
           viewportLines = Math.max(1, Math.round(command.lines));
@@ -384,6 +405,13 @@ export function createCore(options: CoreOptions = {}): Core {
           break;
         case 'scrollBy':
           position = clampPosition(position + command.lines);
+          break;
+        case 'setProgress':
+          if (!Number.isFinite(command.progress)) return;
+          position = clampPosition(
+            minPosition +
+              Math.min(1, Math.max(0, command.progress)) * (maxPosition() - minPosition),
+          );
           break;
         case 'jumpBack':
           position = clampPosition(position - (viewportLines - 1));

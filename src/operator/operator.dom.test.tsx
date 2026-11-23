@@ -632,18 +632,37 @@ describe('Run mode: scrolling the Live view with the mouse', () => {
       await new Promise((r) => setTimeout(r, 30));
     });
 
-  it('moves the Script forward when the wheel rolls down, and back when it rolls up', async () => {
-    const { dispatched } = await runMode();
+  const speedChange = (dispatched: { type: string }[]) =>
+    (dispatched.filter((c) => c.type === 'adjustSpeed') as unknown as { levels: number }[]).reduce(
+      (sum, c) => sum + c.levels,
+      0,
+    );
+
+  it('sets the speed with the wheel in Run mode: rolling down is faster, up is slower', async () => {
+    const { core, dispatched } = await runMode();
+    const before = core.getState().speedLevel;
     await wheel(100);
-    expect(total(dispatched)).toBeCloseTo(100 / PX_PER_LINE, 3);
-    await wheel(-100);
-    expect(total(dispatched)).toBeCloseTo(0, 3);
+    expect(speedChange(dispatched)).toBeCloseTo(0.1, 5);
+    expect(core.getState().speedLevel).toBeCloseTo(before + 0.1, 5);
+    await wheel(-200);
+    expect(core.getState().speedLevel).toBeCloseTo(before - 0.1, 5);
+    expect(scrolls(dispatched)).toHaveLength(0);
   });
 
-  it('treats a wheel that counts in lines as lines, not pixels', async () => {
+  it('counts a notch the same whether the wheel reports pixels or lines, and adds up small deltas', async () => {
     const { dispatched } = await runMode();
     await wheel(3, 1);
-    expect(total(dispatched)).toBeCloseTo((3 * 16) / PX_PER_LINE, 3);
+    expect(speedChange(dispatched)).toBeCloseTo(0.1, 5);
+    await wheel(10);
+    await wheel(10);
+    expect(speedChange(dispatched)).toBeCloseTo(0.12, 5);
+  });
+
+  it('still scrolls the Script with the wheel over the mini Live view in Edit mode', async () => {
+    const { dispatched } = await mount();
+    await wheel(100);
+    expect(total(dispatched)).toBeCloseTo(100 / PX_PER_LINE, 3);
+    expect(speedChange(dispatched)).toBe(0);
   });
 
   it('cancels the wheel so the page itself does not scroll', async () => {
@@ -651,6 +670,84 @@ describe('Run mode: scrolling the Live view with the mouse', () => {
     const event = new WheelEvent('wheel', { deltaY: 50, bubbles: true, cancelable: true });
     await act(async () => void live().dispatchEvent(event));
     expect(event.defaultPrevented).toBe(true);
+  });
+
+  describe('scrollbar', () => {
+    // A Script much longer than a Screen, so there is something to scroll through.
+    const longRun = async () => {
+      const m = await mount(
+        shownView,
+        apiView,
+        Array.from({ length: 100 }, (_, n) => `line ${n}`),
+      );
+      await act(async () => m.core.dispatch({ type: 'setMode', mode: 'run' }));
+      return m;
+    };
+    const bar = () => host.querySelector('[data-testid="script-scrollbar"]') as HTMLElement;
+    // A 200 px tall track at the top of the page, so a pointer's y is a distance down the track.
+    const sizeTrack = () =>
+      (bar().getBoundingClientRect = () =>
+        ({
+          top: 0,
+          bottom: 200,
+          height: 200,
+          left: 0,
+          right: 16,
+          width: 16,
+          x: 0,
+          y: 0,
+        }) as DOMRect);
+    const press = (type: string, clientY: number) =>
+      act(async () => {
+        bar().dispatchEvent(new MouseEvent(type, { bubbles: true, clientY, button: 0 }));
+      });
+
+    it('is in Run mode only', async () => {
+      const { core } = await runMode();
+      expect(bar()).not.toBeNull();
+      await act(async () => core.dispatch({ type: 'setMode', mode: 'edit' }));
+      expect(bar()).toBeNull();
+    });
+
+    it('follows the reading position', async () => {
+      const { core } = await longRun();
+      await act(async () => core.dispatch({ type: 'setProgress', progress: 0.5 }));
+      expect(bar().getAttribute('aria-valuenow')).toBe('50');
+    });
+
+    it('drags the Script through its length, and a press on the track goes there', async () => {
+      const { core, dispatched } = await longRun();
+      sizeTrack();
+      await press('pointerdown', 100);
+      const middle = core.getState().progress;
+      expect(middle).toBeGreaterThan(0.3);
+      expect(middle).toBeLessThan(0.7);
+      await press('pointermove', 200);
+      expect(core.getState().progress).toBe(1);
+      await press('pointermove', 0);
+      expect(core.getState().progress).toBe(0);
+      await press('pointerup', 0);
+      expect(scrolls(dispatched)).toHaveLength(0);
+    });
+
+    it('holds a playing Script still while dragged and carries on when released', async () => {
+      const { core } = await longRun();
+      sizeTrack();
+      await act(async () => core.dispatch({ type: 'play' }));
+      await press('pointerdown', 100);
+      expect(core.getState().playing).toBe(false);
+      await press('pointerup', 100);
+      expect(core.getState().playing).toBe(true);
+    });
+
+    it('does not also drag the text behind it', async () => {
+      const { dispatched } = await longRun();
+      sizeTrack();
+      await press('pointerdown', 100);
+      await press('pointermove', 40);
+      await press('pointerup', 40);
+      expect(scrolls(dispatched)).toHaveLength(0);
+    });
   });
 
   it('drags the text with the pointer: dragging up moves forward, down moves back', async () => {
@@ -671,6 +768,176 @@ describe('Run mode: scrolling the Live view with the mouse', () => {
     await pointer('pointermove', 201);
     await pointer('pointerup', 201);
     expect(scrolls(dispatched)).toHaveLength(0);
+  });
+
+  describe('a left click toggles stop and play', () => {
+    // A Script much longer than a Screen, so Play does not stop at once at the end.
+    const longRun = async () => {
+      const m = await mount(
+        shownView,
+        apiView,
+        Array.from({ length: 100 }, (_, n) => `line ${n}`),
+      );
+      await act(async () => m.core.dispatch({ type: 'setMode', mode: 'run' }));
+      return m;
+    };
+    const click = async () => {
+      await pointer('pointerdown', 200);
+      await pointer('pointerup', 200);
+    };
+
+    it('plays a stopped Script, then stops it on the next click', async () => {
+      const { core } = await longRun();
+      expect(core.getState().playing).toBe(false);
+      await click();
+      expect(core.getState().playing).toBe(true);
+      await click();
+      expect(core.getState().playing).toBe(false);
+    });
+
+    it('stops a Script that is playing in reverse, and plays forward after', async () => {
+      const { core } = await longRun();
+      // Reverse play stops at the start, so be part-way through first.
+      await act(async () => core.dispatch({ type: 'scrollBy', lines: 50 }));
+      await act(async () => core.dispatch({ type: 'play', direction: 'reverse' }));
+      expect(core.getState().playing).toBe(true);
+      await click();
+      expect(core.getState().playing).toBe(false);
+      await click();
+      expect(core.getState().playing).toBe(true);
+      expect(core.getState().direction).toBe('forward');
+    });
+
+    it('does not toggle when the pointer drags, or when it is cancelled', async () => {
+      const { core } = await longRun();
+      await pointer('pointerdown', 200);
+      await pointer('pointermove', 260);
+      await pointer('pointerup', 260);
+      expect(core.getState().playing).toBe(false);
+      await pointer('pointerdown', 200);
+      await pointer('pointercancel', 200);
+      expect(core.getState().playing).toBe(false);
+    });
+
+    it('does not toggle with another button, while the Script is unlocked, or in Edit mode', async () => {
+      const { core } = await longRun();
+      await act(async () => {
+        live().dispatchEvent(
+          new MouseEvent('pointerdown', { bubbles: true, clientY: 200, button: 2 }),
+        );
+        live().dispatchEvent(
+          new MouseEvent('pointerup', { bubbles: true, clientY: 200, button: 2 }),
+        );
+      });
+      expect(core.getState().playing).toBe(false);
+      await act(async () => core.dispatch({ type: 'setUnlocked', unlocked: true }));
+      await click();
+      expect(core.getState().playing).toBe(false);
+      await act(async () => core.dispatch({ type: 'setUnlocked', unlocked: false }));
+      await act(async () => core.dispatch({ type: 'setMode', mode: 'edit' }));
+      const mini = host.querySelector('[data-testid="live-view"]') as HTMLElement;
+      await act(async () => {
+        mini.dispatchEvent(
+          new MouseEvent('pointerdown', { bubbles: true, clientY: 200, button: 0 }),
+        );
+        mini.dispatchEvent(new MouseEvent('pointerup', { bubbles: true, clientY: 200, button: 0 }));
+      });
+      expect(core.getState().playing).toBe(false);
+    });
+
+    it('does not toggle when the scrollbar or the Reading line is pressed', async () => {
+      const { core } = await longRun();
+      const bar = host.querySelector('[data-testid="script-scrollbar"]') as HTMLElement;
+      const line = host.querySelector('[data-live="reading-line"]') as HTMLElement;
+      for (const el of [bar, line]) {
+        await act(async () => {
+          el.dispatchEvent(
+            new MouseEvent('pointerdown', { bubbles: true, clientY: 100, button: 0 }),
+          );
+          el.dispatchEvent(new MouseEvent('pointerup', { bubbles: true, clientY: 100, button: 0 }));
+        });
+      }
+      expect(core.getState().playing).toBe(false);
+    });
+  });
+
+  describe('a middle click toggles the direction', () => {
+    const middle = (el: Element = live()) =>
+      act(async () => {
+        el.dispatchEvent(
+          new MouseEvent('mousedown', { bubbles: true, cancelable: true, button: 1 }),
+        );
+        el.dispatchEvent(
+          new MouseEvent('auxclick', { bubbles: true, cancelable: true, button: 1 }),
+        );
+      });
+    const longRun = async () => {
+      const m = await mount(
+        shownView,
+        apiView,
+        Array.from({ length: 100 }, (_, n) => `line ${n}`),
+      );
+      await act(async () => m.core.dispatch({ type: 'setMode', mode: 'run' }));
+      await act(async () => m.core.dispatch({ type: 'scrollBy', lines: 50 }));
+      return m;
+    };
+
+    it('turns a Script that is playing forward round, and forward again on the next click', async () => {
+      const { core } = await longRun();
+      await act(async () => core.dispatch({ type: 'play' }));
+      await middle();
+      expect(core.getState()).toMatchObject({ playing: true, direction: 'reverse' });
+      await middle();
+      expect(core.getState()).toMatchObject({ playing: true, direction: 'forward' });
+    });
+
+    it('sets the direction of a stopped Script, so the next click plays that way', async () => {
+      const { core } = await longRun();
+      await middle();
+      expect(core.getState()).toMatchObject({ playing: false, direction: 'reverse' });
+      expect(
+        host.querySelector('[data-testid="direction"] [data-active="true"]')!.textContent,
+      ).toBe('BACK');
+      await act(async () => {
+        live().dispatchEvent(
+          new MouseEvent('pointerdown', { bubbles: true, clientY: 200, button: 0 }),
+        );
+        live().dispatchEvent(
+          new MouseEvent('pointerup', { bubbles: true, clientY: 200, button: 0 }),
+        );
+      });
+      expect(core.getState()).toMatchObject({ playing: true, direction: 'reverse' });
+      await middle();
+      expect(core.getState()).toMatchObject({ playing: true, direction: 'forward' });
+    });
+
+    it('toggles a stopped Script back to forward, and a pause puts it forward', async () => {
+      const { core } = await longRun();
+      await middle();
+      await middle();
+      expect(core.getState().direction).toBe('forward');
+      await middle();
+      await act(async () => core.dispatch({ type: 'pause' }));
+      expect(core.getState().direction).toBe('forward');
+    });
+
+    it('does not start the browser autoscroll', async () => {
+      await longRun();
+      const down = new MouseEvent('mousedown', { bubbles: true, cancelable: true, button: 1 });
+      await act(async () => void live().dispatchEvent(down));
+      expect(down.defaultPrevented).toBe(true);
+    });
+
+    it('is left alone by the scrollbar, the Reading line and Edit mode', async () => {
+      const { core } = await longRun();
+      await act(async () => core.dispatch({ type: 'play' }));
+      await middle(host.querySelector('[data-testid="script-scrollbar"]')!);
+      await middle(host.querySelector('[data-live="reading-line"]')!);
+      expect(core.getState().direction).toBe('forward');
+      await act(async () => core.dispatch({ type: 'setMode', mode: 'edit' }));
+      await middle(host.querySelector('[data-testid="live-view"]')!);
+      expect(core.getState().direction).toBe('forward');
+    });
   });
 
   it('holds a playing Script still while it is dragged, then lets it carry on', async () => {
