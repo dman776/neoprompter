@@ -120,6 +120,7 @@ export function createCore(options: CoreOptions = {}): Core {
   /** The Script is locked against editing in Run mode (ADR 0003); a live fix has its own rule. */
   const locked = () => mode === 'run';
   let theme: Theme = 'dark';
+  let rightColumnCollapsed = false;
   let openInMode: OpenInMode = 'last';
   let notificationDurationMs = DEFAULT_NOTIFICATION_MS;
   const clampDuration = (ms: number) =>
@@ -153,6 +154,7 @@ export function createCore(options: CoreOptions = {}): Core {
     openInMode = restored.openInMode;
     mode = openInMode;
   }
+  if (restored?.rightColumnCollapsed === true) rightColumnCollapsed = true;
   if (restored?.notificationDurationMs !== undefined) {
     notificationDurationMs = clampDuration(restored.notificationDurationMs);
   }
@@ -175,6 +177,7 @@ export function createCore(options: CoreOptions = {}): Core {
       activePreset,
       mode,
       theme,
+      rightColumnCollapsed,
       openInMode,
       notificationDurationMs,
       recentColors,
@@ -252,6 +255,7 @@ export function createCore(options: CoreOptions = {}): Core {
       mode,
       unlocked,
       theme,
+      rightColumnCollapsed,
       openInMode,
       notifications: notifications.map(({ id, text }) => ({ id, text })).reverse(),
       notificationDurationMs,
@@ -426,6 +430,10 @@ export function createCore(options: CoreOptions = {}): Core {
         case 'setTheme':
           if (command.theme !== 'dark' && command.theme !== 'light') return;
           theme = command.theme;
+          break;
+        case 'setRightColumnCollapsed':
+          if (typeof command.collapsed !== 'boolean') return;
+          rightColumnCollapsed = command.collapsed;
           break;
         case 'setOpenInMode':
           if (!['last', 'edit', 'run'].includes(command.openIn)) return;

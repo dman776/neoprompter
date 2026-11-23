@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Command, CoreState } from '../core';
 import type { OutputBlocked, OutputWindowView } from '../output-window';
 import type { ApiView } from '../api';
+import type { UiAction } from '../window-host';
 
 /** The slice of `window.neoprompter` the Operator view uses; a test passes a fake. */
 export interface CoreBridge {
@@ -10,6 +11,8 @@ export interface CoreBridge {
   onState(listener: (state: CoreState) => void): void;
   getOutputView(): Promise<OutputWindowView>;
   getApiView(): Promise<ApiView>;
+  /** Native menu items only the Operator view can handle. Absent in windows that have no menu. */
+  onMenuAction?(listener: (action: UiAction) => void): void;
   chooseOutputMonitor(id: string): Promise<OutputWindowView>;
   setWindowedOutput(windowed: boolean): Promise<OutputWindowView>;
 }
@@ -78,4 +81,13 @@ export function useOutputBlocked(bridge: CoreBridge, outputOn: boolean): OutputB
     };
   }, [bridge, outputOn]);
   return blocked;
+}
+
+/** Calls `handle` for each native menu item that is the Operator view's to handle. */
+export function useMenuActions(bridge: CoreBridge, handle: (action: UiAction) => void): void {
+  const latest = useRef(handle);
+  latest.current = handle;
+  useEffect(() => {
+    bridge.onMenuAction?.((action) => latest.current(action));
+  }, [bridge]);
 }

@@ -14,6 +14,8 @@ export interface Session {
   theme?: Theme;
   /** Optional so older session files still load (they open in the mode last used). */
   openInMode?: OpenInMode;
+  /** Optional so older session files still load (they open expanded). */
+  rightColumnCollapsed?: boolean;
   /** Optional so older session files still load. */
   notificationDurationMs?: number;
   /** Optional so older session files still load (they get the seed colors). */

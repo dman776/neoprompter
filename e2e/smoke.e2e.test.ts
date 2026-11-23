@@ -252,6 +252,45 @@ describe('the running app', () => {
     await operator.getByRole('radio', { name: 'Edit' }).click();
   });
 
+  it('collapses the right column and switches the theme, and the Live view fills the width', async () => {
+    const liveWidth = () =>
+      operator.evaluate(
+        // The box the Live view fits itself into (the picture is also limited by height).
+        () => document.querySelector<HTMLElement>('.live-fit')!.offsetWidth,
+      );
+    const theme = () => operator.evaluate(() => document.documentElement.dataset.theme);
+    const sideCount = () => operator.locator('.run-side').count();
+    await operator.getByRole('radio', { name: 'Run' }).click();
+    await expect.poll(sideCount).toBe(1);
+    const open = await liveWidth();
+
+    await operator.getByTestId('toggle-theme').click();
+    await expect.poll(theme).toBe('light');
+    await expect.poll(async () => (await state()).theme).toBe('light');
+    await new Promise((r) => setTimeout(r, 300)); // let the Live view rescale before the picture
+    await operator.screenshot({ path: join(artifacts, 'operator-run-light.png') });
+    await operator.getByTestId('toggle-column').click();
+    await expect.poll(sideCount).toBe(0);
+    await expect.poll(liveWidth).toBeGreaterThan(open);
+    await operator.screenshot({ path: join(artifacts, 'operator-run-light-collapsed.png') });
+
+    // The collapsed state survives a mode change.
+    await operator.getByRole('radio', { name: 'Edit' }).click();
+    await expect.poll(() => operator.locator('main').getAttribute('data-mode')).toBe('edit');
+    expect((await state()).rightColumnCollapsed).toBe(true);
+    await operator.getByRole('radio', { name: 'Run' }).click();
+    await expect.poll(sideCount).toBe(0);
+
+    await operator.getByTestId('toggle-theme').click();
+    await expect.poll(theme).toBe('dark');
+    await operator.screenshot({ path: join(artifacts, 'operator-run-collapsed.png') });
+    await operator.getByTestId('toggle-column').click();
+    await expect.poll(sideCount).toBe(1);
+    await new Promise((r) => setTimeout(r, 300));
+    await operator.screenshot({ path: join(artifacts, 'operator-run-dark.png') });
+    await operator.getByRole('radio', { name: 'Edit' }).click();
+  });
+
   it('blocks typing in Run mode, and unlocks for a one-paragraph live fix', async () => {
     await operator.getByRole('radio', { name: 'Run' }).click();
     await expect.poll(() => operator.locator('main').getAttribute('data-mode')).toBe('run');

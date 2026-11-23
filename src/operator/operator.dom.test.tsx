@@ -9,6 +9,7 @@ import { App } from './App';
 import type { CoreBridge } from './useCoreState';
 import type { OutputWindowView } from '../output-window';
 import type { ApiView } from '../api';
+import type { UiAction } from '../window-host';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -44,6 +45,8 @@ async function mount(
   const core = createCore({ clock, script: { name: 'Sunday', lines } });
   const dispatched: Command[] = [];
   const listeners: Array<(s: ReturnType<typeof core.getState>) => void> = [];
+  const menuListeners: Array<(action: UiAction) => void> = [];
+  const menu = (action: UiAction) => act(() => menuListeners.forEach((l) => l(action)));
   core.subscribe((s) => listeners.forEach((l) => act(() => l(s))));
   const bridge: CoreBridge = {
     getState: async () => core.getState(),
@@ -54,12 +57,13 @@ async function mount(
     onState: (l) => listeners.push(l),
     getOutputView: async () => outputView,
     getApiView: async () => api,
+    onMenuAction: (l) => menuListeners.push(l),
     chooseOutputMonitor: async () => outputView,
     setWindowedOutput: async () => outputView,
   };
   root = createRoot(host);
   await act(async () => root.render(<App bridge={bridge} />));
-  return { core, clock, dispatched };
+  return { core, clock, dispatched, menu };
 }
 
 const button = (name: string) =>
@@ -125,6 +129,79 @@ describe('the Operator view shell', () => {
   it('uses the dark theme', async () => {
     await mount();
     expect(document.documentElement.getAttribute('data-theme') ?? 'dark').toBe('dark');
+  });
+});
+
+describe('the right-hand column', () => {
+  const side = () => host.querySelector('.run-side');
+  const toggle = () =>
+    host.querySelector<HTMLButtonElement>('header [data-testid="toggle-column"]')!;
+
+  it('collapses and restores from the header button in Run mode', async () => {
+    const { core, dispatched } = await mount();
+    await act(async () => core.dispatch({ type: 'setMode', mode: 'run' }));
+    expect(side()).not.toBeNull();
+    expect(toggle().getAttribute('aria-pressed')).toBe('false');
+    await act(async () => toggle().click());
+    expect(dispatched.at(-1)).toEqual({ type: 'setRightColumnCollapsed', collapsed: true });
+    expect(side()).toBeNull();
+    expect(host.querySelector('.run')!.getAttribute('data-collapsed')).toBe('true');
+    expect(toggle().getAttribute('aria-pressed')).toBe('true');
+    expect(toggle().getAttribute('aria-label')).toBe('Show right column');
+    await act(async () => toggle().click());
+    expect(side()).not.toBeNull();
+  });
+
+  it('collapses from the View menu item', async () => {
+    const { core, menu } = await mount();
+    await act(async () => core.dispatch({ type: 'setMode', mode: 'run' }));
+    await menu('toggle-right-column');
+    expect(core.getState().rightColumnCollapsed).toBe(true);
+    expect(side()).toBeNull();
+    await menu('toggle-right-column');
+    expect(core.getState().rightColumnCollapsed).toBe(false);
+    expect(side()).not.toBeNull();
+  });
+
+  it('stays collapsed when the mode changes, and the button still shows it', async () => {
+    const { core } = await mount();
+    await act(async () => core.dispatch({ type: 'setRightColumnCollapsed', collapsed: true }));
+    await act(async () => core.dispatch({ type: 'setMode', mode: 'run' }));
+    expect(side()).toBeNull();
+    await act(async () => core.dispatch({ type: 'setMode', mode: 'edit' }));
+    expect(toggle().getAttribute('aria-pressed')).toBe('true');
+    await act(async () => core.dispatch({ type: 'setMode', mode: 'run' }));
+    expect(side()).toBeNull();
+  });
+});
+
+describe('the theme', () => {
+  const theme = () => document.documentElement.getAttribute('data-theme');
+  const toggle = () =>
+    host.querySelector<HTMLButtonElement>('header [data-testid="toggle-theme"]')!;
+
+  it('switches to light and back from the header button', async () => {
+    const { core, dispatched } = await mount();
+    expect(theme()).toBe('dark');
+    await act(async () => toggle().click());
+    expect(dispatched.at(-1)).toEqual({ type: 'setTheme', theme: 'light' });
+    expect(core.getState().theme).toBe('light');
+    expect(theme()).toBe('light');
+    await act(async () => toggle().click());
+    expect(theme()).toBe('dark');
+  });
+
+  it('switches from the View menu item', async () => {
+    const { core, menu } = await mount();
+    await menu('toggle-theme');
+    expect(core.getState().theme).toBe('light');
+    expect(theme()).toBe('light');
+  });
+
+  it('follows a theme that came from somewhere else', async () => {
+    const { core } = await mount();
+    await act(async () => core.dispatch({ type: 'setTheme', theme: 'light' }));
+    expect(theme()).toBe('light');
   });
 });
 

@@ -86,6 +86,12 @@ export function VirtualShuttle({ bridge }: { bridge: ShuttleBridge }) {
     };
   }, [bridge]);
 
+  // Shows the theme the Operator chose.
+  const theme = state?.theme;
+  useEffect(() => {
+    if (theme) document.documentElement.dataset.theme = theme;
+  }, [theme]);
+
   const send = (event: DeviceEvent) => bridge.sendDeviceEvent(event);
 
   const ringDown = (e: ReactPointerEvent<HTMLDivElement>) => {
