@@ -1,8 +1,8 @@
-import type { Mode } from '../core';
+import type { Mode, Theme } from '../core';
 import type { OutputBlocked } from '../output-window';
 import { Segment } from './ui/Segment';
 import { Switch } from './ui/Switch';
-import { EditIcon, RunIcon } from './ui/icons';
+import { EditIcon, RunIcon, SidebarIcon, ThemeIcon } from './ui/icons';
 
 interface HeaderProps {
   scriptName: string;
@@ -12,6 +12,11 @@ interface HeaderProps {
   onOutputChange: (on: boolean) => void;
   /** Set while the Output is On but cannot show. */
   outputBlocked: OutputBlocked | null;
+  /** Whether the right-hand column is collapsed (the button is lit then). */
+  columnCollapsed: boolean;
+  onToggleColumn: () => void;
+  theme: Theme;
+  onToggleTheme: () => void;
 }
 
 export const BLOCKED_TEXT: Record<OutputBlocked, string> = {
@@ -28,6 +33,10 @@ export function Header({
   outputOn,
   onOutputChange,
   outputBlocked,
+  columnCollapsed,
+  onToggleColumn,
+  theme,
+  onToggleTheme,
 }: HeaderProps) {
   return (
     <header className="shell-header">
@@ -51,6 +60,29 @@ export function Header({
             {BLOCKED_TEXT[outputBlocked]}
           </span>
         )}
+        <button
+          type="button"
+          className="header-sq"
+          data-testid="toggle-theme"
+          data-lit={theme === 'light' ? 'true' : undefined}
+          aria-label={theme === 'dark' ? 'Switch to light' : 'Switch to dark'}
+          title={theme === 'dark' ? 'Switch to light' : 'Switch to dark'}
+          onClick={onToggleTheme}
+        >
+          <ThemeIcon />
+        </button>
+        <button
+          type="button"
+          className="header-sq"
+          data-testid="toggle-column"
+          data-lit={columnCollapsed ? 'true' : undefined}
+          aria-pressed={columnCollapsed}
+          aria-label={columnCollapsed ? 'Show right column' : 'Collapse right column'}
+          title={columnCollapsed ? 'Show right column' : 'Collapse right column'}
+          onClick={onToggleColumn}
+        >
+          <SidebarIcon />
+        </button>
         <Switch checked={outputOn} onCheckedChange={onOutputChange} label="Output" />
       </div>
     </header>

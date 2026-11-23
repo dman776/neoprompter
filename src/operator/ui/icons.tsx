@@ -110,3 +110,17 @@ export const ColorIcon = () => (
     <path d="M6 16L12 4l6 12M8.2 12h7.6" />
   </svg>
 );
+
+export const SidebarIcon = () => (
+  <svg {...base}>
+    <rect x="4" y="5" width="16" height="14" rx="2" />
+    <path d="M15 5v14" />
+  </svg>
+);
+
+export const ThemeIcon = () => (
+  <svg {...base}>
+    <circle cx="12" cy="12" r="8" />
+    <path d="M12 4a8 8 0 010 16z" fill="currentColor" />
+  </svg>
+);

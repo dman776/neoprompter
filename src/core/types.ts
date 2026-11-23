@@ -91,6 +91,8 @@ export type Command =
   | { type: 'liveFix'; line: number; text: string }
   /** Choose the theme (persisted). */
   | { type: 'setTheme'; theme: Theme }
+  /** Collapse or restore the right-hand column, in both modes (persisted). */
+  | { type: 'setRightColumnCollapsed'; collapsed: boolean }
   /** Choose which mode the app opens in (persisted). */
   | { type: 'setOpenInMode'; openIn: OpenInMode }
   /**
@@ -198,6 +200,8 @@ export interface CoreState {
   /** Run mode only: whether the Script is unlocked for a live fix. Resets on every mode change. */
   unlocked: boolean;
   theme: Theme;
+  /** Whether the right-hand column is collapsed. Shared by Edit mode and Run mode. */
+  rightColumnCollapsed: boolean;
   /** Which mode the app opens in; `mode` above is the current one. */
   openInMode: OpenInMode;
   /** Visible Notifications, newest first. Operator view only; see `outputState`. */
