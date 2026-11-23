@@ -15,13 +15,15 @@ interface LiveViewProps {
    * the Live view measures it so time left and Screen jumps still work.
    */
   outputShowing: boolean;
+  /** Show the "Output on or off" badge (the mini Live view leaves it out). Default true. */
+  badge?: boolean;
 }
 
 /**
  * Exactly what the Talent sees: the Output's own renderer, drawn at a fixed stage size and scaled
  * to fit. A badge says whether the Output is on.
  */
-export function LiveView({ state, dispatch, outputShowing }: LiveViewProps) {
+export function LiveView({ state, dispatch, outputShowing, badge = true }: LiveViewProps) {
   const fit = useRef<HTMLDivElement>(null);
   const surface = useRef<HTMLDivElement>(null);
   const text = useRef<HTMLDivElement>(null);
@@ -130,9 +132,11 @@ export function LiveView({ state, dispatch, outputShowing }: LiveViewProps) {
             <small>Enter updates the Output now. Esc cancels.</small>
           </div>
         )}
-        <span className="live-badge" data-testid="live-badge">
-          {state.outputOn ? 'Output on' : 'Output off'}
-        </span>
+        {badge && (
+          <span className="live-badge" data-testid="live-badge">
+            {state.outputOn ? 'Output on' : 'Output off'}
+          </span>
+        )}
       </div>
     </div>
   );

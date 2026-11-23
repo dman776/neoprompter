@@ -18,7 +18,7 @@ import {
   type Theme,
   type Script,
 } from './types';
-import { createMemoryLibraryStorage, type LibraryStorage } from './library';
+import { createMemoryLibraryStorage, type LibraryStorage, type StoredScript } from './library';
 import { createMemoryPresetStore, type PresetStore } from './presets';
 import { defaultAppearance, type Appearance } from './types';
 import { colorLineRange, editLineText, remapPosition } from './editing';
@@ -209,12 +209,24 @@ export function createCore(options: CoreOptions = {}): Core {
       const { lines: _old, ...rest } = entry;
       const updated = {
         ...rest,
+        editedAt: clock.now(),
         text: lines.map(lineText).join('\n'),
         ...(lines.some((l) => typeof l !== 'string') && { lines }),
       };
       stored = stored.map((s) => (s.id === entry.id ? updated : s));
       storage.writeAll(stored);
     }
+  }
+
+  /** Make a library Script the loaded one: replaces the Script, back to the start, paused. */
+  function loadStored(found: StoredScript): void {
+    script = { name: found.name, lines: found.lines ?? found.text.split(/\r?\n/) };
+    extents = script.lines.map(() => 1);
+    scriptRevision++;
+    loadedScriptId = found.id;
+    position = minPosition;
+    playStart = minPosition;
+    playing = false;
   }
 
   const listeners = new Set<(state: CoreState) => void>();
@@ -246,7 +258,7 @@ export function createCore(options: CoreOptions = {}): Core {
       ringDeflection: ring,
       viewportLines,
       leadIn: LEAD_IN_LINES,
-      library: stored.map(({ id, name }) => ({ id, name })),
+      library: stored.map(({ id, name, editedAt }) => ({ id, name, editedAt: editedAt ?? null })),
       loadedScriptId,
       appearance: { ...appearance },
       presets: Object.keys(presets),
@@ -321,26 +333,50 @@ export function createCore(options: CoreOptions = {}): Core {
               id: String(nextId++),
               name: command.name,
               text: command.text,
+              editedAt: clock.now(),
               ...(command.lines && { lines: command.lines }),
             },
           ];
           storage.writeAll(stored);
           break;
+        case 'newScript': {
+          const entry = {
+            id: String(nextId++),
+            name: 'New Script',
+            text: '',
+            editedAt: clock.now(),
+          };
+          stored = [...stored, entry];
+          storage.writeAll(stored);
+          loadStored(entry);
+          break;
+        }
+        case 'duplicateScript': {
+          const original = stored.find((s) => s.id === command.id);
+          if (!original) return;
+          stored = [
+            ...stored,
+            {
+              ...original,
+              id: String(nextId++),
+              name: `${original.name} copy`,
+              editedAt: clock.now(),
+            },
+          ];
+          storage.writeAll(stored);
+          break;
+        }
         case 'loadScript': {
           const found = stored.find((s) => s.id === command.id);
           if (!found) return;
-          script = { name: found.name, lines: found.lines ?? found.text.split(/\r?\n/) };
-          extents = script.lines.map(() => 1);
-          scriptRevision++;
-          loadedScriptId = found.id;
-          position = minPosition;
-          playStart = minPosition;
-          playing = false;
+          loadStored(found);
           break;
         }
         case 'renameScript':
           if (!stored.some((s) => s.id === command.id)) return;
-          stored = stored.map((s) => (s.id === command.id ? { ...s, name: command.name } : s));
+          stored = stored.map((s) =>
+            s.id === command.id ? { ...s, name: command.name, editedAt: clock.now() } : s,
+          );
           storage.writeAll(stored);
           if (loadedScriptId === command.id) script = { ...script, name: command.name };
           break;

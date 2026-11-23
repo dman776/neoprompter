@@ -124,3 +124,41 @@ export const ThemeIcon = () => (
     <path d="M12 4a8 8 0 010 16z" fill="currentColor" />
   </svg>
 );
+
+export const PlusIcon = () => (
+  <svg {...base}>
+    <path d="M12 5v14M5 12h14" />
+  </svg>
+);
+
+export const DuplicateIcon = () => (
+  <svg {...base}>
+    <rect x="9" y="9" width="11" height="11" rx="2" />
+    <path d="M5 15V6a2 2 0 0 1 2-2h8" />
+  </svg>
+);
+
+export const RenameIcon = () => (
+  <svg {...base}>
+    <path d="M4 20h4L19 9l-4-4L4 16z" />
+  </svg>
+);
+
+export const TrashIcon = () => (
+  <svg {...base}>
+    <path d="M5 7h14M10 7V4h4v3M7 7l1 13h8l1-13" />
+  </svg>
+);
+
+export const ImportIcon = () => (
+  <svg {...base}>
+    <path d="M12 4v11M7 10l5 5 5-5M5 20h14" />
+  </svg>
+);
+
+export const ScriptIcon = () => (
+  <svg {...base}>
+    <path d="M7 3h7l4 4v14H7z" />
+    <path d="M14 3v4h4M10 12h5M10 16h5" />
+  </svg>
+);

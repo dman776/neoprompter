@@ -391,6 +391,50 @@ describe('the running app', () => {
     await dispatch({ type: 'setMode', mode: 'edit' });
   });
 
+  it('shows the mini Live view and the Script library in Edit mode', async () => {
+    const original = (await state()).script;
+    await dispatch({ type: 'setMode', mode: 'edit' });
+    await dispatch({ type: 'saveScript', name: 'Sunday service', text: 'Welcome\nPrayer' });
+    await dispatch({ type: 'saveScript', name: 'Wedding', text: 'Dearly beloved' });
+    const cards = operator.locator('[data-testid="library"] .lib-card');
+    const sunday = cards.filter({ hasText: 'Sunday service' });
+    await expect.poll(() => sunday.count()).toBe(1);
+    expect(await sunday.locator('small').textContent()).toContain('Edited');
+
+    // Loading from the library puts that Script in the editor and the mini Live view.
+    await sunday.click();
+    const mini = operator.locator('[data-testid="live-view"] [data-live="text"] > div');
+    await expect.poll(() => mini.allTextContents()).toEqual(['Welcome', 'Prayer']);
+    // The mini Live view follows typing in the editor.
+    await operator.locator('.ProseMirror p').first().click();
+    await operator.keyboard.press('End');
+    await operator.keyboard.type(' amen');
+    await expect.poll(() => mini.first().textContent()).toBe('Welcome amen');
+
+    await operator.getByTestId('toggle-theme').click();
+    await new Promise((r) => setTimeout(r, 300));
+    await operator.screenshot({ path: join(artifacts, 'operator-edit-light.png') });
+    await operator.getByTestId('toggle-theme').click();
+    await new Promise((r) => setTimeout(r, 300));
+    await operator.screenshot({ path: join(artifacts, 'operator-edit-dark.png') });
+
+    // Collapsing hides the column; the state is the one Run mode uses.
+    await operator.getByTestId('toggle-column').click();
+    await expect.poll(() => operator.locator('[data-testid="edit-side"]').count()).toBe(0);
+    expect((await state()).rightColumnCollapsed).toBe(true);
+    await operator.screenshot({ path: join(artifacts, 'operator-edit-collapsed.png') });
+    await operator.getByTestId('toggle-column').click();
+    await expect.poll(() => operator.locator('[data-testid="edit-side"]').count()).toBe(1);
+
+    // Put the Output back as the later tests expect it.
+    for (const s of (await state()).library) {
+      if (['Sunday service', 'Wedding'].includes(s.name)) {
+        await dispatch({ type: 'deleteScript', id: s.id });
+      }
+    }
+    await dispatch({ type: 'setScriptLines', lines: original.lines });
+  });
+
   describe('the Producer page with a token set', () => {
     const port = 47811;
     const TOKEN = 'e2e-token';

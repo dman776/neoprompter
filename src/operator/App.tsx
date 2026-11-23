@@ -1,8 +1,14 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Mode } from '../core';
-import { useCoreState, useMenuActions, useOutputBlocked, type CoreBridge } from './useCoreState';
+import {
+  useCoreState,
+  useMenuActions,
+  useOutputBlocked,
+  type CoreBridge,
+  type ImportOutcome,
+} from './useCoreState';
 import { Header } from './Header';
-import { ScriptEditor } from './ScriptEditor';
+import { EditMode } from './EditMode';
 import { StatusBar } from './StatusBar';
 import { Notifications } from './Notifications';
 import { Panel } from './ui/Panel';
@@ -29,9 +35,18 @@ export function App({ bridge }: { bridge: CoreBridge }) {
       bridge.dispatch({ type: 'setRightColumnCollapsed', collapsed: !s.rightColumnCollapsed });
     }
   };
+  const [importNote, setImportNote] = useState<ImportOutcome | null>(null);
+  const runImport = () => {
+    void bridge.importScript?.().then((outcome) => setImportNote(outcome));
+  };
   useMenuActions(bridge, (action) => {
     if (action === 'toggle-theme') toggleTheme();
     else if (action === 'toggle-right-column') toggleColumn();
+    else if (action === 'import') runImport();
+    // A new Script replaces the one on the Output, so it belongs to Edit mode only.
+    else if (action === 'new' && latest.current?.mode === 'edit') {
+      bridge.dispatch({ type: 'newScript' });
+    }
   });
   if (!state) return null;
   const setMode = (mode: Mode) => bridge.dispatch({ type: 'setMode', mode });
@@ -48,14 +63,27 @@ export function App({ bridge }: { bridge: CoreBridge }) {
         onToggleColumn={toggleColumn}
         theme={state.theme}
         onToggleTheme={toggleTheme}
+        onImport={state.mode === 'edit' && bridge.importScript ? runImport : undefined}
       />
+      {importNote && (
+        <div
+          className="import-note"
+          data-testid="import-note"
+          data-ok={importNote.ok ? 'true' : undefined}
+          role={importNote.ok ? 'status' : 'alert'}
+        >
+          <span>{importNote.message}</span>
+          <button type="button" onClick={() => setImportNote(null)}>
+            Dismiss
+          </button>
+        </div>
+      )}
       <main className="shell-body" data-mode={state.mode}>
         {state.mode === 'edit' ? (
-          <ScriptEditor
+          <EditMode
+            state={state}
             bridge={bridge}
-            script={state.script}
-            editable={state.mode === 'edit'}
-            recentColors={state.recentColors}
+            outputShowing={state.outputOn && outputBlocked === null}
           />
         ) : (
           <RunMode

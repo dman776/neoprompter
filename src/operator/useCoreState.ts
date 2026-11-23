@@ -5,6 +5,12 @@ import type { ApiSettings, ApiView } from '../api';
 import type { ActionId, ButtonId, ButtonMappingView } from '../input';
 import type { UiAction } from '../window-host';
 
+/** What an Import tells the Operator; `ok: false` says plainly why the file could not be imported. */
+export interface ImportOutcome {
+  ok: boolean;
+  message: string;
+}
+
 /** The slice of `window.neoprompter` the Operator view uses; a test passes a fake. */
 export interface CoreBridge {
   getState(): Promise<CoreState>;
@@ -16,6 +22,8 @@ export interface CoreBridge {
   onMenuAction?(listener: (action: UiAction) => void): void;
   chooseOutputMonitor(id: string): Promise<OutputWindowView>;
   setWindowedOutput(windowed: boolean): Promise<OutputWindowView>;
+  /** Opens a file picker and imports the chosen Word file; null when the Operator cancelled. */
+  importScript?(): Promise<ImportOutcome | null>;
 }
 
 /** What the Preferences window uses beyond the Operator view's slice: Controls and Network. */
