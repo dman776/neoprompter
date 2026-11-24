@@ -284,6 +284,13 @@ app.whenReady().then(() => {
       name: script.name,
       text: script.lines.map(lineText).join('\n'),
       lines: script.lines,
+      source: {
+        method: 'manual',
+        filePath: file,
+        fileType: path.extname(file).slice(1).toLowerCase() as 'doc' | 'docx' | 'txt' | 'pdf',
+        fileSize: bytes.length,
+        fileModifiedMs: fs.statSync(file).mtimeMs,
+      },
     });
     return { ok: true, message: `Imported "${script.name}" into the library.` };
   });
@@ -319,8 +326,13 @@ app.whenReady().then(() => {
     changes: folderChanges,
     scheduler: realScheduler,
     onResult: (result) => {
-      const outcome = describeResult(result);
-      watchedFolder.report(outcome.message);
+      watchedFolder.report(describeResult(result).message);
+      for (const name of result.imported) {
+        core.dispatch({ type: 'notify', text: `New script added: ${name}` });
+      }
+      // The Notification covers what was added; the banner is for what went wrong.
+      if (result.failed.length === 0) return;
+      const outcome = describeResult({ ...result, imported: [] });
       if (operatorReady && operatorWin && !operatorWin.isDestroyed()) {
         operatorWin.webContents.send(IPC.watchedFolderNotice, outcome);
       } else pendingNotice = outcome;

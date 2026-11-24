@@ -32,7 +32,18 @@ async function mount(importResult: ImportOutcome | null = null) {
     script: { name: 'Sample', lines: ['hello'] },
   });
   core.dispatch({ type: 'saveScript', name: 'Sunday service', text: 'one\ntwo' });
-  core.dispatch({ type: 'saveScript', name: 'Wedding', text: 'three' });
+  core.dispatch({
+    type: 'saveScript',
+    name: 'Wedding',
+    text: 'three',
+    source: {
+      method: 'watched',
+      filePath: '/Drop/imported/Wedding.pdf',
+      fileType: 'pdf',
+      fileSize: 2048,
+      fileModifiedMs: Date.UTC(2026, 10, 1, 9, 0),
+    },
+  });
   let imports = 0;
   const { bridge, dispatched, menu } = createFakeBridge(core, {
     importScript: async () => {
@@ -188,5 +199,41 @@ describe('Import', () => {
     await menu('import');
     expect(imports()).toBe(0);
     expect(host.querySelector('header [data-testid="import"]')).toBeNull();
+  });
+
+  describe('import source', () => {
+    const card = (name: string) =>
+      Array.from(library().querySelectorAll('.lib-item')).find((c) =>
+        c.textContent?.includes(name),
+      )!;
+
+    it('marks a Script as added manually or imported automatically', async () => {
+      await mount();
+      expect(card('Sunday service').querySelector('[data-source="manual"]')).not.toBeNull();
+      expect(card('Wedding').querySelector('[data-source="watched"]')).not.toBeNull();
+    });
+
+    it('opens the details with the path, type and size, without loading the Script', async () => {
+      const { dispatched } = await mount();
+      await press(card('Wedding').querySelector('button[aria-label="Script details"]'));
+      const info = card('Wedding').querySelector('[data-testid="script-info"]')!.textContent!;
+      expect(info).toContain('Automatic (Watched folder)');
+      expect(info).toContain('/Drop/imported/Wedding.pdf');
+      expect(info).toContain('pdf');
+      expect(info).toContain('2.0 KB');
+      expect(dispatched.some((c) => c.type === 'loadScript')).toBe(false);
+      await press(card('Wedding').querySelector('button[aria-label="Script details"]'));
+      expect(card('Wedding').querySelector('[data-testid="script-info"]')).toBeNull();
+    });
+
+    it('shows a Script made in the app as Manual with just its line count', async () => {
+      await mount();
+      await press(card('Sunday service').querySelector('button[aria-label="Script details"]'));
+      const info = card('Sunday service').querySelector(
+        '[data-testid="script-info"]',
+      )!.textContent!;
+      expect(info).toContain('Manual');
+      expect(info).toContain('Not recorded');
+    });
   });
 });

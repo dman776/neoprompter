@@ -174,3 +174,25 @@ export const ScriptIcon = () => (
     <path d="M14 3v4h4M10 12h5M10 16h5" />
   </svg>
 );
+
+/** Added by hand: a mouse pointer. */
+export const ManualImportIcon = () => (
+  <svg {...base}>
+    <path d="M5 3l14 7-6 2.2L10.8 18z" />
+  </svg>
+);
+
+/** Imported automatically from the Watched folder: a folder with a refresh arrow. */
+export const WatchedFolderIcon = () => (
+  <svg {...base}>
+    <path d="M3 7a1 1 0 0 1 1-1h5l2 2h8a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z" />
+    <path d="M15 13a3 3 0 1 1-1-2.2M14.2 9.5v1.8h1.8" />
+  </svg>
+);
+
+export const InfoIcon = () => (
+  <svg {...base}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M12 11v6M12 7.5v.5" />
+  </svg>
+);

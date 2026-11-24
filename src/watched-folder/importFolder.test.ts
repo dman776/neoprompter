@@ -83,6 +83,18 @@ describe('importWatchedFolder', () => {
     expect(fs.disk.has('/Drop/imported/Sunday.docx')).toBe(true);
   });
 
+  it('records where the Script came from, as the Watched folder', async () => {
+    const { core, run } = setup({ '/Drop/Sunday.docx': 'sunday' });
+    await run();
+    expect(core.getState().library[0].source).toMatchObject({
+      method: 'watched',
+      filePath: '/Drop/imported/Sunday.docx',
+      fileType: 'docx',
+      fileSize: 6,
+      fileModifiedMs: 0,
+    });
+  });
+
   it('leaves a file that fails to Import in place, with a plain message', async () => {
     const { core, fs, run } = setup({ '/Drop/Broken.doc': 'BAD', '/Drop/Good.docx': 'good' });
     const result = await run();
