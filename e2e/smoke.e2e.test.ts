@@ -560,6 +560,12 @@ describe('the running app', () => {
           problems.push('page scrolls sideways');
         return problems;
       });
+    // Put the window back as it was: the later tests (a short transport bar) need its full size.
+    const original = await app.evaluate(({ BrowserWindow }) => {
+      const win = BrowserWindow.getAllWindows().find((w) => w.getTitle().includes('Operator'))!;
+      const [width, height] = win.getSize();
+      return { width, height };
+    });
     await dispatch({ type: 'setMode', mode: 'run' });
     await expect.poll(() => operator.locator('main').getAttribute('data-mode')).toBe('run');
     for (const [name, width, height] of [
@@ -579,7 +585,7 @@ describe('the running app', () => {
       expect(await overlaps()).toEqual([]);
       await dispatch({ type: 'setRightColumnCollapsed', collapsed: false });
     }
-    await resize(1200, 780);
+    await resize(original.width, original.height);
     await dispatch({ type: 'setMode', mode: 'edit' });
   });
 
