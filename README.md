@@ -10,6 +10,41 @@ while the **Producer** and others send them live information.
 NeoPrompter is an Electron + TypeScript app for macOS and Windows. It makes no network calls of its
 own: the only thing it serves is a small page and API on your local network, for the Producer.
 
+## Screenshots
+
+**Edit mode** is where Scripts are prepared. The Scripts list marks each Script as added by hand
+(pointer icon) or imported automatically from the Watched folder (folder icon), and the info
+button shows the file's type, path, last modified date, size and when it was imported.
+
+![Edit mode: the editor, a mini Live view and the Scripts list with a Script's details open](docs/screenshots/edit-mode.png)
+
+**Run mode** is the live production: speed meter, transport, a Live view that is an exact copy of
+what the Talent sees, and a Notification banner from the Producer.
+
+![Run mode: the Live view playing a Script, with a Notification banner](docs/screenshots/run-mode.png)
+
+The **Output** is the clean, text-only display for the Talent.
+
+![The Output window showing the Script text and the Reading line](docs/screenshots/output.png)
+
+When the Watched folder imports a Script, a **"New script added"** Notification appears.
+
+![A "New script added: Easter Sunday" Notification over Edit mode](docs/screenshots/new-script-notification.png)
+
+**Automatic imports.** Choose a **Watched folder** in Preferences, General, and any `.doc`,
+`.docx`, `.txt` or `.pdf` file dropped into it becomes a Script, then moves into an `imported/`
+subfolder. Nothing is added while you are in Run mode; the files wait until you are back in Edit
+mode.
+
+![Preferences, General: the Watched folder set to a folder](docs/screenshots/preferences-watched-folder.png)
+
+**Presets** save the Output's whole look (text size, spacing, colors, Reading line) under a name,
+so one setup can be kept for each Talent or venue and switched in a click.
+
+![Preferences, Appearance, Presets: a saved Preset chosen from the list](docs/screenshots/preferences-presets.png)
+
+To retake them after a change, run `npm run build` then `node scripts/readme-screenshots.mjs`.
+
 ## What it does
 
 - **Two views for two jobs.** _Edit mode_ is the Script library and a full editor for preparing
@@ -18,11 +53,14 @@ own: the only thing it serves is a small page and API on your local network, for
   typing in Run mode until you deliberately unlock it for a live fix.
 - **A clean Output.** A text-only window for the prompter display, always laid out as a 1920x1080
   picture and scaled to fit, so lines wrap and sit in the same place on any monitor. It has a
-  Reading line, a Progress bar, mirroring and saved Presets (for example one per Talent).
-- **Word import.** Bring in `.doc` and `.docx` files as Scripts, keeping structure, emphasis and
-  colors. Colors too hard to read are replaced with a readable one when shown; the Script keeps the
-  original. Pick a **Watched folder** in Preferences and any Word file dropped into it is imported
-  automatically.
+  Reading line, a Progress bar, mirroring and saved **Presets**, so you can keep several
+  configurations (for example one per Talent) and switch between them.
+- **Import from Word, text and PDF.** Bring in `.doc`, `.docx`, `.txt` and `.pdf` files as Scripts.
+  Word files keep structure, emphasis and colors; text and PDF files come in as plain text. Colors
+  too hard to read are replaced with a readable one when shown; the Script keeps the original. Pick
+  a **Watched folder** in Preferences and any of these files dropped into it is imported
+  automatically, with a "New script added" Notification. Each Script shows whether it was added by
+  hand or imported automatically, with its file's details one click away.
 - **Notifications from the Producer.** The Producer opens a web page on a phone or laptop and sends
   short messages that appear as banners in the Operator view, never on the Output. **Quick
   messages** are one-tap saved texts, each with an optional color that fills the banner.
@@ -43,7 +81,7 @@ Keyboard, and a ShuttleXPress used through its driver software works by sending 
 | `Left` / `Right`, `PgUp`/`PgDn` | Back / forward a Screen                                              |
 | Left click on the Live view     | Toggle stop and play (not while the Script is unlocked)              |
 | Middle click                    | Toggle the direction, playing or stopped                             |
-| Mouse wheel                     | Speed: roll down for faster, up for slower                           |
+| Mouse wheel                     | While playing: speed (down is faster). Paused: scrolls the Script    |
 | Drag the text                   | Move through the Script; a playing Script holds still while you drag |
 | Scrollbar (right edge)          | Drag to any point in the Script                                      |
 | Drag the Reading line           | Place it up or down the Output                                       |

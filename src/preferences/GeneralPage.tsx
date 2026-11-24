@@ -37,7 +37,7 @@ function WatchedFolderRow({ bridge }: Pick<PageProps, 'bridge'>) {
   return (
     <Row
       title="Watched folder"
-      help="Word files dropped into this folder are imported as Scripts. Off until you choose one."
+      help="Word (.doc, .docx), text (.txt) and PDF files dropped into this folder are imported as Scripts. Off until you choose one."
     >
       <span className="pf-value pf-path" aria-label="Watched folder">
         {view.path ?? 'Off'}

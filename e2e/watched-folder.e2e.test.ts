@@ -86,13 +86,22 @@ describe('the Watched folder in the running app', () => {
     expect(existsSync(join(drop, 'photo.png'))).toBe(true);
   });
 
-  it('tells the Operator about the startup Import in the notice banner', async () => {
+  it('raises a New script added Notification for each Import, and the banner reports the failure', async () => {
+    const shown = () =>
+      operator.getByTestId('notifications').evaluate((el) => el.textContent ?? '');
+    await vi.waitFor(
+      async () => {
+        const text = await shown();
+        for (const name of ['Guide', 'Notes', 'Sunday']) {
+          expect(text).toContain(`New script added: ${name}`);
+        }
+      },
+      { timeout: 8000, interval: 200 },
+    );
     const banner = operator.getByTestId('notice');
     await banner.waitFor({ timeout: 5000 });
-    expect(await banner.textContent()).toContain(
-      'Imported 3 Scripts from the Watched folder: "Guide", "Notes", "Sunday".',
-    );
     expect(await banner.textContent()).toContain('Broken.doc');
+    expect(await banner.textContent()).not.toContain('Imported 3 Scripts');
     await operator.screenshot({ path: join(artifacts, 'watched-folder-notice.png') });
   });
 
@@ -150,8 +159,14 @@ describe('the Watched folder in the running app', () => {
     expect(names.filter((n) => n === 'Sunday')).toHaveLength(1);
     expect(existsSync(join(drop, 'imported', 'Sunday.docx'))).toBe(true);
     expect(existsSync(join(drop, 'imported', 'Sunday 2.docx'))).toBe(true);
-    // The broken file failed once at startup; it is not reported again with these drops.
-    expect(await operator.getByTestId('notice').textContent()).not.toContain('Broken.doc');
+    // The Notification names the numbered Script.
+    await vi.waitFor(
+      async () =>
+        expect(await operator.getByTestId('notifications').textContent()).toContain(
+          'New script added: Sunday 2',
+        ),
+      { timeout: 5000, interval: 200 },
+    );
   });
 
   it('stops watching when the folder is cleared', async () => {
