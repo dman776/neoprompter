@@ -624,7 +624,11 @@ describe('Run mode: scrolling the Live view with the mouse', () => {
   // Without layout the Live view scale is its starting 0.3, and a visual line is 48 * 1.4 stage px.
   const PX_PER_LINE = 0.3 * 48 * 1.4;
   const runMode = async () => {
-    const m = await mount();
+    const m = await mount(
+      shownView,
+      apiView,
+      Array.from({ length: 80 }, (_, i) => `line ${i}`),
+    );
     await act(async () => m.core.dispatch({ type: 'setMode', mode: 'run' }));
     return m;
   };
@@ -656,6 +660,7 @@ describe('Run mode: scrolling the Live view with the mouse', () => {
 
   it('sets the speed with the wheel in Run mode: rolling down is faster, up is slower', async () => {
     const { core, dispatched } = await runMode();
+    await act(async () => core.dispatch({ type: 'play', direction: 'forward' }));
     const before = core.getState().speedLevel;
     await wheel(100);
     expect(speedChange(dispatched)).toBeCloseTo(0.1, 5);
@@ -666,12 +671,20 @@ describe('Run mode: scrolling the Live view with the mouse', () => {
   });
 
   it('counts a notch the same whether the wheel reports pixels or lines, and adds up small deltas', async () => {
-    const { dispatched } = await runMode();
+    const { core, dispatched } = await runMode();
+    await act(async () => core.dispatch({ type: 'play', direction: 'forward' }));
     await wheel(3, 1);
     expect(speedChange(dispatched)).toBeCloseTo(0.1, 5);
     await wheel(10);
     await wheel(10);
     expect(speedChange(dispatched)).toBeCloseTo(0.12, 5);
+  });
+
+  it('scrolls the Script with the wheel in Run mode while it is paused', async () => {
+    const { dispatched } = await runMode();
+    await wheel(100);
+    expect(total(dispatched)).toBeCloseTo(100 / PX_PER_LINE, 3);
+    expect(speedChange(dispatched)).toBe(0);
   });
 
   it('still scrolls the Script with the wheel over the mini Live view in Edit mode', async () => {

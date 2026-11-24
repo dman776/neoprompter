@@ -117,7 +117,7 @@ export function LiveView({
     moveLine(state.appearance.readingLineY + direction * step);
   };
 
-  // Scrolling the Script by hand: dragging the text with the pointer, and the mouse wheel in Edit mode (in Run mode the wheel sets the speed). Screen
+  // Scrolling the Script by hand: dragging the text with the pointer, and the mouse wheel (while a Script plays in Run mode the wheel sets the speed). Screen
   // px become visual lines through the Live view's scale and the Output's line height.
   const scaleRef = useRef(scale);
   scaleRef.current = scale;
@@ -230,8 +230,8 @@ export function LiveView({
             ? event.deltaY * box.clientHeight
             : event.deltaY;
       // Run mode: the wheel sets the speed (down is faster), one notch (100 px, or 3 lines) is one
-      // nudge step, and a trackpad's small deltas add up. Edit mode's mini Live view scrolls.
-      if (latest.current.mode === 'run') {
+      // nudge step, and a trackpad's small deltas add up. A paused Script (and Edit mode's mini Live view) scrolls.
+      if (latest.current.mode === 'run' && latest.current.playing) {
         const notches = event.deltaMode === 1 ? event.deltaY / 3 : px / 100;
         dispatch({ type: 'adjustSpeed', levels: notches * SPEED_NUDGE_STEP });
         return;
