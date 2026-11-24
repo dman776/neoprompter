@@ -871,16 +871,24 @@ describe('the running app', () => {
       });
     expect(await position()).toBeCloseTo(await outputOffset(), 1);
 
-    // In Run mode the wheel sets the speed (down is faster) and leaves the position alone.
+    // Paused, the wheel scrolls the Script like any app (down goes forward).
     const level = async () => (await state()).speedLevel;
     const startLevel = await level();
-    const startPosition = await position();
     await operator.mouse.move(cx, cy);
     await operator.mouse.wheel(0, 200);
-    await vi.waitFor(async () => expect(await level()).toBeGreaterThan(startLevel));
+    await vi.waitFor(async () => expect(await position()).toBeGreaterThan(-10_000));
+    expect(await level()).toBeCloseTo(startLevel, 5);
+    await dispatch({ type: 'scrollBy', lines: -10_000 });
+
+    // Playing, the wheel sets the speed (down is faster) and leaves the position alone.
+    await dispatch({ type: 'play' });
+    const playLevel = await level();
+    await operator.mouse.wheel(0, 200);
+    await vi.waitFor(async () => expect(await level()).toBeGreaterThan(playLevel));
     await operator.mouse.wheel(0, -400);
-    await vi.waitFor(async () => expect(await level()).toBeLessThan(startLevel));
-    expect(await position()).toBeCloseTo(startPosition, 3);
+    await vi.waitFor(async () => expect(await level()).toBeLessThan(playLevel));
+    await dispatch({ type: 'pause' });
+    await dispatch({ type: 'scrollBy', lines: -10_000 });
 
     // The scrollbar: dragging its thumb down moves forward, and the Output follows.
     await dispatch({ type: 'scrollBy', lines: -10_000 });

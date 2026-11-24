@@ -22,7 +22,7 @@ export { NOTIFICATION_PALETTE, isNotificationColor } from './types';
 export { lineHeading, lineRuns, lineText } from './richScript';
 export { contrastRatio, displayColor, readableTextOn, MIN_CONTRAST } from './readableColor';
 export { createMemoryLibraryStorage } from './library';
-export type { LibraryStorage, StoredScript } from './library';
+export type { ImportSource, LibraryStorage, StoredScript } from './library';
 export {
   defaultAppearance,
   READING_LINE_HEIGHT,

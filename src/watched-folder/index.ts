@@ -1,4 +1,4 @@
-import { lineText, type Core } from '../core';
+import { lineText, type Core, type ImportSource } from '../core';
 import type { ImportResult } from '../import';
 
 /** What Preferences shows: the Watched folder's path, or null while it is off. */
@@ -95,6 +95,11 @@ export interface WatchedFolderResult {
   waiting: string[];
 }
 
+/** File size when `stat` has nothing: the bytes themselves. */
+function bytesLength(fs: WatchedFolderFs, path: string): number {
+  return fs.readFile(path).length;
+}
+
 /** The name of the subfolder that Imported files move into. */
 export const IMPORTED_FOLDER = 'imported';
 
@@ -174,18 +179,26 @@ export async function importWatchedFolder(
     const { script } = imported;
     const before = core.getState().library;
     const name = uniqueName(script.name, new Set(before.map((s) => s.name)));
+    const kept = freeFileName(file, (n) => fs.exists(fs.join(folder, IMPORTED_FOLDER, n)));
+    const stat = fs.stat(from);
     core.dispatch({
       type: 'saveScript',
       name,
       text: script.lines.map(lineText).join('\n'),
       lines: script.lines,
+      source: {
+        method: 'watched',
+        filePath: fs.join(folder, IMPORTED_FOLDER, kept),
+        fileType: file.slice(file.lastIndexOf('.') + 1).toLowerCase() as ImportSource['fileType'],
+        fileSize: stat?.size ?? bytesLength(fs, from),
+        fileModifiedMs: stat?.modifiedMs ?? null,
+      },
     });
     if (core.getState().library.length === before.length) {
       result.failed.push({ file, message: `"${file}" could not be added to the library.` });
       continue;
     }
 
-    const kept = freeFileName(file, (n) => fs.exists(fs.join(folder, IMPORTED_FOLDER, n)));
     try {
       fs.moveFile(from, fs.join(folder, IMPORTED_FOLDER, kept));
     } catch {

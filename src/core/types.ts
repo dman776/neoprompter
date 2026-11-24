@@ -16,6 +16,8 @@ export interface RichLine {
 /** A Script line: a plain string (one unstyled run) or a RichLine. */
 export type ScriptLine = string | RichLine;
 
+import type { ImportSource } from './library';
+
 /** A Script, as the core sees it. Plain-text Scripts are just all-string lines. */
 export interface Script {
   name: string;
@@ -68,7 +70,14 @@ export type Command =
   | { type: 'jumpForward' }
   | { type: 'returnToPlayStart' }
   /** `text` is the plain-text form; `lines` (optional) carries the styled form. */
-  | { type: 'saveScript'; name: string; text: string; lines?: ScriptLine[] }
+  | {
+      type: 'saveScript';
+      name: string;
+      text: string;
+      lines?: ScriptLine[];
+      /** The file it came from, when it is an Import. The core stamps `importedAt`. */
+      source?: Omit<ImportSource, 'importedAt'>;
+    }
   | { type: 'loadScript'; id: string }
   | { type: 'renameScript'; id: string; name: string }
   | { type: 'deleteScript'; id: string }
@@ -184,6 +193,9 @@ export interface LibraryEntry {
   name: string;
   /** When it was last edited (clock milliseconds), or null if unknown. */
   editedAt: number | null;
+  /** Where it came from; null for a Script made in the app (and older ones). */
+  source: ImportSource | null;
+  lineCount: number;
 }
 
 /** Appearance settings of the Output; a Preset is a named saved copy of these. */

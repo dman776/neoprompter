@@ -325,7 +325,13 @@ export function createCore(options: CoreOptions = {}): Core {
       ringDeflection: ring,
       viewportLines,
       leadIn: LEAD_IN_LINES,
-      library: stored.map(({ id, name, editedAt }) => ({ id, name, editedAt: editedAt ?? null })),
+      library: stored.map(({ id, name, editedAt, source, lines, text }) => ({
+        id,
+        name,
+        editedAt: editedAt ?? null,
+        source: source ?? null,
+        lineCount: (lines ?? text.split(/\r?\n/)).length,
+      })),
       loadedScriptId,
       appearance: { ...appearance },
       presets: Object.keys(presets),
@@ -432,6 +438,9 @@ export function createCore(options: CoreOptions = {}): Core {
               text: command.text,
               editedAt: clock.now(),
               ...(command.lines && { lines: command.lines }),
+              ...(command.source && {
+                source: { ...command.source, importedAt: clock.now() },
+              }),
             },
           ];
           storage.writeAll(stored);
