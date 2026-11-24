@@ -116,7 +116,7 @@
   top: 64px;
   left: 50%;
   transform: translateX(-50%);
-  width: min(640px, 88vw);
+  width: min(820px, 92vw);
   display: grid;
   gap: 8px;
   pointer-events: none;
@@ -126,12 +126,14 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 9px 12px 9px 14px;
+  padding: 14px 16px 14px 18px;
   /* Neutral on purpose: a palette color (set inline) is the only thing that fills a banner. */
   background: var(--surface);
   color: var(--text);
   border: 1px solid var(--border);
   border-radius: var(--radius);
+  font-size: 26px;
+  line-height: 1.25;
   font-weight: 600;
   box-shadow: var(--shadow);
   animation: notification-in 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
@@ -150,6 +152,7 @@
   color: inherit;
   border-radius: 6px;
   padding: 3px 9px;
+  font-size: 14px;
   font-weight: 600;
   cursor: default;
 }
