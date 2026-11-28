@@ -1,4 +1,11 @@
-import { useEffect, useMemo, useRef, useState, type MutableRefObject } from 'react';
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type MutableRefObject,
+  type CSSProperties,
+} from 'react';
 import { EditorContent, useEditor, useEditorState } from '@tiptap/react';
 import Document from '@tiptap/extension-document';
 import Paragraph from '@tiptap/extension-paragraph';
@@ -17,7 +24,16 @@ import { Search } from './search';
 import { ColorTool } from './ColorTool';
 import { Panel } from './ui/Panel';
 import { Button } from './ui/Button';
-import { BoldIcon, HeadingIcon, ItalicIcon, RedoIcon, SearchIcon, UndoIcon } from './ui/icons';
+import {
+  BoldIcon,
+  HeadingIcon,
+  ItalicIcon,
+  MinusIcon,
+  PlusIcon,
+  RedoIcon,
+  SearchIcon,
+  UndoIcon,
+} from './ui/icons';
 
 /** How long after the last keystroke the editor sends its content to the core. */
 export const SAVE_DELAY_MS = 300;
@@ -35,6 +51,20 @@ const extensions = [
   UndoRedo,
   Search,
 ];
+
+/** The editor's own text size in pixels (a view setting for the Operator; it never reaches the Script). */
+export const EDITOR_SIZE = { min: 10, max: 48, step: 1, default: 17 };
+const EDITOR_SIZE_KEY = 'neoprompter.editorFontSize';
+const clampSize = (n: number) =>
+  Math.min(EDITOR_SIZE.max, Math.max(EDITOR_SIZE.min, Math.round(n)));
+function loadEditorSize(): number {
+  try {
+    const n = Number(localStorage.getItem(EDITOR_SIZE_KEY));
+    return Number.isFinite(n) && n > 0 ? clampSize(n) : EDITOR_SIZE.default;
+  } catch {
+    return EDITOR_SIZE.default;
+  }
+}
 
 const sameLines = (a: ScriptLine[], b: ScriptLine[]) =>
   a.length === b.length && a.every((line, i) => sameLine(line, b[i]));
@@ -195,6 +225,22 @@ export function ScriptEditor({
     editor?.commands.focus();
   };
   const chain = () => editor?.chain().focus();
+  const [size, setSize] = useState(loadEditorSize);
+  const [sizeDraft, setSizeDraft] = useState<string | null>(null);
+  const applySize = (n: number) => {
+    const next = clampSize(n);
+    setSize(next);
+    try {
+      localStorage.setItem(EDITOR_SIZE_KEY, String(next));
+    } catch {
+      /* the size just is not remembered */
+    }
+  };
+  const commitSizeDraft = () => {
+    const n = Number(sizeDraft);
+    if (sizeDraft !== null && sizeDraft.trim() !== '' && Number.isFinite(n)) applySize(n);
+    setSizeDraft(null);
+  };
 
   return (
     <Panel title="Script" meta={saving ? 'Saving…' : 'Saved'} className="script-editor">
@@ -267,6 +313,43 @@ export function ScriptEditor({
           recentColors={recentColors}
           onColorPicked={(color) => bridge.dispatch({ type: 'pickColor', color })}
         />
+        <span className="format-sep" />
+        <div className="editor-size" role="group" aria-label="Editor text size">
+          <Button
+            square
+            variant="ghost"
+            aria-label="Smaller editor text"
+            title="Smaller editor text"
+            disabled={size <= EDITOR_SIZE.min}
+            onClick={() => applySize(size - EDITOR_SIZE.step)}
+          >
+            <MinusIcon />
+          </Button>
+          <input
+            type="text"
+            inputMode="numeric"
+            className="editor-size-input"
+            aria-label="Editor text size"
+            title="Editor text size (this view only)"
+            value={sizeDraft ?? String(size)}
+            onChange={(e) => setSizeDraft(e.target.value.replace(/\D/g, '').slice(0, 2))}
+            onBlur={commitSizeDraft}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') commitSizeDraft();
+              if (e.key === 'Escape') setSizeDraft(null);
+            }}
+          />
+          <Button
+            square
+            variant="ghost"
+            aria-label="Larger editor text"
+            title="Larger editor text"
+            disabled={size >= EDITOR_SIZE.max}
+            onClick={() => applySize(size + EDITOR_SIZE.step)}
+          >
+            <PlusIcon />
+          </Button>
+        </div>
         <span className="word-count" aria-live="polite">
           <b>{stats.words}</b> words · <b>{formatReadTime(stats.readSeconds)}</b>
         </span>
@@ -274,6 +357,7 @@ export function ScriptEditor({
       {finding && editor && <FindBar editor={editor} editable={editable} onClose={closeFind} />}
       <div
         className="script-scroll"
+        style={{ '--editor-size': `${size}px` } as CSSProperties}
         onKeyDown={(e) => {
           if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'f') {
             e.preventDefault();

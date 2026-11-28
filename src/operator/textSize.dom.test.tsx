@@ -51,3 +51,20 @@ describe('Run mode text size', () => {
     expect(core.getState().appearance.fontSize).toBe(start - FONT_SIZE_STEP);
   });
 });
+
+describe('Run mode Text panel', () => {
+  it('changes the Output text size and line spacing from the right-hand column', async () => {
+    const core = await mountRun();
+    const start = core.getState().appearance;
+    await act(async () => button('Larger text size').click());
+    expect(core.getState().appearance.fontSize).toBe(start.fontSize + FONT_SIZE_STEP);
+    expect(host.querySelector('[data-testid="panel-size-value"]')?.textContent).toBe(
+      `${start.fontSize + FONT_SIZE_STEP}`,
+    );
+    await act(async () => button('Looser line spacing').click());
+    expect(core.getState().appearance.lineSpacing).toBeCloseTo(start.lineSpacing + 0.1);
+    await act(async () => button('Tighter line spacing').click());
+    await act(async () => button('Tighter line spacing').click());
+    expect(core.getState().appearance.lineSpacing).toBeCloseTo(start.lineSpacing - 0.1);
+  });
+});

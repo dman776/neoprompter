@@ -18,6 +18,28 @@
   background: var(--border);
   margin: 4px 6px;
 }
+.editor-size {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.editor-size-input {
+  width: 38px;
+  height: 28px;
+  padding: 0 4px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--well);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.editor-size-input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+}
 .word-count {
   margin-left: auto;
   padding-right: 6px;
@@ -38,7 +60,7 @@
 }
 .script-doc {
   outline: none;
-  font: 17px/1.65 var(--font);
+  font: var(--editor-size, 17px) / 1.65 var(--font);
   color: var(--text);
   min-height: 100%;
 }
@@ -61,18 +83,18 @@
   letter-spacing: -0.01em;
 }
 .script-doc h1 {
-  font-size: 26px;
+  font-size: 1.529em;
 }
 .script-doc h2 {
-  font-size: 22px;
+  font-size: 1.294em;
 }
 .script-doc h3 {
-  font-size: 19px;
+  font-size: 1.118em;
 }
 .script-doc h4,
 .script-doc h5,
 .script-doc h6 {
-  font-size: 17px;
+  font-size: 1em;
 }
 
 /* Find and replace: a compact bar above the document, and highlights inside it. */
