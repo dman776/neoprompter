@@ -3,6 +3,7 @@ import { LiveView } from './LiveView';
 import { ScriptLock } from './ScriptLock';
 import { SpeedMeter } from './Speed';
 import { StatusPanel } from './StatusPanel';
+import { TextPanel } from './TextPanel';
 import { Transport } from './Transport';
 import { useKeyBindings } from './useKeyBindings';
 import { useApiView, useOutputView, type CoreBridge } from './useCoreState';
@@ -63,6 +64,7 @@ export function RunMode({
             />
           </div>
           <StatusPanel state={state} outputView={outputView} apiView={apiView} />
+          <TextPanel state={state} dispatch={bridge.dispatch} />
         </aside>
       )}
     </div>
